@@ -1,10 +1,31 @@
+/************************************************************
+*  Color scheme based on Notepad++ - by Destro
+*
+*  Guide:
+*    https://www.sublimetext.com/docs/3/color_schemes.html
+*************************************************************/
 {
 	"name": "AMXXEditor: Nodepad++",
 	"author": "Destro",
+	"amxxeditor":
+	{
+		"default_popup": "Notepad++",
+		"default_console": "MS-DOS",
+		"syntax_settings":
+		{
+			// Custom settings...
+			//"font_face": ""
+		}
+	},
+	"variables":
+    {
+        "main-foreground": 		"#111",
+        "main-background": 		"#f0f0f0",
+    },
 	"globals":
 	{
-		"foreground": "#111",
-		"background": "#f0f0f0",
+		"foreground": "var(main-foreground)",
+		"background": "var(main-background)",
 		"caret": "#111",
 		
 		/* Text Selection */
@@ -121,12 +142,12 @@
 			"font_style": "bold"
 		},
 		{
-			"name": "Pawn Brace",
+			"name": "Pawn Braces",
 			"scope": "keyword.brace",
 			"foreground": "#111"
 		},
 		{
-			"name": "Pawn Coma",
+			"name": "Pawn Comma",
 			"scope": "punctuation.separator",
 			"foreground": "#111"
 		},
@@ -162,16 +183,16 @@
 			"name": "Pawn Constant Vars",
 			"scope": "constant.vars",
 			"foreground": "#000080",
-			"background": "#f0f0f1",
-			"font_style": "italic"
+			"font_style": "italic",
+			
+			// Fix bug, reverse foreground/background
+			"background": "#00000001"
 		},
-		
 		{
-			"name": "Fix Constant Selection",
+			/* Fix selection highlight */
+			"name": "Fix Constant on selection",
 			"scope": "fixselection",
-			"foreground": "#000080",
-			"background": "#f0f0f1",
-			"font_style": "italic"
+			"background": "#00000001",
 		},
 		
 		{

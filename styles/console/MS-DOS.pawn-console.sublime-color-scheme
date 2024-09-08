@@ -1,0 +1,28 @@
+{
+	"name": "AMXXConsole: MS-DOS Console",
+	"author": "Destro",
+	"amxxeditor":
+	{
+		"syntax_settings":
+		{
+			"caret_style": "blink",
+			"caret_extra_top": 0,
+			"caret_extra_bottom": 0,
+			"caret_extra_width": 2
+		}
+	},
+	"globals":
+	{
+		"foreground": "#ddd",
+		"background": "#000",
+		"caret": "#aaa",
+		
+		/* Text Selection */
+		"selection": "#fbfbfb",
+		"inactive_selection": "#fbfbfb",
+		"selection_foreground": "#000",
+		"selection_corner_style": "square",
+		"invisibles": "#fbfbfb", // TAB / SPACE
+		"font_style": "bold"
+	}
+}

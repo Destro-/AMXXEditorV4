@@ -4,18 +4,16 @@ html {
 
 body {
 	margin: 0px;
-	background-color: #fff;
+	background-color: #000;
 }
 
 .top {
 	padding: 4px 10px 7px 10px;
 	border-radius: 5;
 	font-family: Verdana;
-	border-bottom: 1px solid #eee;
 }
 
 .content {
-	background-color: #fff;
 	padding: 5px 10px 5px 10px;
 }
 
@@ -24,20 +22,20 @@ body {
 	
 }
 
-.separator { padding: 0px 5px 0px 5px }
-.customLink { color: #000; font-weight: bold;}
+.separator { color: #000; padding: 0px 5px 0px 5px }
+.customLink { color: #fff; font-weight: bold;}
 
-.incInfo { color: #000; font-weight: bold;}
+.incInfo { color: #fff; font-weight: bold;}
 .incPath { color: #ff8040; font-weight: bold;}
 
-.pawnDefaultColor { color: #000080; font-family: Verdana; }
+.pawnDefaultColor { color: #999; font-family: Verdana; }
 .pawnFunction { color: #e00; }
-.pawnString { color: #f00; }
+.pawnString { color: #a69a28; }
 .pawnKeyword { color: #007700; }
 .pawnConstant { color: #007700; }
-.pawnNumber { color: #000080; }
+.pawnNumber { color: #0764ba; }
 .pawnTag { color: #007700; font-style: italic; }
 .pawnTag a { color: #007700; text-decoration: none; }
 
-.inspectorTitle { color: #000; font-weight: bold;}
-.inspectorBlock { color: #000; }
+.inspectorTitle { color: #fff; font-weight: bold;}
+.inspectorBlock { color: #eee; }

@@ -1,4 +1,4 @@
-/* Sublime AMXX Editor v4.1 */
+/* Sublime AMXX Editor v4.2 */
 
 #include <amxmodx>
 // #include <amxmisc>

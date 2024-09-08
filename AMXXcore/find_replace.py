@@ -66,12 +66,14 @@ class AmxxFindReplace:
 			return None # high CPU usage if is tested the down code in preview
 
 		self.result 	= [ ]
-		includes 		= self.get_includes(self.view)
+		includes 		= self.get_includes(self.view, True)
 
 		for inc in includes :
 			text = self.read_text(inc)
 			self.result += self.search_all(text, inc)
-			
+			if len(self.result) >= 512 :
+				break
+				
 		if not self.result :
 			self.last_error = "Search not found"
 			return self.last_error
@@ -227,26 +229,26 @@ class AmxxFindReplace:
 			except:
 				pass
 		
-	def get_includes(self, view):
+	def get_includes(self, view, includedir=False):
 		includes 	= [ ]
 		visited 	= [ ]
-		node 		= var.nodes[util.get_filename_by_view(view)]
+		node 		= globalvar.nodes[util.get_filename_by_view(view)]
 
-		self.includes_recur(node, includes, visited)
+		self.includes_recur(node, includes, visited, includedir)
 		
 		return includes
 		
-	def includes_recur(self, node, includes, visited) :
+	def includes_recur(self, node, includes, visited, includedir) :
 		if node.file_path in visited :
 			return
 
 		visited += [ node.file_path ]
 
-		if cfg.include_dir != os.path.dirname(node.file_path) :
+		if includedir or cfg.include_dir != os.path.dirname(node.file_path) :
 			includes += [ node.file_path ]
 
 		for child in node.children :
-			self.includes_recur(child, includes, visited)
+			self.includes_recur(child, includes, visited, includedir)
 
 ######################################################################○
 

@@ -1,0 +1,77 @@
+{
+	"name": "AMXXConsole: DarkColorize-Litle",
+	"author": "Destro",
+	"amxxeditor":
+	{
+		"syntax_settings":
+		{
+			"font_face": "Arial"
+			//"font_size": 9
+		}
+	},
+	"globals":
+	{
+		"foreground": "#3880D1",
+		"background": "#111",
+		"caret": "#ddd",
+		
+		/* Text Selection */
+		"selection": "#DDF0FF33",
+		"selection_border": "#DDF0FF33",
+		"invisibles": "#444", // TAB / SPACE
+	},
+	
+	"rules":
+	[
+		{
+			"name": "Console Comment",
+			"scope": "console.comment",
+			"foreground": ["hsl(200, 90%, 70%)", "hsl(300, 90%, 70%)"]
+		},
+		{
+			"name": "Console Line path",
+			"scope": "console.line_path",
+			"foreground": "#e0d55a",
+		},
+		{
+			"name": "Console Line number",
+			"scope": "console.line_num",
+			"foreground": "#B4DE0D"
+		},
+		{
+			"name": "Console Error",
+			"scope": "console.error",
+			"foreground": "#dd0000",
+		},
+		{
+			"name": "Console Warning",
+			"scope": "console.warning",
+			"foreground": "#CF8506",
+		},
+		{
+			"name": "Console Info",
+			"scope": "console.info",
+			"foreground": "#41B5C4"
+		},
+		{
+			"name": "Console Info Value",
+			"scope": "console.info_value",
+			"foreground": "#2B5D8A"
+		},
+		{
+			"name": "Console Finished",
+			"scope": "console.finished",
+			"foreground": "#3A8518"
+		},
+		{
+			"name": "Console Time",
+			"scope": "console.time",
+			"foreground": "#5ECF29"
+		},
+		{
+			"name": "Console Others",
+			"scope": "cconsole.others",
+			"foreground": "#3C7D96"
+		}
+	]
+}

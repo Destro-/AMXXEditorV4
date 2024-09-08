@@ -1,0 +1,24 @@
+{
+	"name": "AMXXConsole: SmallFonts Terminal",
+	"author": "Destro",
+	"amxxeditor":
+	{
+		"syntax_settings":
+		{
+			"font_face": "Small Fonts"
+		}
+	},
+	"globals":
+	{
+		"foreground": "#ffe52c",
+		"background": "#111",
+		"caret": "#ffe52c",
+		
+		/* Text Selection */
+		"selection": "#fe26",
+		"selection_border": "#fe26",
+		"invisibles": "#fe26", // TAB / SPACE
+	},
+
+	
+}

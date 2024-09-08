@@ -1,10 +1,29 @@
+/************************************************************
+*  Guide:
+*    https://www.sublimetext.com/docs/3/color_schemes.html
+*************************************************************/
 {
 	"name": "AMXXEditor: Dark",
 	"author": "Destro",
+	"amxxeditor":
+	{
+		"default_popup": "BasicBlack",
+		"default_console": "DarkColorize",
+		"syntax_settings":
+		{
+			// Custom settings...
+			//"font_face": ""
+		}
+	},
+	"variables":
+    {
+        "main-foreground": 		"#ccc",
+        "main-background": 		"#111",
+    },
 	"globals":
 	{
-		"foreground": "#ccc",
-		"background": "#111",
+		"foreground": "var(main-foreground)",
+		"background": "var(main-background)",
 		"caret": "#ddd",
 		
 		/* Text Selection */
@@ -12,7 +31,9 @@
 		"selection_border": "#DDF0FF33",
 		"invisibles": "#444", // TAB / SPACE
 
+
 		/* Find Highlight */
+		"highlight": "#000",
 		"find_highlight": "#BCE617",
 		"find_highlight_foreground": "#000",
 		
@@ -148,12 +169,6 @@
 			"font_style": "italic"
 		},
 		{
-			"name": "Pawn Constant Vars",
-			"scope": "constant.vars.pawn",
-			"foreground": "#7F98BA",
-			"font_style": "italic"
-		},
-		{
 			"name": "Pawn String",
 			"scope": "string",
 			"foreground": "#9c2222",
@@ -163,6 +178,22 @@
 			"name": "Pawn String Escape",
 			"scope": "string constant",
 			"foreground": "#A8430C"
+		},
+		
+		{
+			"name": "Pawn Constant Vars",
+			"scope": "constant.vars.pawn",
+			"foreground": "#7F98BA",
+			"font_style": "italic",
+			
+			// Fix bug, reverse foreground/background
+			"background": "#00000001"
+		},
+		{
+			/* Fix selection highlight bug*/
+			"name": "Fix Constant on selection",
+			"scope": "fixselection",
+			"background": "#00000001",
 		},
 		
 		{

@@ -3,7 +3,7 @@ import re
 import sublime, sublime_plugin
 
 
-from AMXXcore.core import var
+from AMXXcore.core import globalvar
 
 def parse_current_arguments(text):
 
@@ -90,6 +90,7 @@ html {
 	font-size: %dpx;
 }
 %s
+%s
 </style>
 <body>
 	<div class="top">%s</div>
@@ -99,7 +100,8 @@ html {
 </html>
 """ % (
 			fontsize,
-			var.cache_tooltip_css,
+			globalvar.cachePopupCSS,
+			globalvar.autoPopupCSS,
 			top,
 			content,
 			bottom
@@ -120,21 +122,33 @@ def pawn_highlight(str):
 	str = str.replace('=', '<EQUAL>')
 	
 	str = re.sub(r',(\w)', r', \1', str)
-	str = re.sub(r'([A-Za-z_][\w_]*)\(', r'<span class="pawnFunc">\1</span>(', str)
-	str = re.sub(r'([a-zA-Z_]\w*:)', r'<span class="pawnTag">\1</span>', str)
+	str = re.sub(r'([A-Za-z_][\w_]*)\(', r'<span class="pawnFunction">\1</span>(', str)
+	str = re.sub(r'([a-zA-Z_]\w*:)', r'<span class="pawnTag"><a href="@\1">\1</a></span>', str)
 	str = re.sub(r'([\(\)\[\]&]|\.\.\.)', r'<span class="pawnKeyword">\1</span>', str)
 	str = re.sub(r'\b(\d+(.\d+)?)\b', r'<span class="pawnNumber">\1</span>', str)
 
-	str = str.replace('const ', '<span class="pawnConstVar">const </span>')
+	str = str.replace('const ', '<span class="pawnConstant">const </span>')
+	str = str.replace('sizeof ', '<span class="pawnConstant">sizeof </span>')
+	str = str.replace('charsmax', '<span class="pawnConstant">charsmax</span>')
 	str = str.replace('<EQUAL>', '<span class="pawnKeyword">=</span>')
 	
 	for s in slist :
 		str = str.replace('<STR>', '<span class="pawnString">'+s+'</span>', 1)
 	slist.clear()
 	
+	def get_tags(m):
+		r = '<span class="pawnTag">{'
+		for tag in m.group(1).split(',') :
+			tag = tag.strip()
+			r += '<a href="@%s">%s</a>, ' % (tag, tag)
+			
+		return r[0:-2] + '}:</span>'
+	
+	str = re.sub(r'\{([^\}]*)\}:', get_tags, str)
+	
 	str = str.replace('&', '&amp;')
 	
-	return str
+	return '<span class="pawnDefaultColor">' + str + '</span>'
 
 	
 	

@@ -1,29 +1,31 @@
 {
-	// Example: AMXXEditor 3.0.0 by Destro
+	// Example: AMXXEditor 4.2 by Destro
 
 	"build_profiles":
 	{
-		"amxx-1.8.2":
+		/*"AMXX-1.8.2":
 		{
 			"amxxpc_debug": 2,
 			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\amxxpc.exe",
 			"includes_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\include",
 			"output_dir": "D:\\archivos\\plugins"
 		},
-		"amxx-1.8.3":
+		"AMXX-1.9":
 		{
-			"amxxpc_debug": 1,
-			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\amxxpc.exe",
-			"includes_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\include",
+			"amxxpc_debug": 2,
+			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.9\\amxxpc.exe",
+			"includes_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.9\\include",
 			"output_dir": "D:\\archivos\\plugins"
-		}
+		}*/
 	},
 	
 
 	/* EDITOR */
-	"enable_popup": 		true,		// ( true / false )
-	"enable_buildversion": 	true,		// ( true / false )
-
+	"enable_tooltip": 				true,	// ( true / false )
+	"enable_buildversion": 			true,	// ( true / false )
+	"enable_check_invalid": 		true,	// ( true / false )
+	"enable_dynamic_highlight": 	true,	// ( true / false )
+	
 	"ac_enable": 			true,		// ( true / false )
 	"ac_keywords": 			2,			// ( 0 disable, 1 normal, 2 insert parents )
 	"ac_snippets": 			true,		// ( true / false )
@@ -35,9 +37,11 @@
 	
 	"live_refresh_delay": 	1.5, 		// ( 0.5 ~ 5.0 ) 		Delay before regenerating Auto-Completion
 
-	"style_popup": 			"dark", 	// ( color name  )
-	"style_editor": 		"dark", 	// ( color name / default )
-	"style_console": 		"dark",	 	// ( color name / default )
+	"popup_style_mode":		0,			// 0: Using CSS style file, 1: Using Editor color-scheme file.
+	
+	"style_editor": 		"AMXXStudio", 	// ( stylename / "default" )
+	"style_console": 		"AMXXStudio",	// ( stylename / "default" )
+	"style_popup": 			"AMXXStudio", 	// ( stylename  )
 	
 	
 		
@@ -52,5 +56,5 @@
 	* "f"  - Show scope on hover (tool for syntax  dev).
 	* "*"  - All debugging levels at the same time.
 	***********************************************/
-	"debug_flags": "cf",
+	"debug_flags": "abcf",
 }

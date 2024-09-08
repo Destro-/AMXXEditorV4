@@ -2,12 +2,12 @@ import os
 import time
 import threading
 import sublime, sublime_plugin
-
+import jstyleson
 
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Global VARs 
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-class var:
+class globalvar:
 	pass
 	
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -17,7 +17,7 @@ class cfg:
 	filename = "AMXX-Editor.sublime-settings"
 	settings = None
 	on_change_callback = None
-	lock = False
+	silent = False
 	
 	
 	# Support reloading module
@@ -34,15 +34,15 @@ class cfg:
 		cfg.on_change()
 		
 	def on_change():
-		if cfg.lock :
-			cfg.lock = False
+		if cfg.silent :
+			cfg.silent = False
 			return
 		
 		if cfg.on_change_callback :
 			cfg.on_change_callback()
 		
 	def set(key, value):
-		cfg.lock = True
+		cfg.silent = True
 		if value == None:
 			cfg.settings.erase(key)
 		else :
@@ -51,8 +51,8 @@ class cfg:
 	def get(key, default=None):
 		return cfg.settings.get(key, default)
 	
-	def save(lock=True):
-		cfg.lock = lock
+	def save(silent=True):
+		cfg.silent = silent
 		sublime.save_settings(cfg.filename)
 		
 	def get_path(key) :
@@ -68,7 +68,7 @@ class util:
 		return max(min(value, maxv), minv)
 	
 	def cfg_set_key(filename, key, value):
-		s = OpenSettings(filename)
+		s = SublimeSettings(filename)
 		s.set(key, value)
 		s.save()
 		
@@ -137,6 +137,13 @@ class util:
 		
 		return view.id()
 
+	def safe_json_load(path):
+		try :
+			json = sublime.load_binary_resource(path).decode("utf-8", "replace")
+			return jstyleson.loads(json)
+		except:
+			pass
+		return None
 		
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Others Class/Utility
@@ -150,7 +157,7 @@ class Enum(tuple):
 			return None
 
 			
-class OpenSettings:
+class SublimeSettings:
 	def __init__(self, filename):
 		self.filename = filename
 		self.settings = sublime.load_settings(filename)
@@ -166,7 +173,38 @@ class OpenSettings:
 	
 	def save(self):
 		sublime.save_settings(self.filename)
+		
+class CustomSettings:
+	def __init__(self, filename, clear=False):
+		self.path = os.path.join(sublime.packages_path(), "User", filename)
+		
+		if not clear :
+			try:
+				with open(self.path) as f:
+					self.data = jstyleson.load(f)
+			except:
+				self.data = dict()
+		else :
+			self.data = dict()
+			
+	def save(self):
+		with open(self.path, 'w', encoding='utf-8') as f:
+			jstyleson.dump(self.data, f, ensure_ascii=False, indent=4)
+		
+	def clear(self):
+		self.data.clear()
+		
+	def set(self, key, value):
+		if value == None:
+			try:
+				del self.data[key]
+			except:
+				pass
+		else :
+			self.data[key] = value
 
+	def get(self, key, default=None):
+		return self.data.get(key, default)
 		
 class DelayedTimer(threading.Thread):
 	def __init__(self, delay_time, function, *args, **kwargs):

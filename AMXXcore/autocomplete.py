@@ -258,8 +258,8 @@ class ac:
 	
 		list = [ ]
 				
-		def add(value, allowparent=False):
-			if mode == 2 and allowparent :
+		def add(value, allowparens=False):
+			if mode == 2 and allowparens :
 				list.append(( value + "\t keyword", value + "(${1})" ))
 			else :
 				list.append(( value + "\t keyword", value ))
@@ -317,7 +317,7 @@ class ac:
 
 		return list
 		
-	def generate_autocompletion_list(node):
+	def generate_autocomplete_list(node):
 	
 		what = node.file_name+" - "
 		
@@ -327,17 +327,17 @@ class ac:
 
 			return value
 		
-		return node.generate_list("autocompletion", list, remove_filename)
+		return node.generate_list("autocomplete", list, remove_filename)
 
 		
 	def block_on_varname(text):
 	#{
 	
 		num_bracket		= 0
-		num_parent		= 0
+		num_paren		= 0
 		num_brace 		= 0
 		inBrackets 		= False
-		inParents		= False
+		inParens		= False
 		inBraces 		= False
 		inString 		= False
 		
@@ -369,14 +369,14 @@ class ac:
 					if num_bracket == 0 :
 						inBrackets = False
 				elif c == '(' :
-					num_parent += 1
-					inParents = True
+					num_paren += 1
+					inParens = True
 				elif c == ')' :
-					num_parent -= 1
-					if num_parent == 0 :
-						inParents = False
+					num_paren -= 1
+					if num_paren == 0 :
+						inParens = False
 
-			if inString or inBrackets or inBraces or inParents:
+			if inString or inBrackets or inBraces or inParens:
 				blockState = False
 				continue
 
@@ -395,7 +395,7 @@ class ac:
 	####################################################
 	
 	"""
-	Other code
+	Another code
 	def sorted_nicely(list):
 		def alphanum_key(key):
 			r = []

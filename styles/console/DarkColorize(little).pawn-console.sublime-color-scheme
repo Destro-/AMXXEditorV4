@@ -1,9 +1,17 @@
 {
-	"name": "AMXXConsole: Dark",
+	"name": "AMXXConsole: DarkColorize-Litle",
 	"author": "Destro",
+	"amxxeditor":
+	{
+		"syntax_settings":
+		{
+			"font_face": "Arial", 
+			"font_size": 9
+		}
+	},
 	"globals":
 	{
-		"foreground": "#ccc",
+		"foreground": "#3880D1",
 		"background": "#111",
 		"caret": "#ddd",
 		
@@ -11,26 +19,6 @@
 		"selection": "#DDF0FF33",
 		"selection_border": "#DDF0FF33",
 		"invisibles": "#444", // TAB / SPACE
-
-		/* Find Highlight */
-		"find_highlight": "#BCE617",
-		"find_highlight_foreground": "#000",
-		
-		/* Highlight active brackets */
-		"brackets_foreground": "#f00",
-		"brackets_options": "foreground",
-		"bracket_contents_foreground": "#679",
-		"bracket_contents_options": "underline",
-		
-		/* Indentation guides */
-		"guide": "#444",
-		"stack_guide": "#444",
-		"active_guide": "#666",
-		
-		/* Line numbers */
-		"gutter": "#151515", 
-		"gutter_foreground": "#677985", 
-		"line_highlight": "#10B2E844",
 	},
 	
 	"rules":
@@ -38,13 +26,12 @@
 		{
 			"name": "Console Comment",
 			"scope": "console.comment",
-			"foreground": "#B6C720",
+			"foreground": ["hsl(200, 90%, 70%)", "hsl(300, 90%, 70%)"]
 		},
 		{
 			"name": "Console Line path",
 			"scope": "console.line_path",
-			"foreground": "#3880D1",
-			"font_style": "bold"
+			"foreground": "#e0d55a",
 		},
 		{
 			"name": "Console Line number",
@@ -55,13 +42,11 @@
 			"name": "Console Error",
 			"scope": "console.error",
 			"foreground": "#dd0000",
-			"font_style": "bold"
 		},
 		{
 			"name": "Console Warning",
 			"scope": "console.warning",
 			"foreground": "#CF8506",
-			"font_style": "bold"
 		},
 		{
 			"name": "Console Info",
@@ -77,7 +62,6 @@
 			"name": "Console Finished",
 			"scope": "console.finished",
 			"foreground": "#3A8518",
-			"font_style": "bold"
 		},
 		{
 			"name": "Console Time",

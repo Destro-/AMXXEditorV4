@@ -1,0 +1,77 @@
+{
+	"name": "AMXXConsole: Matrix",
+	"author": "Destro",
+	"amxxeditor":
+	{
+		"syntax_settings":
+		{
+			"font_face": "OCRAStd"
+		}
+	},
+	"globals":
+	{
+		"foreground": "#0da615",
+		"background": "#000",
+		"caret": "#0f0",
+		
+		/* Text Selection */
+		"selection": "#0f06",
+		"selection_border": "#0f06",
+		"invisibles": "#0f06", // TAB / SPACE
+	},
+
+	"rules":
+	[
+		{
+			"name": "Console Comment",
+			"scope": "console.comment",
+			"foreground": ["hsl(80, 70%, 40%)", "hsl(125, 70%, 60%)"],
+		},
+		{
+			"name": "Console Line path",
+			"scope": "console.line_path",
+			"foreground": "hsl(120, 100%, 50%)",
+		},
+		{
+			"name": "Console Line number",
+			"scope": "console.line_num",
+			"foreground": "hsl(90, 100%, 60%)"
+		},
+		{
+			"name": "Console Error",
+			"scope": "console.error",
+			"foreground": ["hsl(90, 80%, 40%)", "hsl(120, 100%, 60%)"],
+		},
+		{
+			"name": "Console Warning",
+			"scope": "console.warning",
+			"foreground": ["hsl(90, 80%, 40%)", "hsl(120, 100%, 60%)"],
+		},
+		{
+			"name": "Console Info",
+			"scope": "console.info",
+			"foreground": ["hsl(90, 80%, 40%)", "hsl(120, 100%, 60%)"]
+		},
+		{
+			"name": "Console Info Value",
+			"scope": "console.info_value",
+			"foreground": ["hsl(90, 80%, 40%)", "hsl(120, 100%, 60%)"]
+		},
+		{
+			"name": "Console Finished",
+			"scope": "console.finished",
+			"foreground": ["hsl(90, 80%, 40%)", "hsl(120, 100%, 60%)"],
+			"font_style": "bold"
+		},
+		{
+			"name": "Console Time",
+			"scope": "console.time",
+			"foreground": ["hsl(90, 80%, 40%)", "hsl(120, 100%, 60%)"]
+		},
+		{
+			"name": "Console Others",
+			"scope": "cconsole.others",
+			"foreground": ["hsl(90, 80%, 40%)", "hsl(120, 100%, 60%)"]
+		}
+	]
+}

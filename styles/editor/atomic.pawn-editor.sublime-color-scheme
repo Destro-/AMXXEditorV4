@@ -1,29 +1,57 @@
+/************************************************************
+*  Guide:
+*    https://www.sublimetext.com/docs/3/color_schemes.html
+*************************************************************/
 {
 	"name": "AMXXEditor: Atomic",
 	"author": "Destro",
+	"amxxeditor":
+	{
+		"default_popup": "BasicBlack",
+		"default_console": "SmallFonts-Terminal",
+		"syntax_settings":
+		{
+			// Custom settings...
+			//"font_face": ""
+		}
+	},
+	"variables":
+    {
+        "main-foreground": 		"#999",
+        "main-background": 		"#111111",
+    },
 	"globals":
 	{
-		"foreground": "#ccc",
-		"background": "#111111",
-		
-		"invisibles": "#444",
+		"foreground": "var(main-foreground)",
+		"background": "var(main-background)",
 		"caret": "#aaa",
 		
+		/* Text Selection */
 		"selection": "#DDF0FF33",
 		"selection_border": "#DDF0FF33",
+		"invisibles": "#444", // TAB / SPACE
 		
+		
+		/* Find Highlight */
+		"highlight": "#000",
 		"find_highlight": "#BCE617",
 		"find_highlight_foreground": "#000",
 		
+		/* Highlight active brackets */
 		"brackets_foreground": "#a00",
 		"brackets_options": "foreground",
 		"bracket_contents_foreground": "#fff",
 		"bracket_contents_options": "underline",
 		
-		"misspelling": "#f00",
+		/* Indentation guides */
+		"guide": "#bbb",
+		"stack_guide": "#ddd",
 		"active_guide": "#666",
-		"tags_options": "stippled_underline",
-		"line_highlight": "#10B2E844"
+
+		/* Line numbers */
+		"gutter": "#222", 
+		"gutter_foreground": "#aaa", 
+		"line_highlight": "#333",
 	},
 	
 	"rules":
@@ -61,19 +89,19 @@
 		},
 		{
 			"name": "Pawn Function parens",
-			"scope": "function.parens.pawn",
+			"scope": "function.parens",
 			"foreground": "#aaa",
 			"font_style": "bold"
 		},
 		
 		{
 			"name": "Pawn Define Constant",
-			"scope": "entity.name.constant.preprocessor.pawn",
+			"scope": "entity.name.constant.preprocessor",
 			"foreground": "#CF8506"
 		},
 		{
 			"name": "Pawn Include path",
-			"scope": "meta.preprocessor.include.path.pawn",
+			"scope": "meta.preprocessor.include.path",
 			"foreground": "#B4DE0D"
 		},
 		{
@@ -101,19 +129,19 @@
 		
 		{
 			"name": "Pawn Brackets",
-			"scope": "meta.brackets.pawn",
+			"scope": "meta.brackets",
 			"foreground": "#A6B5C5",
 			"font_style": "bold"
 		},
 		{
 			"name": "Pawn Parens",
-			"scope": "parens.pawn",
+			"scope": "parens",
 			"foreground": "#A6B5C5",
 			"font_style": "bold"
 		},
 		{
 			"name": "Pawn Brace",
-			"scope": "keyword.brace.pawn",
+			"scope": "keyword.brace",
 			"foreground": "#A6B5C5"
 		},
 		{
@@ -123,25 +151,19 @@
 		},
 		{
 			"name": "Pawn Function Types",
-			"scope": "storage.modifier.function.pawn",
+			"scope": "storage.modifier.function",
 			"foreground": "#3790E7",
 			"font_style": "bold"
 		},
 		{
 			"name": "Pawn Vars Types",
-			"scope": "storage.type.vars.pawn",
+			"scope": "storage.type.vars",
 			"foreground": "#A35AED"
 		},
 		{
 			"name": "Pawn Tag",
-			"scope": "storage.modifier.tag.pawn",
+			"scope": "storage.modifier.tag",
 			"foreground": "#CA96FF",
-			"font_style": "italic"
-		},
-		{
-			"name": "Pawn Constant Vars",
-			"scope": "constant.vars.pawn",
-			"foreground": "#8da1b1",
 			"font_style": "italic"
 		},
 		{
@@ -154,6 +176,22 @@
 			"name": "Pawn String Escape",
 			"scope": "string constant",
 			"foreground": "#817e25"
+		},
+		
+		{
+			"name": "Pawn Constant Vars",
+			"scope": "constant.vars",
+			"foreground": "#366d85",
+			"font_style": "italic",
+			
+			// Fix bug, reverse foreground/background
+			"background": "#00000001"
+		},
+		{
+			/* Fix selection highlight bug*/
+			"name": "Fix Constant on selection",
+			"scope": "fixselection",
+			"background": "#00000001",
 		},
 		
 		{

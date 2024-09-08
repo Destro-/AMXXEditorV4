@@ -5,34 +5,34 @@
 *    https://www.sublimetext.com/docs/3/color_schemes.html
 *************************************************************/
 {
-	"name": "AMXXStudio",
+	"name": "AMXXEditor: AMXXStudio",
 	"author": "Destro",
 	"amxxeditor":
 	{
-		"is_dark": false,
-		"default_popup": "classic",
-		"default_console": "classic",
+		"default_popup": "AMXXStudio",
+		"default_console": "AMXXStudio",
 		"syntax_settings":
 		{
 			// Custom settings...
+			//"font_face": ""
 		}
 	},
 	"variables":
     {
-        "main-color": 			"#000080",
+        "main-foreground": 		"#000080",
         "main-background": 		"#F0F0F0",
-        "selection-color": 		"#eee",
+        "selection-foreground": "#eee",
 		"selection-background": "#28e",
     },
 	"globals":
 	{
-		"foreground": "var(main-color)",
+		"foreground": "var(main-foreground)",
 		"background": "var(main-background)",
 		"caret": "#000",
 		
 		/* Text Selection */
 		"selection": "var(selection-background)",
-		"selection_foreground": "var(selection-color)",
+		"selection_foreground": "var(selection-foreground)",
 		"selection_corner_style": "square",
 		"invisibles": "#4af", // TAB / SPACE
 		
@@ -105,14 +105,16 @@
 			"name": "Pawn Constant",
 			"scope": "constant.vars",
 			"foreground": "#00b",
-			"background": "color(var(main-background) l(+ 0.3%))" // Fix bug, reverse foreground/background
+			
+			// Fix bug, reverse foreground/background
+			"background": "#00000001"
 		},
 		{
 			/* Fix selection highlight */
-			"name": "Fix Constant Selection",
+			"name": "Fix Constant on selection",
 			"scope": "fixselection",
-			"foreground": "var(selection-color)",
-			"background": "var(selection-background)",
+			"background": "#00000001", // fix bug
+			"foreground": "var(selection-foreground)", // equal at selection-foreground
 		},
 	
 		{
