@@ -1,6 +1,6 @@
 %YAML 1.2
 ---
-name: Pawn Console Result
+name: Console Output
 scope: source.sma
 contexts:
   main:

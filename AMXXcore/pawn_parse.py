@@ -1,11 +1,26 @@
+
+if __name__ == "__main__" :
+	import os
+	import sys
+	
+	sys.path.append( os.path.realpath( os.path.join( os.path.dirname(__file__), "../test" ) ))
+	
+	import analizer_test
+
+
 import re
 import time
-import sublime
-import threading
 from AMXXcore.core 			import *
 import AMXXcore.debug 		as debug
 
 
+def debug_instances_info():
+	return "Global Instances count: ParseData(%d), TagDataStruct(%d), FuncDataStruct(%d)" % (
+		ParseData.get_counter(),
+		TagDataStruct.get_counter(),
+		FuncDataStruct.get_counter()
+	)
+	
 
 class ParseData:
 	counter = 0
@@ -17,26 +32,72 @@ class ParseData:
 		self.constants 			= set()
 		self.tags				= dict()
 
-		ParseData.counter += 1
+		type(self).counter += 1
 
 	def __del__(self):
-		ParseData.counter -= 1
+		type(self).counter -= 1
 
+	@classmethod
+	def get_counter(cls):
+		return cls.counter
 
+class TagDataStruct:
+	counter = 0
+	
+	def __init__(self, name, line_offset, file_path):
+		self.name 				= name
+		self.file_path 			= file_path
+		self.line_offset 		= line_offset
+		self.line				= 0
+		self.isenum				= False
+		self.funclist			= set()
+		
+		self.update_line(0)
+		
+		type(self).counter += 1
+
+	def __del__(self):
+		type(self).counter -= 1
+		
+	def __hash__(self):
+		return hash(self.name)
+
+	def __eq__(self, other):
+		return self.name == other.name
+	
+	def update_line(self, baseline):
+		self.line = baseline + self.line_offset
+		
+	def add_func(self, func):
+		self.funclist.add(func)
+		
+	@classmethod
+	def get_counter(cls):
+		return cls.counter
+		
 class FuncDataStruct:
-	def __init__(self, type, name, parameters, return_type, file_path, start_offset, end_offset, local_vars, param_list):
-		self.type 				= type
+	counter = 0
+	
+	def __init__(self, functype, name, parameters, return_tag, return_array, file_path, start_offset, end_offset, local_vars, param_list, autocomplete):
+		self.type 				= functype
 		self.name 				= name
 		self.parameters 		= parameters
-		self.return_type 		= return_type
+		self.return_tag 		= return_tag
+		self.return_array		= return_array
 		self.file_path 			= file_path
 		self.start_offset 		= start_offset
 		self.end_offset 		= end_offset
 		self.local_vars 		= local_vars
 		self.param_list 		= param_list
+		self.autocomplete 		= autocomplete
 		
 		self.update_line(0)
+		
+		type(self).counter += 1
 
+	def __del__(self):
+		type(self).counter -= 1
+		
 	def __hash__(self):
 		return hash(self.name)
 
@@ -47,10 +108,13 @@ class FuncDataStruct:
 		self.start_line = baseline + self.start_offset
 		self.end_line 	= baseline + self.end_offset
 	
-	
+	@classmethod
+	def get_counter(cls):
+		return cls.counter
+
 class pawnParse:
 
-	PARAMS_regex 		= re.compile(r"(const\s*)?(\w*}?:)?([A-Za-z_][\w_]*|\.\.\.)(\[)?")
+	Regex_VALID_PARAM = re.compile(r"(const\s*)?(\w*}?:)?([A-Za-z_][\w_]*|\.\.\.)(\[\w*\])?")
 	DEFINE_regex 		= re.compile(r"#define[\s]+([^\s]+)[\s]+(.+)")
 	GET_CONST_regex 	= re.compile(r"(\w*:)?([A-Za-z_][\w_]*)")
 	VALID_NAME_regex 	= re.compile(r"^[A-Za-z_][\w_]*$")
@@ -62,16 +126,13 @@ class pawnParse:
 	debug.performance.init("var")
 	debug.performance.init("func")
 
-	def __init__(self, worker_thread=None):
-		self.thread = worker_thread
+	def __init__(self):
+		pass
 		
 	def process(self, pFile, node, offset_line=0):
 
 		debug.performance.start("pawnparse")
-		
-		if self.thread and self.thread.ident != threading.current_thread().ident :
-			raise Exception("Instance only work in thread %s, The current thread is %s" % ( self.thread, threading.current_thread() ))
-		
+
 		self.data				= ParseData()
 		self.file 				= pFile
 		self.node 				= node
@@ -116,7 +177,7 @@ class pawnParse:
 		debug.debug(flag_level, "(Analizer) %s: >> %s - line:(%s)" % (func, info, line))
 		
 	def info(self, func, info):
-		self.debug(debug.FLAG_INFO_PARSE, "INFO: "+func, info)
+		self.debug(debug.FLAG_INFO_PARSE, func, info)
 	def error(self, func, info):
 		self.debug(debug.FLAG_INFO_PARSE, "ERROR: "+func, info)
 		
@@ -142,6 +203,7 @@ class pawnParse:
 		if buffer is None :
 			return None
 		
+		# line by line is better than regex
 		buffer = buffer.replace('\t', ' ')
 		while '  ' in buffer :
 			buffer = buffer.replace("  ", ' ')
@@ -154,7 +216,7 @@ class pawnParse:
 		start_coment = -1
 			
 		self.region_fix_skip = self.region_multiline
-		self.calculate_regions(buffer)
+		self.check_string_regions(buffer)
 		
 		# REMOVE Coments
 		while True :
@@ -163,7 +225,7 @@ class pawnParse:
 			#{
 				pos = buffer.find("*/", pos+1)
 				if pos != -1 :
-					if not self.intersect_regions(pos) :
+					if not self.is_string_region(pos) :
 						start_valid = (pos + 2)
 						total += start_valid - start_coment
 						self.found_comment = False
@@ -174,7 +236,7 @@ class pawnParse:
 			#{
 				start_coment = buffer.find("/*", start_coment+1)
 				if start_coment != -1 :
-					if not self.intersect_regions(start_coment) :
+					if not self.is_string_region(start_coment) :
 						result += buffer[start_valid:start_coment]
 						self.found_comment = True
 				else :
@@ -190,7 +252,7 @@ class pawnParse:
 		#{
 			pos = result.find("//", pos+1)
 			if pos != -1 :
-				if not self.intersect_regions(pos+total) :
+				if not self.is_string_region(pos+total) :
 					start_coment = pos+total
 					result = result[0:pos]
 					break
@@ -206,7 +268,7 @@ class pawnParse:
 		return result
 	#}
 	
-	def calculate_regions(self, buffer):
+	def check_string_regions(self, buffer):
 	#{
 		start = -1
 		if self.region_multiline :
@@ -236,7 +298,7 @@ class pawnParse:
 			self.region_multiline = True
 	#}
 	
-	def intersect_regions(self, pos):
+	def is_string_region(self, pos):
 	#{
 		if not self.string_regions :
 			return False
@@ -284,15 +346,24 @@ class pawnParse:
 						return self.function_block_finish(localvars)
 				#}
 			
+			# SKIP #else ... #end
+			# very simple, it does not make sense to make it so complex when it is hardly ever used
+			if buffer.startswith("#else") :
+				while not buffer.startswith("#end") :
+					buffer = self.read_string()
+				buffer = self.read_string()
+			###############################################
+			
+			
 			old = self.region_multiline
 			self.region_multiline = self.region_fix_skip
-			self.calculate_regions(buffer)
+			self.check_string_regions(buffer)
 			self.region_multiline = old
 			
 			pos = buffer.find('{')
 			while pos != -1 :
 			#{
-				if not self.intersect_regions(pos) and (not pos or buffer[pos - 1] != "'") :
+				if not self.is_string_region(pos) and (not pos or buffer[pos - 1] != "'") :
 					num_brace += 1
 					
 				pos = buffer.find('{', (pos + 1))
@@ -301,7 +372,7 @@ class pawnParse:
 			pos = buffer.find('}')
 			while pos != -1 :
 			#{
-				if not self.intersect_regions(pos) and (not pos or buffer[pos - 1] != "'") :
+				if not self.is_string_region(pos) and (not pos or buffer[pos - 1] != "'") :
 					num_brace -= 1
 					
 				pos = buffer.find('}', (pos + 1))
@@ -346,16 +417,31 @@ class pawnParse:
 			self.data.constants.add(name)
 	#}
 	
-	def add_enumtag(self, tag):
+	def add_enumtag(self, tagname):
 		
-		fixname = self.GET_CONST_regex.search(tag)
+		fixname = self.GET_CONST_regex.search(tagname)
 		if fixname :
-			tag = fixname.group(2)
-
-			self.add_autocomplete(tag, tag+":", "enumtype")
-			self.data.tags[tag] = [ self.start_position - self.offset_line, 0, self.node.file_path ]
-			self.info("parse_enum", "addTag -> [%s]" % tag)
+			tagname = fixname.group(2)
+			self.add_tag(tagname)
+			self.info("parse_enum", "addTag -> [%s]" % tagname)
+			
+	def add_tag(self, tagname, funcname=None):
 		
+		if tagname in [ "Float", "_", "bool", "any" ] :
+			return
+		
+		tag = self.data.tags.get(tagname)
+		if not tag :
+			tag = TagDataStruct(tagname, self.start_position - self.offset_line, self.node.file_path)
+			self.data.tags[tagname] = tag
+		
+		if funcname :
+			tag.add_func(funcname)
+		else : # without funcname it is only called from add_enumtag(), this data is used to `goto_definition`.
+			tag.line_offset = self.start_position - self.offset_line
+			tag.file_path = self.node.file_path
+			tag.isenum = True
+
 	def add_enum(self, buffer, line):
 	#{
 		buffer = buffer.strip()
@@ -375,7 +461,7 @@ class pawnParse:
 		self.info("parse_enum", "add -> [%s]" % split[0])
 	#}
 	
-	def add_autocomplete(self, name, autocomplete, type, info=""):
+	def add_autocomplete(self, name, autocomplete, type, valuepreview=""):
 	#{
 		
 		def strcut(s, maxlen):
@@ -385,11 +471,11 @@ class pawnParse:
 		name	= strcut(name, 30).ljust(30)
 		type	= strcut(type, 10).title().rjust(10, " ")
 		
-		info	= strcut(info, 16).ljust(16, " ")
+		valuepreview	= strcut(valuepreview, 16).ljust(16, " ")
 
 		include = strcut(self.node.file_name, 25).ljust(25, " ")
 		
-		format_info = "%s\t%s  %s %s …" % (name, info, include, type)
+		format_info = "%s\t%s  %s %s …" % (name, valuepreview, include, type)
 	
 		self.data.autocomplete.append( ( format_info, autocomplete  ) )
 		
@@ -435,13 +521,21 @@ class pawnParse:
 			elif buffer.startswith("enum") :
 				self.parse_enum(buffer)
 			elif self.startswith(buffer, "const") :
-				buffer = self.parse_const(buffer)
+				self.parse_const(buffer)
 			elif self.startswith(buffer, "new") :
 				self.parse_variable(buffer, False)
 			elif self.startswith(buffer, "public") :
 				self.parse_function(buffer, globalvar.FUNC_TYPES.public)
-			elif self.startswith(buffer, "stock") :
-				self.parse_function(buffer, globalvar.FUNC_TYPES.stock)
+			elif self.startswith(buffer, "stock") : # https://github.com/evandrocoan/AmxxEditor/blob/f1b4c892b4f413fd43afd19ab267a54a121be65c/AmxxEditor.py#L1623
+				split = buffer.split('(')
+				if split[0].find(" const ") > -1:
+					buffer = buffer[6:]
+					self.parse_const(buffer)
+				elif len(split) == 1 :
+					buffer = buffer[6:]
+					self.parse_variable(buffer, False)
+				else :
+					self.parse_function(buffer, globalvar.FUNC_TYPES.stock)
 			elif self.startswith(buffer, "forward") :
 				self.parse_function(buffer, globalvar.FUNC_TYPES.forward)
 			elif self.startswith(buffer, "native") :
@@ -451,15 +545,15 @@ class pawnParse:
 		#}
 	#}
 	
-	def startswith(self, buffer, str):
+	def startswith(self, buffer, string):
 	#{
-		if not buffer.startswith(str) :
+		if not buffer.startswith(string) :
 			return False
 			
-		if len(str) == len(buffer) :
+		if len(string) == len(buffer) :
 			return True
 			
-		if buffer[len(str)] == ' ' :
+		if buffer[len(string)] == ' ' :
 			return True
 			
 		return False
@@ -526,7 +620,7 @@ class pawnParse:
 		num_bracket		= 0
 		num_paren		= 0
 		num_brace 		= 0
-		checkMissComa	= False
+		checkMissComma	= False
 		emptyValue		= True
 		multiLines 		= True
 		skipSpaces 		= False
@@ -544,7 +638,7 @@ class pawnParse:
 		#{
 			buffer = self.read_string()
 			if not buffer :
-				return self.vars_force_finish(found_line, localvars)
+				return self.vars_force_finish(found_line, localvars, "x00 - empty buffer")
 		#}
 		
 		while multiLines :
@@ -612,7 +706,7 @@ class pawnParse:
 				#{
 					if c == ',' or c == ';' :
 						if emptyValue :
-							return self.vars_force_finish(found_line, localvars)
+							return self.vars_force_finish(found_line, localvars, "x01 - empty value")
 						emptyValue = True
 						skipValue = False
 					else :
@@ -621,8 +715,8 @@ class pawnParse:
 						continue
 				#}
 				
-				if checkMissComa and c.isalpha() :
-					return self.vars_force_finish(found_line, localvars)
+				if checkMissComma and c.isalpha() :
+					return self.vars_force_finish(found_line, localvars, "x02 - missing comma")
 				
 		
 				#print("B:: varName[%s] buff[%s] c[%s] - inString %d inBrackets %d inBraces %d inParens %d skipValue %d skipSpaces %d parseName %d" % (varName, buffer, c, inString, inBrackets, inBraces, inParens, skipValue, skipSpaces, parseName ))
@@ -642,12 +736,12 @@ class pawnParse:
 								skipSpaces = True
 								classChecked = True
 							else :
-								return self.vars_force_finish(found_line, localvars)
+								return self.vars_force_finish(found_line, localvars, "x03 - using multi 'const'")
 								
 							varName = ""
 						#}
 						else :
-							checkMissComa = True
+							checkMissComma = True
 					#}
 					elif c == '=' or c == ';' or c == ',' :
 					#{
@@ -656,7 +750,7 @@ class pawnParse:
 						if varName != "" :
 						#{
 							if not self.valid_name(varName) :
-								return self.vars_force_finish(found_line, localvars)
+								return self.vars_force_finish(found_line, localvars, "x04 - invalid name2")
 							else :
 							#{
 								if local :
@@ -664,14 +758,14 @@ class pawnParse:
 									found_line = self.line_position
 								else :
 									self.add_autocomplete(varName, varName, "var")
-									self.info("parse_variable", "add1 -> [%s]" % varName)
+									self.info("parse_variable", "addA -> [%s]" % varName)
 									
-								checkMissComa = False
+								checkMissComma = False
 								classChecked = False
 							#}
 						#}
 						else :
-							return self.vars_force_finish(found_line, localvars)
+							return self.vars_force_finish(found_line, localvars, "x05 - empty varname")
 							
 						varName = ""
 						parseName = False
@@ -696,7 +790,7 @@ class pawnParse:
 							debug.performance.pause("var")
 							return localvars
 						elif not skipSpaces and not skipValue and c != ' ' and c != ',' :
-							return self.vars_force_finish(found_line, localvars)
+							return self.vars_force_finish(found_line, localvars, "x06")
 	
 				
 					if c == ',' :
@@ -711,11 +805,10 @@ class pawnParse:
 			if inString or inBrackets or inBraces or inParens or skipValue :
 				multiLines = True
 				
-			if inString and c != '\\' :
-				return self.vars_force_finish(found_line, localvars)
-				
 			#print("D:: varName[%s] buff[%s] c[%s] - inString %d inBrackets %d inBraces %d inParens %d skipValue %d skipSpaces %d parseName %d multiLines %d" % (varName, buffer, c, inString, inBrackets, inBraces, inParens, skipValue, skipSpaces, parseName, multiLines ))
 			
+			if inString and c != '\\' :
+				return self.vars_force_finish(found_line, localvars, "x07 - bad string finish")
 
 			if c != ',' :
 			#{
@@ -729,14 +822,14 @@ class pawnParse:
 							skipSpaces = True
 							classChecked = True
 						else :
-							return self.vars_force_finish(found_line, localvars)
+							return self.vars_force_finish(found_line, localvars, "x08 - using multi 'const'")
 								
 						varName = ""
 						parseName = True
 						multiLines = True
 					#}
 					elif not self.valid_name(varName) :
-						return self.vars_force_finish(found_line, localvars)
+						return self.vars_force_finish(found_line, localvars, "x09 - invalid name")
 					else :
 					#{
 						if local :
@@ -744,9 +837,9 @@ class pawnParse:
 							found_line = self.line_position
 						else :
 							self.add_autocomplete(varName, varName, "var")
-							self.info("parse_variable", "add2 -> [%s]" % varName)
+							self.info("parse_variable", "addB -> [%s]" % varName)
 							
-						checkMissComa = False
+						checkMissComma = False
 						classChecked = False
 						parseName = False
 					#}
@@ -765,10 +858,13 @@ class pawnParse:
 				debug.performance.pause("var")
 				return localvars
 				
-			if (skipValue or inBrackets or inBraces or inParens) :
+			if inString :
+				continue
+				
+			if skipValue or inBrackets or inBraces or inParens :
 				if buffer[0] == '#' or buffer.split(' ', 1)[0] in self.INVALID_NAMES or buffer.split('(', 1)[0] in self.INVALID_NAMES :
 					self.restore_buffer = buffer
-					return self.vars_force_finish(found_line, localvars)
+					return self.vars_force_finish(found_line, localvars, "x0A - detected bad brace clasp")
 			
 			if not multiLines :
 				if buffer[0] == '=' or  buffer[0] == ',' or  buffer[0] == '[' or  buffer[0] == '{' :
@@ -783,7 +879,7 @@ class pawnParse:
 					self.restore_buffer = buffer
 			elif not inBraces and buffer[0] == '}' :
 					self.restore_buffer = buffer
-					return self.vars_force_finish(found_line, localvars)
+					return self.vars_force_finish(found_line, localvars, "x0B - detected a block-end brace")
 				
 			#print("E:: varName[%s] buff[%s] c[%s] - inString %d inBrackets %d inBraces %d inParens %d skipValue %d skipSpaces %d parseName %d multiLines %d" % (varName, buffer, c, inString, inBrackets, inBraces, inParens, skipValue, skipSpaces, parseName, multiLines ))
 			
@@ -794,9 +890,9 @@ class pawnParse:
 		return localvars
 	#}
 	
-	def vars_force_finish(self, found_line, localvars):
+	def vars_force_finish(self, found_line, localvars, code=""):
 		self.mark_error(found_line)
-		self.error("parse_vars", "invalid sintax")
+		self.error("parse_vars", "invalid sintax - code: " + code)
 		
 		debug.performance.pause("var")
 		
@@ -918,9 +1014,9 @@ class pawnParse:
 		debug.performance.pause("func")
 	#}
 	
-	def parse_function_params(self, buffer, func, type):
+	def parse_function_params(self, buffer, func, functype):
 	#{
-		if type == globalvar.FUNC_TYPES.function :
+		if functype == globalvar.FUNC_TYPES.function :
 			remaining = func
 		else :
 			split = func.split(' ', 1)
@@ -932,14 +1028,20 @@ class pawnParse:
 			return
 			
 		remaining = split[1]
-		returntype = ''
+		return_tag = ''
+		return_array = ''
 		funcname_and_return = split[0].strip()
 		split_funcname_and_return = funcname_and_return.split(':')
 		if len(split_funcname_and_return) > 1 :
 			funcname = split_funcname_and_return[1].strip()
-			returntype = split_funcname_and_return[0].strip()
+			return_tag = split_funcname_and_return[0].strip()
 		else :
 			funcname = split_funcname_and_return[0].strip()
+			
+		if funcname[0] == '[' :
+			bracket_end = funcname.find(']') + 1
+			return_array = funcname[0:bracket_end]
+			funcname = funcname[bracket_end:].strip()
 			
 		# Fix float.inc
 		if funcname.startswith("operator") :
@@ -947,46 +1049,65 @@ class pawnParse:
 			return
 			
 		if not self.valid_name(funcname) :
-			self.error("parse_function_params", "invalid name: [ %s ]  -  buffer: [ %s ]" % (funcname, buffer))
+			self.error("parse_function_params", "invalid name: [%s]  -  buffer: [%s]" % (funcname, buffer))
 			return
 	
-		if type == -1 : # Deprecated !
+		if functype == -1 : # Deprecated !
 			self.skip_function_block(buffer)
-		else :
-		#{
-			remaining = remaining.strip()
-			if remaining == ')' :
-				params = []
-			else :
-				params = remaining[:-1].split(',')
+			return 
+	
+		param_localvar 	= list()
+		param_tags 		= set()
+		autocomplete 	= funcname + '('
+	
+		full_parameters = remaining.strip()[:-1]
+
+		if full_parameters :
+		#{	
+			params = remaining[:-1].split(',')
 				
 			num = 1
 			skip = False
-			
-			parameters 			= [ ]
-			full_parameters 	= func[func.find("(")+1:-1]
-			autocomplete 		= funcname + '('
-			
-			tags = set()
 			inTags = False
 			
+			valid_params = [ ]
+
 			for param in params :
-				param = param.strip()
+			#{
+				param = param.strip("& \t")
 				
 				if inTags :
 					pos = param.find('}')
 					if pos != -1 :
 						inTags = False
-						tags.add(param[0:pos])
+						param_tags.add(param[0:pos])
 						param = param[pos+2:]
 					else :
-						tags.add(param)
+						param_tags.add(param)
 						continue
 				elif param.startswith('{') :
 					inTags = True
-					tags.add(param[1:])
+					param_tags.add(param[1:])
 					continue
+
+				result = self.Regex_VALID_PARAM.match(param)
+				if not result :
+					continue
+					
+				valid_param = result.group(3)
+				if result.group(4) :
+					param_localvar += [ valid_param + "[]" ]
+					valid_param += result.group(4)
+				else :
+					param_localvar += [ valid_param ]
 				
+				tagname = result.group(2)
+				if tagname :
+					tagname = tagname.strip(" }:")
+					if self.valid_name(tagname) :
+						param_tags.add(tagname)
+						valid_param = tagname + ":" + valid_param
+						
 				if cfg.ac_add_parameters and not skip:
 	
 					if cfg.ac_add_parameters == 1 and "=" in param :
@@ -994,36 +1115,34 @@ class pawnParse:
 					else :
 						if num > 1 :
 							autocomplete += ', '
-						autocomplete += '${%d:%s}' % (num, param)
+						autocomplete += '${%d:%s}' % (num, valid_param)
 						num += 1
-
-				result = self.PARAMS_regex.match(param)
-				if result :
-					if result.group(4) :
-						parameters += [ result.group(3) + "[]" ]
-					else :
-						parameters += [ result.group(3) ]
-					
-			#print("tags:", tags)
-			# Regex tags: ((\{[^}]*}:)|\w*:)
-			
-			autocomplete += ')'
-			
-			# Find local vars
-			endline = startline = self.start_position
-
-			localvars = set()
-			
-			if type <= globalvar.FUNC_TYPES.stock :
-				localvars.update(parameters)
-				localvars.update(self.skip_function_block(buffer))
-				endline = self.line_position
-				
-			self.add_autocomplete(funcname, autocomplete, globalvar.FUNC_TYPES[type])
-			self.info("parse_function_params", "add -> [%s]" % func)
-
-			self.data.funclist.add( FuncDataStruct(type, funcname, full_parameters, returntype, self.node.file_path, startline - self.offset_line, endline - self.offset_line, localvars, parameters) )
+			#}
 		#}
+		autocomplete += ')'
+			
+		# Find local vars
+		endline = startline = self.start_position
+
+		localvars = set()
+			
+		if functype <= globalvar.FUNC_TYPES.stock :
+			localvars.update(param_localvar)
+			localvars.update(self.skip_function_block(buffer))
+			endline = self.line_position
+				
+		self.add_autocomplete(funcname, autocomplete, globalvar.FUNC_TYPES[functype])
+		self.info("parse_function_params", "add -> [%s]" % func)
+
+		objFuncData = FuncDataStruct(functype, funcname, full_parameters, return_tag, return_array, self.node.file_path, startline - self.offset_line, endline - self.offset_line, localvars, param_localvar, autocomplete)
+		
+		if return_tag :
+			self.add_tag(return_tag, objFuncData)
+			
+		for tagname in param_tags :
+			self.add_tag(tagname, objFuncData)
+
+		self.data.funclist.add(objFuncData)
 	#}
 #}
 

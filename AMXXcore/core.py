@@ -18,7 +18,7 @@ class cfg:
 	settings = None
 	on_change_callback = None
 	silent = False
-	
+	view_debug_mode = False
 	
 	# Support reloading module
 	def init(on_change_callback=None):

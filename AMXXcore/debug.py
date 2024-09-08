@@ -75,18 +75,21 @@ class performance:
 # "a"  - Errors messages.
 # "b"  - Warnings messages.
 # "c"  - Info messages.
-# "d"  - Info Analyzer parser.
-# "e"  - Sublime EventListener.
-# "f"  - Show scope on hover (tool for syntax  dev).
+# "d"  - Dev messages.
+# "e"  - Dev PawnParser.
+# "f"  - Sublime EventListener.
+# "g"  - Show scope on hover (tool for syntax dev).
+# "z"  - Enable ViewDebugMode, show sections region (the code in view is parsed into small sections).
 # "*"  - All debugging levels at the same time.
 	
 # 'CHAR in STRING' is most faster that bitwise (and most easy)
 FLAG_ERROR		= "a"
 FLAG_WARNING	= "b"
 FLAG_INFO		= "c"
-FLAG_INFO_PARSE	= "d"
-FLAG_ST3_EVENT	= "e"
-FLAG_SHOW_SCOPE	= "f"
+FLAG_INFO_DEV	= "d"
+FLAG_INFO_PARSE	= "e"
+FLAG_ST3_EVENT	= "f"
+FLAG_SHOW_SCOPE	= "g"
 FLAG_ALL		= "*"
 
 
@@ -113,7 +116,10 @@ def warning(*args):
 	
 def info(*args):
 	debug(FLAG_INFO, "INFO:", *args)
-		
+
+def dev(*args):
+	debug(FLAG_INFO_DEV, "DEV:", *args)
+
 
 #:: Simple LOG
 log_file = None

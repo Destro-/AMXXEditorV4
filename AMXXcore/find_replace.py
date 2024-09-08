@@ -244,7 +244,7 @@ class AmxxFindReplace:
 
 		visited += [ node.file_path ]
 
-		if includedir or cfg.include_dir != os.path.dirname(node.file_path) :
+		if includedir or node.readonly == False :
 			includes += [ node.file_path ]
 
 		for child in node.children :

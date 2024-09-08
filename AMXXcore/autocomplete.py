@@ -13,6 +13,7 @@ class ac:
 		ac.cache_emit			= ac.generate_emit_list()
 		ac.cache_preprocessor 	= ac.generate_preprocessors_list()
 		ac.cache_snippets 		= ac.generate_snippets_list()
+		ac.cache_keywords		= ac.generate_keywords_list()
 
 	####################################################
 
@@ -22,70 +23,70 @@ class ac:
 	####################################################
 	def generate_preprocessors_list():
 	
-		list = [ ]
+		items = [ ]
 		
 		def add(value):
-			if value.endswith(" ") : # Fix bug
+			"""if value.endswith(" ") : # Fix bug
 				list.append(( "#" + value + "\t preprocessor", value ))
 			else :
-				list.append(( "#" + value + "\t preprocessor", "#" + value )) 
+			"""
+			items.append(( value + "\t preprocessor", value )) 
 			
 			
-		list.append(( "#include\t preprocessor", 		"#include <${1}>" ))
-		list.append(( "#tryinclude\t preprocessor", 	"#tryinclude <${1}>" ))
+		items.append(( "#include\t preprocessor", 		"#include <${1}>" ))
+		items.append(( "#tryinclude\t preprocessor", 	"#tryinclude <${1}>" ))
 		
-		add("define ")
-		add("if ")
-		add("elseif ")
-		add("else")
-		add("endif")
-		add("endinput")
-		add("undef ")
-		add("endscript")
-		add("error")
-		add("file ")
-		add("line ")
-		add("emit ")
-		add("assert ")
+		add("#define ")
+		add("#if ")
+		add("#else")
+		add("#endif")
+		add("#endinput")
+		add("#undef ")
+		add("#endscript")
+		add("#error")
+		add("#file ")
+		add("#line ")
+		add("#emit ")
+		add("#assert ")
 		
-		add("pragma amxlimit ")
-		add("pragma codepage ")
-		add("pragma compress ")
-		add("pragma ctrlchar ")
-		add("pragma dynamic ")
-		add("pragma library ")
-		add("pragma reqlib ")
-		add("pragma reqclass ")
-		add("pragma loadlib ")
-		add("pragma explib ")
-		add("pragma expclass ")
-		add("pragma defclasslib ")
-		add("pragma pack ")
-		add("pragma rational ")
-		add("pragma semicolon ")
-		add("pragma tabsize ")
-		add("pragma align")
-		add("pragma unused ")
+		add("#pragma amxlimit ")
+		add("#pragma codepage ")
+		add("#pragma compress ")
+		add("#pragma ctrlchar ")
+		add("#pragma dynamic ")
+		add("#pragma library ")
+		add("#pragma reqlib ")
+		add("#pragma reqclass ")
+		add("#pragma loadlib ")
+		add("#pragma explib ")
+		add("#pragma expclass ")
+		add("#pragma defclasslib ")
+		add("#pragma pack ")
+		add("#pragma rational ")
+		add("#pragma semicolon ")
+		add("#pragma tabsize ")
+		add("#pragma align")
+		add("#pragma unused ")
 		
-		return ac.sorted_nicely(list)
+		return ac.sorted_nicely(items)
 		
 	def generate_emit_list():
 	
-		list = [ ]
+		items = [ ]
 			
 		def add(opcode, valuetype, info):
 		
 			if cfg.ac_emit_info :
 				if valuetype :
-					list.append(( opcode + "\t emit opcode", opcode + " ${1:<" + valuetype + ">}\t\t// " + info))
+					items.append(( opcode + "\t emit opcode", opcode + " ${1:<" + valuetype + ">}\t\t${2:// " + info + "}"))
 				else:
-					list.append(( opcode + "\t emit opcode", opcode + "\t\t\t// " + info))
+					items.append(( opcode + "\t emit opcode", opcode + "\t\t\t${1:// " + info + "}"))
 					
 			else :
 				if valuetype :
-					list.append(( opcode + "\t emit opcode", opcode + " ${1:<" + valuetype + ">}"))
+					items.append(( opcode + "\t emit opcode", opcode + " ${1:<" + valuetype + ">}"))
 				else:
-					list.append(( opcode + "\t emit opcode", opcode))
+					items.append(( opcode + "\t emit opcode", opcode))
 		
 		
 		add("LOAD.pri", 		"address", 		"PRI   =  [address]")
@@ -226,14 +227,14 @@ class ac:
 		add("SYMTAG", 			"value", 		"symbol tag")
 		add("BREAK", 			"", 			"invokes  optional debugger")
 
-		return list
+		return items
 		
 	def generate_snippets_list():
 	
-		list = [ ]
+		items = [ ]
 				
 		def add(name, insert):
-			list.append(( name + "\t snippet", insert ))
+			items.append(( name + "\t snippet", insert ))
 				
 
 		add("if-else()", 		"if(${1})\n{\n\t${2}\n}\nelse {\n\t${3}\n}")
@@ -248,21 +249,21 @@ class ac:
 		add("enum _:", 			"enum _:${1:MyEnumSizeof}\n{\n\t${2:item1}=0,\n\t${3:item2}\n}")
 		add("new-const", 		"new const ")
 
-		return ac.sorted_nicely(list)
+		return ac.sorted_nicely(items)
 		
 		
 	####################################################
 	# Generate dynamic list:
 	####################################################
-	def generate_keywords_list(mode):
+	def generate_keywords_list():
 	
-		list = [ ]
+		items = [ ]
 				
 		def add(value, allowparens=False):
-			if mode == 2 and allowparens :
-				list.append(( value + "\t keyword", value + "(${1})" ))
+			if cfg.ac_keywords == 2 and allowparens :
+				items.append(( value + "\t keyword", value + "(${1})" ))
 			else :
-				list.append(( value + "\t keyword", value ))
+				items.append(( value + "\t keyword", value ))
 				
 		add("if", True)
 		add("else")
@@ -286,11 +287,11 @@ class ac:
 		add("const ")
 		add("enum")
 		
-		return list
+		return ac.sorted_nicely(items)
 		
 	def generate_includes_list(includes_list, text):
 	
-		list = [ ]
+		items = [ ]
 		op = "<"
 		cl = ">"
 		
@@ -300,34 +301,34 @@ class ac:
 			cl = ""
 			
 		for inc in includes_list :
-			list.append(( inc + "\t inc", op + inc + cl ))
+			items.append(( inc + "\t inc", op + inc + cl ))
 			
-		return list
+		return items
 		
 	def generate_local_vars_list(node, line):
 	
-		list = [ ]
+		items = [ ]
 		
 		for func in node.funclist :
 			if func.start_line <= line and line <= func.end_line :
 				for var in func.local_vars :
-					list.append(( var + "\t local var", var ))
+					items.append(( var + "\t local var", var ))
 
-				return list
+				return items
 
-		return list
+		return items
 		
 	def generate_autocomplete_list(node):
 	
-		what = node.file_name+" - "
+		#what = node.file_name+" - "
 		
-		def remove_filename(value, this_node):
+		def remove_filename(value, this_node, objA, objB):
 			#if node.file_name == this_node.file_name :
 			#	return (value[0].replace(what, ""), value[1])
 
 			return value
 		
-		return node.generate_list("autocomplete", list, remove_filename)
+		return ac.sorted_nicely(node.generate_list("autocomplete", list, remove_filename))
 
 		
 	def block_on_varname(text):
@@ -392,11 +393,22 @@ class ac:
 		return blockState
 	#}
 	
+	def format_autocomplete(node, name, infotype, value_preview=""):
+
+		def strcut(s, maxlen):
+			return s[:maxlen-1] + "‥" if len(s) >= maxlen else s
+		
+		name			= strcut(name, 30).ljust(30)
+		infotype		= strcut(infotype, 10).title().rjust(10, " ")
+		value_preview	= strcut(value_preview, 16).ljust(16, " ")
+		include 		= strcut(node.file_name, 25).ljust(25, " ")
+		
+		return "%s\t%s  %s %s …" % (name, value_preview, include, infotype)
+
 	####################################################
-	
 	"""
 	Another code
-	def sorted_nicely(list):
+	def sorted_nicely(items):
 		def alphanum_key(key):
 			r = []
 
@@ -408,7 +420,7 @@ class ac:
 					
 			return r
 		
-		return sorted(list, key=alphanum_key)
+		return sorted(items, key=alphanum_key)
 	"""
 
 	def sorted_nicely(l):

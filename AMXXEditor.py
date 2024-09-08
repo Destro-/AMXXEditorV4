@@ -1,4 +1,4 @@
-# Sublime AMXXPawn-Editor 4.2 by Destro
+# Sublime AMXXPawn-Editor 4.3 by Destro
 
 import os
 import re
@@ -8,6 +8,7 @@ import webbrowser
 import time
 import urllib.request
 import threading
+
 
 BASE_PATH = os.path.dirname(__file__)
 
@@ -25,11 +26,25 @@ from pathtools.path 		import list_files
 from AMXXcore.core 			import *
 from AMXXcore.autocomplete 	import *
 from AMXXcore.find_replace 	import *
-from AMXXcore.pawn_parse 	import pawnParse
+from AMXXcore.pawn_parse 	import *
 import AMXXcore.tooltip 	as tooltip
 import AMXXcore.debug 		as debug
 
+"""
+import string
+import random
 
+def get_random_string(length):
+	letters = string.ascii_lowercase
+	result_str = ''.join(random.choice(letters) for i in range(length))
+	return result_str
+	
+class PopupListener(sublime_plugin.EventListener):
+
+	def on_selection_modified(self, view):
+		view.show_popup(get_random_string(20), location=0)
+"""
+   
 # import multiprocessing
 #        return multiprocessing.cpu_count()
 
@@ -37,11 +52,12 @@ import AMXXcore.debug 		as debug
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Global VARs & Initialize
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-globalvar.EDITOR_VERSION 		= "4.2"
-globalvar.PACKAGE_NAME			= "AMXXEditorV4"
+globalvar.EDITOR_VERSION 		= "4.3"
+globalvar.PACKAGE_NAME			= "PawnAMXXEditor"
 globalvar.FUNC_TYPES 			= Enum( [ "function", "public", "stock", "forward", "native" ] )
 
 globalvar.nodes 				= dict()
+globalvar.include_dirs			= list()
 
 g_style_popup 		= { "list": [ ], "path": { }, "active": "" }
 g_style_editor 		= { "list": [ ], "path": { }, "active": "" }
@@ -82,13 +98,13 @@ def plugin_loaded() :
 	
 	# Code Analyzer/Parse
 	globalvar.analyzer 				= CodeAnalyzer()
-	globalvar.parse 				= pawnParse(globalvar.analyzerQueue)
+	globalvar.parse 				= pawnParse()
 				
 	# Config
 	cfg.init(on_config_change)
 	
 	# NOTA: Mejorar, asegurarse de comprobar el tiempo entre cada comprobacion
-	sublime.set_timeout_async(check_update, 2500)
+	#sublime.set_timeout_async(check_update, 2500)
 
 def plugin_unloaded() :
 
@@ -102,9 +118,6 @@ def plugin_unloaded() :
 	
 def on_config_change() :
 
-	# Debug
-	cfg.debug_flags = debug.check_flags(cfg.get('debug_flags', ""))
-	
 	# Profiles
 	cfg.default_profile		= cfg.get('default_profile', "")
 	cfg.profiles 			= cfg.get("build_profiles", None)
@@ -113,34 +126,38 @@ def on_config_change() :
 		print("ERROR: if not cfg.profiles")
 		return
 		
-	cfg.profiles_list = list(cfg.profiles.keys())
-
-	for profile_name in cfg.profiles_list :
+	globalvar.profiles_list = list(cfg.profiles.keys())
+	globalvar.include_dirs.clear()
+	
+	for profile_name in globalvar.profiles_list :
 		profile = cfg.profiles[profile_name]
-		if not validate_profile(profile_name, profile) :
-			return
-			
+		
 		# Fix values
 		profile['output_dir'] 		= util.cfg_get_path(profile, 'output_dir')
-		profile['includes_dir'] 	= util.cfg_get_path(profile, 'includes_dir')
+		profile['include_dir'] 		= util.cfg_get_path(profile, 'include_dir')
 		profile['amxxpc_path'] 		= util.cfg_get_path(profile, 'amxxpc_path')
+		
+		if not validate_profile(profile_name, profile) :
+			return
 		
 		if 'amxxpc_debug' in profile :
 			profile['amxxpc_debug'] = util.clamp(int(profile['amxxpc_debug']), 0, 2)
 		else :
 			profile['amxxpc_debug'] = 2
+			
+		globalvar.include_dirs.append(profile['include_dir'])
 
-	if not cfg.default_profile in cfg.profiles_list :
-		cfg.default_profile = cfg.profiles_list[0]
-		
+	if not cfg.default_profile in globalvar.profiles_list :
+		cfg.default_profile = globalvar.profiles_list[0]
+
 
 	# Cache settings
 	cfg.enable_tooltip 			= cfg.get('enable_tooltip', True)
 	cfg.enable_buildversion 	= cfg.get('enable_buildversion', True)
-	cfg.enable_check_invalid 	= cfg.get('enable_check_invalid', True)
-	cfg.enable_dynamic_highlight = cfg.get('enable_dynamic_highlight', True)
+	cfg.enable_marking_error 	= cfg.get('enable_marking_error', True)
+	cfg.enable_const_highlight 	= cfg.get('enable_const_highlight', True)
 	
-	cfg.popup_style_mode		= cfg.get('popup_style_mode', 0)
+	cfg.style_popup_mode		= cfg.get('style_popup_mode', 0)
 	
 	cfg.ac_enable 				= cfg.get('ac_enable', True)
 	cfg.ac_keywords 			= cfg.get('ac_keywords', 2)
@@ -152,7 +169,8 @@ def on_config_change() :
 	cfg.ac_explicit_mode 		= cfg.get('ac_explicit_mode', False)
 	cfg.ac_add_parameters		= cfg.get('ac_add_parameters', 1)
 	
-	cfg.include_dir 			= cfg.profiles[cfg.default_profile]['includes_dir']
+	cfg.debug_flags 			= debug.check_flags(cfg.get('debug_flags', ""))
+	cfg.include_dir 			= cfg.profiles[cfg.default_profile]['include_dir']
 	
 	# Update Live reflesh delay.
 	globalvar.analyzerQueue.delay	= util.clamp(float(cfg.get('live_refresh_delay', 1.5)), 0.5, 5.0)
@@ -181,20 +199,25 @@ def on_config_change() :
 	update_console_style()
 	update_popup_style()
 	
-	globalvar.autoPopupCSS = ""
+	
+	if cfg.style_popup_mode == 1:
+		globalvar.cacheSyntaxCSS = self.generate_highlightCSS(view)
+	else :
+		globalvar.cacheSyntaxCSS = ''
+	
 	
 	globalvar.watchDog.unschedule_all()
 
-	for profile_name in cfg.profiles_list :
+	for profile_name in globalvar.profiles_list :
 		if list_includes(cfg.profiles[profile_name]):
-			globalvar.watchDog.schedule(globalvar.incFileEventHandler, cfg.profiles[profile_name]['includes_dir'], True)
+			globalvar.watchDog.schedule(globalvar.incFileEventHandler, cfg.profiles[profile_name]['include_dir'], True)
 
 	# Popup style autoload on changed
 	path = os.path.join(sublime.packages_path(), globalvar.PACKAGE_NAME, "styles", "popup")
 	if os.path.isdir(path) :
 		globalvar.watchDog.schedule(globalvar.popupFileEventHandler, path)
 	
-	# Autocomplete.Init()
+	# Autocompletion keyword cache
 	ac.init()
 	
 
@@ -203,14 +226,14 @@ def list_includes(profile):
 	bad_files = 0
 	profile['includes_list'] = list()
 	
-	for inc in list_files(profile['includes_dir']) :
+	for inc in list_files(profile['include_dir']) :
 		if inc.endswith(".inc") :
-			inc = inc.replace(profile['includes_dir'], "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
+			inc = inc.replace(profile['include_dir'], "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
 			profile['includes_list'].append(inc)
-		else : # big recursive loop in root folder  (example: C:\\ )
+		else : # big recursive loop in root folder  (example: 'C:\\')
 			bad_files += 1
 			if bad_files >= 50 :
-				debug.warning("Big recursive loop, include_dir: \"%s\"" % profile['includes_dir'])
+				debug.warning("Big recursive loop, include_dir: \"%s\"" % profile['include_dir'])
 				return False
 				
 	profile['includes_list'] = ac.sorted_nicely(profile['includes_list'])
@@ -223,9 +246,10 @@ def update_editor_style():
 		newValue = g_style_editor['path'][g_style_editor['active']]
 		
 	s = CustomSettings("AMXX-Pawn.sublime-settings", True)
-	s.set('color_scheme', newValue)
-	s.set('show_errors_inline', False)
-	s.set('extensions', [ "sma", "inc" ])
+	s.set("color_scheme", newValue)
+	s.set("show_errors_inline", False)
+	s.set("word_separators", "./\\()\"'-:,.;<>~!$%^&*|+=[]{}`~?")
+	s.set("extensions", [ "sma", "inc" ])
 	
 	if newValue :
 		data = util.safe_json_load(newValue).get("amxxeditor")
@@ -254,8 +278,13 @@ def update_console_style():
 	
 def update_popup_style():
 	globalvar.cachePopupCSS = sublime.load_resource(g_style_popup['path'][g_style_popup['active']])
-	globalvar.cachePopupCSS = globalvar.cachePopupCSS.replace("\r", "") # Fix
+	globalvar.cachePopupCSS = globalvar.cachePopupCSS.replace('\r', '') # Fix endline
 	
+	# Remove comments
+	globalvar.cachePopupCSS = re.sub(r'/\*.*?\*/', '', globalvar.cachePopupCSS, 0, re.DOTALL)
+	globalvar.cachePopupCSS = globalvar.cachePopupCSS.replace('\n\n', '\n')
+
+
 def list_styles(style, endext):
 	for file in sublime.find_resources("*" + endext) :
 		name = os.path.basename(file).replace(endext, "")
@@ -274,12 +303,12 @@ def validate_profile(profile_name, profile) :
 
 	error = "Invalid profile configuration :  %s\n\n" % profile_name
 
-	if not profile or not isinstance(profile, dict) or profile.get('amxxpc_path') == None or profile.get('includes_dir') == None or profile.get('output_dir') == None :
+	if not profile or not isinstance(profile, dict) or profile.get('amxxpc_path') == None or profile.get('include_dir') == None or profile.get('output_dir') == None :
 		error += "Empty Value\n"
 	elif not os.path.isfile(util.cfg_get_path(profile, 'amxxpc_path')) :
 		error += "amxxpc_directory :  File does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'amxxpc_path')
-	elif not os.path.isdir(util.cfg_get_path(profile, 'includes_dir')) :
-		error += "include_directory :  Directory does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'includes_dir')
+	elif not os.path.isdir(util.cfg_get_path(profile, 'include_dir')) :
+		error += "include_directory :  Directory does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'include_dir')
 	elif profile.get('output_dir') != "${file_path}" and not os.path.isdir(util.cfg_get_path(profile, 'output_dir')) :
 		error += "output_dir :  Directory does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'output_dir')
 	else :
@@ -315,23 +344,23 @@ def run_edit_settings() :
 class AmxxProfileCommand(sublime_plugin.ApplicationCommand):
 
 	def run(self, index) :
-		if index >= len(cfg.profiles_list) :
+		if index >= len(globalvar.profiles_list) :
 			return
 
-		cfg.default_profile = cfg.profiles_list[index]
+		cfg.default_profile = globalvar.profiles_list[index]
 		
 		cfg.set("default_profile", cfg.default_profile)
 		cfg.save()
 
 	def is_visible(self, index) :
-		return (index < len(cfg.profiles_list))
+		return (index < len(globalvar.profiles_list))
 		
 	def is_checked(self, index) :
-		return (index < len(cfg.profiles_list) and cfg.profiles_list[index] == cfg.default_profile)
+		return (index < len(globalvar.profiles_list) and globalvar.profiles_list[index] == cfg.default_profile)
 
 	def description(self, index) :
-		if index < len(cfg.profiles_list) :
-			return cfg.profiles_list[index]
+		if index < len(globalvar.profiles_list) :
+			return globalvar.profiles_list[index]
 		return ""
 		
 class AmxxEditorStyleCommand(sublime_plugin.ApplicationCommand):
@@ -501,6 +530,26 @@ def check_update(bycommand=0) :
 #}
 
 
+# https://codereview.stackexchange.com/questions/185509/sublime-text-plugin-to-modify-text-before-its-pasted
+class AmxxEscapeAndPasteCommand(sublime_plugin.TextCommand):
+	def run(self, edit):
+		# Get the clipboard text
+		originalText = textToPaste = sublime.get_clipboard() 
+		
+		if not '^n' in textToPaste and not '^"' in textToPaste and not '^^' in textToPaste :
+			textToPaste = textToPaste.replace('^', '^^')
+			textToPaste = textToPaste.replace('"', '^"')
+			
+		textToPaste = textToPaste.replace('\r', '')
+		textToPaste = textToPaste.replace('\n', '^n')
+		textToPaste = textToPaste.replace('\t', '^t')
+
+		# Place the text back into the clipboard and paste in place
+		sublime.set_clipboard(textToPaste)
+		self.view.run_command("paste")
+		
+		# Restore the original text to the clipboard
+		sublime.set_clipboard(originalText)
 
 class FindReplaceInputHandler(sublime_plugin.TextInputHandler):
 	def __init__(self, core):
@@ -545,7 +594,7 @@ class FindReplaceInputHandler(sublime_plugin.TextInputHandler):
 			"""
 		elif not text :
 			body = """
-			<b>ESPECIAL WORDs:</b>
+			<b>Keywords:</b>
 			<br>
 			re::
 			<br>
@@ -848,7 +897,8 @@ class AmxxBuildVerCommand(sublime_plugin.TextCommand):
 			beta = ""
 		
 		self.view.replace(edit, region, result.group(1) + str(build) + beta + '\"')
-				
+			
+
 class AboutInputHandler(sublime_plugin.ListInputHandler):
 	def preview(self, text):
 		content = """
@@ -892,6 +942,7 @@ sasske <i>(white color scheme)</i><br>
 addons_zz <i>(npp color scheme)</i><br>
 KliPPy <i>(build version)</i><br>
 Mistrick <i>(mistrick color scheme)</i><br>
+Matt <i>(StringEscapeAndPaste)</i><br>
 
 <div style="background-color: #f00; position: relative; left: 360px; top: -65px; height: 0px; width: 0px;">
 <img src="file://C:/Users/Emanue/Desktop 4/subime pawn logo/logo_pawneditor.png">
@@ -952,6 +1003,8 @@ class HolaMundo(sublime_plugin.ViewEventListener):
 """
 class SublimeEvents(sublime_plugin.EventListener):
 
+	originalText = ""
+	
 	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 	#:: Util Functions :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1011,9 +1064,12 @@ class SublimeEvents(sublime_plugin.EventListener):
 		if not is_amxmodx_view(view):
 			return
 	
-		if not get_view_node(view) :
+		node = get_view_node(view)
+		if node :
+			node.organize_and_cache()
+		else :
 			self.add_to_queue(view)
-		
+
 	def on_post_save(self, view):
 		self.debug_event("on_post_save() -> view:[%d] - file:[%s]" % (view.id(), view.file_name()))
 		self.add_to_queue(view)
@@ -1021,6 +1077,11 @@ class SublimeEvents(sublime_plugin.EventListener):
 	def on_load(self, view):
 		self.debug_event("on_load() -> view:[%d] - file:[%s]" % (view.id(), view.file_name()))
 		self.add_to_queue(view)
+		
+		"""
+		>>> sublime.active_window().active_view().settings().erase('syntax')
+		>>> sublime.active_window().active_view().settings().get('syntax')
+		"""
 	
 	# Delayed queue
 	def on_modified(self, view):
@@ -1035,8 +1096,51 @@ class SublimeEvents(sublime_plugin.EventListener):
 		clear_error_lines(view)
 
 	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-	#:: Auto Build-Version :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:: Auto build version - Auto Tag - Auto string escape and paste :::::::::::::::::::::::::::::::::::::
 	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	def on_text_command(self, view, cmd, args):
+		
+		self.debug_event("on_text_command() -> cmd:[%s] - arg:[%s]" % (cmd, args))
+		#print("on_text_command() -> cmd:[%s] - arg:[%s]" % (cmd, args))
+
+		if not is_amxmodx_view(view) :
+			return
+			
+		if cmd != "paste" :
+			return
+			
+		sel = view.sel()
+		if len(sel) != 1 : # skip multi-selections
+			return
+			
+		scope = view.scope_name(sel[0].begin())
+		
+		if not "string.quoted.double.pawn" in scope :
+			return
+		
+		self.originalText = textToPaste = sublime.get_clipboard() 
+		
+		if not '^n' in textToPaste and not '^"' in textToPaste and not '^^' in textToPaste :
+			textToPaste = textToPaste.replace('^', '^^')
+			textToPaste = textToPaste.replace('"', '^"')
+			
+		textToPaste = textToPaste.replace('\r', '')
+		textToPaste = textToPaste.replace('\n', '^n')
+		textToPaste = textToPaste.replace('\t', '^t')
+
+		# Place the text back into the clipboard and paste in place
+		sublime.set_clipboard(textToPaste)
+		
+	def on_post_text_command(self, view, cmd, args):
+		
+		if cmd != "paste" or not self.originalText :
+			return
+			
+		# Restore the original text to the clipboard
+		sublime.set_clipboard(self.originalText)
+		
+		self.originalText = ""
+	
 	def on_window_command(self, window, cmd, args):
 
 		self.debug_event("on_window_command() -> cmd:[%s] - arg:[%s]" % (cmd, args))
@@ -1047,7 +1151,7 @@ class SublimeEvents(sublime_plugin.EventListener):
 		p = cfg.profiles[cfg.default_profile]
 		
 		build = SublimeSettings("AMXX-Compiler.sublime-build")
-		build.set("cmd", [ p['amxxpc_path'], "-d"+str(p['amxxpc_debug']), "-i"+p['includes_dir'], "-o"+p['output_dir']+"/${file_base_name}.amxx", "${file}" ])
+		build.set("cmd", [ p['amxxpc_path'], "-d"+str(p['amxxpc_debug']), "-i"+p['include_dir'], "-o"+p['output_dir']+"/${file_base_name}.amxx", "${file}" ])
 		build.set("syntax", "AMXX-Console.sublime-syntax")
 		build.set("selector", "source.sma")
 		build.set("working_dir", os.path.dirname(p['amxxpc_path']))
@@ -1056,14 +1160,71 @@ class SublimeEvents(sublime_plugin.EventListener):
 		build.save()
 	
 		view = window.active_view()
-		if not is_amxmodx_view(view) or not cfg.enable_buildversion :
+		if not is_amxmodx_view(view) :
 			return
 			
 		if not view.file_name() :
 			view.run_command("save")
 			
-		view.run_command("amxx_build_ver")
+		self.amxx_auto_tag(window, view)
+			
+		if cfg.enable_buildversion :
+			view.run_command("amxx_build_ver")
 		
+	def amxx_auto_tag(self, window, view):
+		
+		node = get_view_node(view)
+		if not node :
+			return
+
+		findreplace = AmxxFindReplace(window)
+		
+		funclist = node.generate_list("funclist", set)
+		includes = findreplace.get_includes(view)
+		
+		def replace_autotag(text):
+			def search_vartag(varname, text):
+				m = re.search(varname+r'\s*=\s*([a-zA-Z_]\w*)\s*\(', text, re.MULTILINE)
+				if not m :
+					return None
+					
+				search_func = m.group(1)
+				
+				found = None
+				for func in funclist :
+					if search_func == func.name :
+						found = func
+						if found.type != globalvar.FUNC_TYPES.public :
+							break
+							
+				if not found :
+					return None
+					
+				return found.return_tag
+			
+			def replace_func(match):
+				varname = match.group(2)
+				tag = search_vartag(varname, text)
+				
+				if tag :
+					return tag+':'+match.group(2)
+					
+				return match.group(2)
+
+			return re.sub(r'\s+(auto|:):([a-zA-Z_]\w*)', replace_func, text)
+			
+		
+		for inc in includes :
+			text = findreplace.read_text(inc)
+			
+			newtext = replace_autotag(text)
+			
+			if newtext != text :
+				try:
+					findreplace.write_text(newtext, inc)
+				except Exception as e:
+					print("autotag error:", e)
+
 	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 	#:: ToolTip ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1079,9 +1240,6 @@ class SublimeEvents(sublime_plugin.EventListener):
 		if not "support.function.pawn" in scope and not "variable.function.pawn" in scope and not "meta.preprocessor.include.path" in scope and not "storage.modifier.tag" in scope:
 			view.hide_popup()
 			return
-			
-		if not globalvar.autoPopupCSS and cfg.popup_style_mode == 1:
-			globalvar.autoPopupCSS = self.generate_highlightCSS(view)
 
 		if "meta.preprocessor.include.path" in scope :
 			self.tooltip_include(view, point)
@@ -1096,56 +1254,72 @@ class SublimeEvents(sublime_plugin.EventListener):
 	def tooltip_include(self, view, point):
 	
 		line 		= view.substr(view.line(point))
-		include 	= CodeAnalyzer.Regex_FIND_INCLUDE.match(line).group(1).strip()
+		include 	= CodeAnalyzer.Regex_FIND_INCLUDE.match(line).group(2).strip()
 
 
 		(file_path, exists) = globalvar.analyzer.get_include_path(util.get_filename_by_view(view), include)
 		if not exists :
 			return
 
-		link_local = file_path + '##1'
+		location_data = file_path + "##1"
 		if not '.' in include :
-			link_web = include + '##1'
+			webapi_data = include + "#"
 			include += ".inc"
 		else :
-			link_web = None
+			webapi_data = None
 			
-		top = ''
-		if link_web :
-			top += '<a class="customLink" href="'+link_web+'">WebAPI</a><span class="separator">|</span>'
-		top += '<a class="customLink" href="'+link_local+'">'+include+'</a>'
+		header = ""
+		if webapi_data :
+			header += '<a href="webapi:'+webapi_data+'">WebAPI</a><span class="separator">|</span>'
+		header += '<a href="goto:'+location_data+'">'+include+'</a>'
 	
-		content = '<span class="incInfo">Location:</span><br>'
-		content += '<span class="incPath">'+file_path+'</span>'
+		content =  '<h3 class="heading">Location:</h3>'
+		content += '<b class="path">%s</b>' % file_path
 
-		tooltip.show_popup(view, point + 1, top, content, "", self.tooltip_on_click)
+		self.tooltip_show_popup(view, point + 1, "tooltip-include", header, content)
 
-	def tooltip_tag(self, view, point):
+	def tooltip_tag(self, view, point, search_tag=None):
 		
-		word_region = view.word(point)
-		search_tag  = view.substr(word_region)
+		if not search_tag :
+			word_region = view.word(point)
+			search_tag  = view.substr(word_region)
+			
 		found 		= None
 		node 		= get_view_node(view)
 		
 		if not node :
 			return
 
-		tags = node.generate_list("tags", dict)
-		
-		print("tag:", tags)
-		
-		tag = tags.get(search_tag)
-		if not tag :
+		references = node.cache_all_tags.get(search_tag)
+		if not references :
 			return
 			
-		link_local 	= tag[2] + '#' + search_tag + '#' + str(tag[1])
-		
-		top = '<a class="customLink" href="@'+search_tag+':">Search All</a><span class="separator">|</span>'
-		top += '<a class="customLink" href="'+link_local+'">'+os.path.basename(tag[2])+'</a>'
+		content =  ""
+		header = '<a href="find_all:'+search_tag+'">Search All</a>'
+			
+		enumtag = references.get("enum")
+		if enumtag :
+			location_data = enumtag.file_path + '#' + search_tag + '#' + str(enumtag.line)
+			header += '<span class="separator">|</span><a href="goto:'+location_data+'">Go to Enum</a>'
 	
-		content = ""
-		
-		tooltip.show_popup(view, point + 1, top, content, "", self.tooltip_on_click)
+		includes = sorted(references)
+		for inc in includes :
+			if inc == "enum":
+				continue
+				
+			content += '<b>%s:</b><br>' % inc
+			
+			funclist = sorted(references[inc], key=lambda func: func.start_line)
+			for func in funclist :
+				# <a class="btn copy" href="copy:{funcname}">copy</a>
+				
+				content += '<div class="itemrow"><a class="btn insert" href="snippet:{autocomplete}">insert</a> <a class="funcname" href="goto:{location}">{funcname}</a></div>'.format(
+					funcname=func.name,
+					autocomplete=func.autocomplete,
+					location= "%s#%s#%d" % (func.file_path, func.name, func.start_line)
+				)
+			
+		self.tooltip_show_popup(view, point + 1, "tooltip-tag", header, content)
 		
 	def tooltip_function(self, view, point, funcCall):
 		
@@ -1170,25 +1344,30 @@ class SublimeEvents(sublime_plugin.EventListener):
 			
 		filename = os.path.basename(found.file_path)
 		
-		link_local 	= found.file_path + '#' + found.name + '#' + str(found.start_line)
-		link_web 	= ''
+		location_data = found.file_path + '#' + found.name + '#' + str(found.start_line)
+		webapi_data = ""
 			
 		if found.type != globalvar.FUNC_TYPES.function and cfg.include_dir == os.path.dirname(found.file_path) :
-			link_web = filename.rsplit('.', 1)[0] + '#' + found.name + '#'
+			webapi_data = filename.rsplit('.', 1)[0] + '#' + found.name
 
-		top = '<a class="customLink" href="@'+search_func+'">Search All</a>'
-		if link_web:
-			top += '<span class="separator">|</span><a class="customLink" href="'+link_web+'">WebAPI</a>'
-		top += '<span class="separator">|</span><a class="customLink" href="'+link_local+'">'+filename+'</a>'
+		header = '<a href="find_all:'+search_func+'">Search All</a>'
+		if webapi_data:
+			header += '<span class="separator">|</span><a href="webapi:'+webapi_data+'">WebAPI</a>'
+		header += '<span class="separator">|</span><a href="goto:'+location_data+'">'+filename+'</a>'
 		
-		content = ""
+		return_tag = found.return_tag
+		return_array = found.return_array
+
+		content = ''
 		if found.type :
 			content += '<span class="pawnKeyword"><b>'+globalvar.FUNC_TYPES[found.type]+'</b></span>&nbsp;&nbsp;'
-		if found.return_type :
-			content += '<span class="pawnTag"><a href="@'+found.return_type+':">'+found.return_type+':</a></span>&nbsp;'
+		if return_tag :
+			content += '<a class="pawnTag" href="showtag:'+return_tag+'">'+return_tag+':</a>'
+		if return_array :
+			content += return_array
 		content += '<span class="pawnFunction">'+found.name+'</span>' + tooltip.pawn_highlight('('+found.parameters+')')
 		content += '<br>'
-		
+	
 		if funcCall and found.param_list :
 			(row, col) = view.rowcol(point)
 			line = view.substr(view.line(point)).rstrip()
@@ -1199,8 +1378,8 @@ class SublimeEvents(sublime_plugin.EventListener):
 	
 			if len(arguments) >= 1 :
 				content += '<br>'
-				content += '<span class="inspectorTitle">Params-Inspector:</span>'
-				content += '<br><code class="inspectorBlock">'
+				content += '<span class="inspecTitle">Parameters:</span>'
+				content += '<br><code class="inspecBlock">'
 			
 				i = 0
 				for value in arguments :
@@ -1218,27 +1397,94 @@ class SublimeEvents(sublime_plugin.EventListener):
 					i += 1
 					
 				content += '</code>'
-				
-		tooltip.show_popup(view, point + 1, top, content, "", self.tooltip_on_click)
+			elif len(found.parameters) > 90 :
+				content += '<br><br>'
 			
-	def tooltip_on_click(self, link):
+		self.tooltip_show_popup(view, point + 1, "tooltip-function", header, content)
+			
+	def tooltip_on_click(self, src):
 	
 		view = sublime.active_window().active_view()
-		view.hide_popup()
+
+		print("on_url_click:", src)
 		
-		if link[0] == '@' :
+		(cmd, data) = src.split(':', 1)
+
+		if cmd == "find_all" :
 			global g_fix_view
 			g_fix_view = True
-			sublime.active_window().run_command("amxx_find_replace", { "find_replace": link[1:] } )
-			return
+			sublime.active_window().run_command("amxx_find_replace", { "find_replace": data } )
 			
-		(file, search, line_row) = link.split('#')
+		elif cmd == "webapi" :
+			(include, function) = data.split('#')
+			webbrowser.open_new_tab("http://www.amxmodx.org/api/%s/%s" % (include, function)) 
 		
-		if "." in file :
+		elif cmd == "goto" :
+			(file, search, line_row) = data.split('#')
 			util.goto_definition(file, search, int(line_row)-1, False)
-		else :
-			webbrowser.open_new_tab("http://www.amxmodx.org/api/"+file+"/"+search)
 		
+		elif cmd == "copy" :
+			sublime.set_clipboard(data)
+		
+		elif cmd == "insert" :
+			view.run_command("reindent")
+			view.run_command("insert", {"characters": data, 'scroll_to_end': True })
+			
+		elif cmd == "snippet" :
+			view.run_command("reindent")
+			view.run_command('insert_snippet', {"contents": data})
+
+		elif cmd == "showtag" :
+			self.tooltip_tag(view, -1, data)
+			return
+
+		view.hide_popup()
+			
+	def tooltip_show_popup(self, view, location, classname, header="", content="", bottom=""):
+
+
+		import math
+		normal_size = view.settings().get("font_size", 9) + 1
+		micro_size = math.floor(normal_size * 0.7)
+		small_size = math.floor(normal_size * 0.85)
+		large_size = math.ceil(normal_size * 1.25)
+		
+		print("font size: micro(%d) small(%d) normal(%d) large(%d)" % (micro_size, small_size, normal_size, large_size) )
+		
+		html  = """<body id="amxx-editor" class="%(classname)s">
+<style>
+html {
+	--micro-size: %(micro_size)spx;
+	--small-size: %(small_size)spx;
+	--normal-size: %(normal_size)spx;
+	--large-size: %(large_size)spx;
+}
+%(popupcss)s
+%(syntaxcss)s
+</style>
+<div class="header">%(header)s</div>
+<div class="content">%(content)s</div>
+<div class="bottom">%(bottom)s</div>
+</body>
+""" % {
+			"micro_size": micro_size,
+			"small_size": small_size,
+			"normal_size": normal_size,
+			"large_size": large_size,
+			"popupcss": globalvar.cachePopupCSS,
+			"syntaxcss": globalvar.cacheSyntaxCSS,
+			"classname": classname,
+			"header": header,
+			"content": content,
+			"bottom": bottom
+		}
+		
+		if location < 1 and view.is_popup_visible() :
+			view.show_popup(html, 0, self.last_popup_location, max_width=800, on_navigate=self.tooltip_on_click)
+		else :
+			self.last_popup_location = location
+			view.show_popup(html, sublime.HIDE_ON_MOUSE_MOVE_AWAY, location, max_width=800, on_navigate=self.tooltip_on_click)
+
 
 	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 	#:: Fix Bug on Selection :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1333,14 +1579,17 @@ class SublimeEvents(sublime_plugin.EventListener):
 	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 	def on_query_completions(self, view, prefix, locations):
 		
-		if not is_amxmodx_view(view) or not cfg.ac_enable:
+		if not is_amxmodx_view(view) or not cfg.ac_enable or len(locations) > 1:
 			return None
 			
-		if view.match_selector(locations[0], 'source.sma string') :
+		if view.match_selector(locations[0], 'source.sma string') and prefix[0] != '@' :
 			return ([ ], sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-			
-		word = view.substr(view.word(locations[0]))
-		self.debug_event("on_selection_modified() -> prefix:[%s] - word:[%s] - location:[%d]" % (prefix, word, locations[0]))
+				
+		word_location = view.word(locations[0])
+		word = view.substr(word_location)
+		self.debug_event("on_query_completions() -> prefix:[%s] - word:[%s] - location:[%d]" % (prefix, word, locations[0]))
+		
+		#print("on_query_completions() -> prefix:[%s] - word:[%s] - location:[%d]" % (prefix, word, locations[0]))
 		
 		fullLine = view.substr(view.full_line(locations[0])).strip()
 		if fullLine[0] == '#' :
@@ -1356,7 +1605,40 @@ class SublimeEvents(sublime_plugin.EventListener):
 				return ( ac.cache_preprocessor, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 				
 			return ([ ], sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+
+		#if len(prefix) > 1 :
+		#	return None
+		
+		line 		= view.rowcol(locations[0])[0] + 1
+		file_path 	= util.get_filename_by_view(view)
+		node 		= globalvar.nodes.get(file_path)
+		if not node :
+			return None
 			
+		#firstChar = view.substr(sublime.Region(word_location.begin()-1, word_location.begin()))
+		if prefix[0] == '@' :
+		
+			if view.match_selector(locations[0], 'source.sma string') :
+				def format_autocomplete(func, curnode, outObj, valueObj):
+					if func.type == globalvar.FUNC_TYPES.public :
+						return ( ac.format_autocomplete(curnode, "@ " + func.name, "public"), func.name )
+					return ( None, None )
+
+				funclist = node.generate_list("funclist", set, format_autocomplete)
+	
+				return (funclist, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+				
+			else :
+				def format_autocomplete(value, curnode, outObj, valueObj):
+					return ( ac.format_autocomplete(curnode, "@ %s:" % value, "tag"), "%s:" % value )
+		
+				tags = node.generate_list("tags", set, format_autocomplete)
+				tags.add(("@ auto:", "auto:"))
+				tags.add(("@ bool:", "bool:"))
+				tags.add(("@ Float:", "Float:"))
+				
+				return (tags, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+		
 		if fullLine.startswith("new ") or fullLine.startswith("static ") or fullLine.startswith("for") :
 		
 			(row, col) = view.rowcol(locations[0])
@@ -1368,42 +1650,32 @@ class SublimeEvents(sublime_plugin.EventListener):
 			if pos != -1 and ac.block_on_varname(text[pos+4:]) :
 				return ([ ], sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
+		debug.performance.init("total2")
+
+		completions = []
 	
-		#if len(prefix) > 1 :
-		#	return None
+		completions.extend(node.cache_autocomplete)
 		
-		
-		line 		= view.rowcol(locations[0])[0] + 1
-		file_path 	= util.get_filename_by_view(view)
-		node 		= globalvar.nodes.get(file_path)
-		if not node :
-			return None
-		
-		list = ac.generate_autocomplete_list(node)
-	
 		if cfg.ac_local_var :
-			list.extend(ac.generate_local_vars_list(node, line))
+			completions.extend(ac.generate_local_vars_list(node, line))
 		if cfg.ac_keywords :
-			list.extend(ac.generate_keywords_list(cfg.ac_keywords))
+			completions.extend(ac.cache_keywords)
 		if cfg.ac_snippets :
-			list.extend(ac.cache_snippets)
+			completions.extend(ac.cache_snippets)
 		
-		
-		newlist = [ ]
+		final_list = [ ]
 
 		if cfg.ac_explicit_mode :
-			for item in list :
+			for item in completions :
 				if item[0][0] == prefix[0] :
-					newlist += [ item ]
+					final_list += [ item ]
 		else :
-			newlist = list
+			final_list = completions
 
 		if cfg.ac_extra_sorted :
-			newlist = ac.sorted_nicely(newlist)
+			final_list = ac.sorted_nicely(final_list)
 			
-		#newlist[0] = ( prefix + ":\t                                                               --- ", "" )
-		
-		return (newlist, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+		return (final_list, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1433,8 +1705,8 @@ class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler):
 			
 		# Add to Autocomplete
 		profile = cfg.profiles[cfg.default_profile]
-		if profile['includes_dir'] in event.src_path and event.src_path.endswith(".inc") :
-			inc = event.src_path.replace(profile['includes_dir'], "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
+		if profile['include_dir'] in event.src_path and event.src_path.endswith(".inc") :
+			inc = event.src_path.replace(profile['include_dir'], "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
 			profile['includes_list'].append(inc)
 			print("Add include:", inc, " -> ", event.src_path)
 		
@@ -1452,7 +1724,7 @@ class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler):
 		if not node :
 			return
 
-		node.remove_all_children_and_funcs()
+		node.remove_all_children_and_clear()
 		
 #:: Monitor on Scrolled Thread ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1488,7 +1760,7 @@ class MonitorScrolledThread(threading.Thread):
 			self.on_scrolled(view)
 			
 	def on_scrolled(self, view):
-		if cfg.enable_dynamic_highlight :
+		if cfg.enable_const_highlight :
 			constants_highlight(view, False)
 			invalid_functions_highlight(view, False)
 
@@ -1533,10 +1805,12 @@ class AnalyzerQueueThread(threading.Thread):
 				with open(file_path, 'r', encoding="utf-8", errors="replace") as f :
 					buffer = f.read()
 			
-			try :
+			globalvar.analyzer.process(view, file_path, buffer)
+			"""try :
 				globalvar.analyzer.process(view, file_path, buffer)
 			except Exception as e:
 				debug.error("analyzer.process() -> Exception:", e)
+			"""
 				
 	def stop(self):
 		self.delayed.stop()
@@ -1564,7 +1838,7 @@ class AnalyzerQueueThread(threading.Thread):
 
 class  CodeAnalyzer:
 
-	Regex_FIND_INCLUDE 		= re.compile(r'^[\s]*#include[\s]+[<"]([^>"]+)[>"]', re.M)
+	Regex_FIND_INCLUDE 		= re.compile(r'^[\t ]*(#include\s+[<"]([^>"]+)[>"])', re.M)
 	Regex_LOCAL_INCLUDE 	= re.compile(r'\.(sma|inc|inl)$')
 	Regex_FIND_FUNC 		= re.compile(r'^(stock |public )?(\w*:)?([A-Za-z_][\w_]*)\s*\(', re.M)
 
@@ -1578,15 +1852,15 @@ class  CodeAnalyzer:
 		
 		(current_node, is_added) = NodeBase.get_or_add(file_path)
 	
-		base_includes = set()
+		includes_used = set()
 		error_regions = [ ]
 
 		for match in self.Regex_FIND_INCLUDE.finditer(buffer):
-			exists = self.load_include_file(file_path, match.group(1).strip(), current_node, current_node, base_includes)
+			exists = self.load_include_file(file_path, match.group(2).strip(), current_node, current_node, includes_used)
 			if view and not exists :
-				error_regions.append(sublime.Region(match.start(), match.end()))
+				error_regions.append(sublime.Region(match.start(1), match.end(1)))
 
-		for removed_node in current_node.children.difference(base_includes) :
+		for removed_node in current_node.children.difference(includes_used) :
 			current_node.remove_child(removed_node)
 
 		self.process_parse(view, buffer, None, current_node, error_regions)
@@ -1620,7 +1894,7 @@ class  CodeAnalyzer:
 		if not view or not view.is_valid() :
 			return
 				
-		# Separate code in sections
+		# Code separated into sections
 		debug.performance.start("generate_sections", True)
 		new_sections = self.generate_sections(view, buffer)
 		debug.performance.end("generate_sections")
@@ -1633,7 +1907,7 @@ class  CodeAnalyzer:
 			if not view or not view.is_valid() :
 				return
 			
-			line = view.rowcol(section.begin)[0] # NOTE: Go to @InsecureThreadBuffer
+			line = view.rowcol(section.begin)[0] # Insecure thread buffer
 			node.parse_data[section] = globalvar.parse.process( TextReader( buffer[section.begin:section.end] ), node, line)
 
 
@@ -1656,7 +1930,7 @@ class  CodeAnalyzer:
 				return
 				
 			data = node.parse_data[section]
-			baseline = view.rowcol(section.begin)[0] # NOTE: Go to @InsecureThreadBuffer
+			baseline = view.rowcol(section.begin)[0] # Insecure thread buffer
 			
 			node.autocomplete.extend(data.autocomplete)
 			node.constants.update(data.constants)
@@ -1665,10 +1939,24 @@ class  CodeAnalyzer:
 				func.update_line(baseline) # Update current line position, used for autocomplete and tooltip
 			node.funclist.update(data.funclist)
 			
-			for tag in data.tags :
-				l = data.tags[tag]
-				l[1] = l[0] + baseline
-			node.tags.update(data.tags)
+			for tagname in data.tags :
+				data.tags[tagname].update_line(baseline)
+				
+			for tagname in data.tags :
+				tagA = node.tags.get(tagname)
+				tagB = data.tags[tagname]
+
+				if not tagA :
+					node.tags[tagname] = tagB
+					continue
+					
+				if tagB.funclist :
+					tagA.funclist.update(tagB.funclist)
+					
+				if tagB.isenum :
+					tagA.file_path 		= tagB.file_path
+					tagA.line_offset 	= tagB.line_offset
+					tagA.line			= tagB.line
 				
 			# Mark error lines
 			for error in data.error_lines :
@@ -1680,28 +1968,43 @@ class  CodeAnalyzer:
 				end = view.line(end).end()
 
 				error_regions.append(sublime.Region(begin, end))
-				
+			
+		
+		# Organize and Cache data
+		debug.performance.init("organize_and_cache")
+		node.organize_and_cache()
+		debug.performance.end("organize_and_cache")
+
 		# Show errors
-		if cfg.enable_check_invalid :
+		if cfg.enable_marking_error :
 			marking_error_lines(view, error_regions)
 		
-	
 		
-		"""
-		# Debug
-		r_color1 = [ ]
-		r_color2 = [ ]
-		color = False
-		for section in sorted(new_sections, key=lambda o: o.begin) :
-			color = not color
-			if color :
-				r_color1.append(sublime.Region(section.begin, section.end))
-			else:
-				r_color2.append(sublime.Region(section.begin, section.end))
-		view.add_regions("color1", r_color1, "region.greenish", "", 0)
-		view.add_regions("color2", r_color2, "region.pinkish", "", 0)
-		"""
-		
+		#:: View Debug Mode :::::::::::::::::::::::::
+		if "z" in cfg.debug_flags :
+			r_color1 = [ ]
+			r_color2 = [ ]
+			color = False
+			
+			for section in sorted(new_sections, key=lambda o: o.begin) :
+				color = not color
+				if color :
+					r_color1.append(sublime.Region(section.begin, section.end))
+				else:
+					r_color2.append(sublime.Region(section.begin, section.end))
+					
+			view.add_regions("color1", r_color1, "region.greenish", "", 0)
+			view.add_regions("color2", r_color2, "region.pinkish", "", 0)
+			
+			cfg.view_debug_mode = True
+			
+		elif cfg.view_debug_mode :
+			view.erase_regions("color1")
+			view.erase_regions("color2")
+			
+			cfg.view_debug_mode = False
+		#::::::::::::::::::::::::::::::::::::::
+			
 		# Compile regex of constants
 		debug.performance.init("const")
 		node.Regex_CONST		= self.compile_constants(node.constants)
@@ -1714,23 +2017,27 @@ class  CodeAnalyzer:
 				
 		# Dynamic Highlight
 		debug.performance.init("highlight")
-		if cfg.enable_dynamic_highlight :
+		if cfg.enable_const_highlight :
 			constants_highlight(view, True)
 			invalid_functions_highlight(view, True)
 		debug.performance.end("highlight")
 
 
 		#:: Debug performance :::::::::::::::::
-		debug.info("(Analizer) Generate %d sections: %.3fsec  -  Region-Highlight: %.3fsec" % (len(new_sections), debug.performance.end("generate_sections"), debug.performance.end("highlight")) )
-		debug.info("(Analizer) Parsing %d sections: %.3fsec" % (len(difference), debug.performance.end("pawnparse")) )
-		debug.info("(Analizer) Enum: %.3fsec - var: %.3fsec - func: %.3fsec - const: %.3fsec" % (
+		debug.dev(" (Analizer) Generate %d sections: %.3fsec  -  Region-Highlight: %.3fsec" % (len(new_sections), debug.performance.end("generate_sections"), debug.performance.end("highlight")) )
+		debug.dev(" (Analizer) Parsing %d sections: %.3fsec" % (len(difference), debug.performance.end("pawnparse")) )
+		debug.info("(Analizer) Enum: %.3fsec - Vars: %.3fsec - Func: %.3fsec - Constant: %.3fsec" % (
 			debug.performance.end("enum"),
 			debug.performance.end("var"),
 			debug.performance.end("func"),
 			debug.performance.end("const")
 		))
+		debug.dev(" (Analizer) Organize And Cache data: %.3fsec" % debug.performance.end("organize_and_cache"))
+		debug.dev(" (Analizer) %s" % debug_instances_info())
 		debug.info("(Analizer) Finished: -> Total: %.3fsec\n" % debug.performance.end("total") )
 		#::::::::::::::::::::::::::::::::::::::
+		
+
 		
 	def compile_constants(self, constlist):
 	
@@ -1741,26 +2048,19 @@ class  CodeAnalyzer:
 		pattern = "\\b(" + constants + ")\\b"
 		
 		return re.compile(pattern)
-		
-		
-	#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-	# NOTE: @InsecureThreadBuffer
-	#   View buffer may change while this function is running. Therefore, view.find_by_selector() is insecure.
-	#
-	#	"comment" in view.scope_name() AND view.rowcol()
-	#	- It is not perfect, but less likely to cause failures.
-	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	
 	def generate_sections(self, view, buffer):
 	
 		sections = set()
 		begin_point = 0
 		
+		# View buffer may change while this function is running. Therefore, view.find_by_selector() is insecure.
 		for match in self.Regex_FIND_FUNC.finditer(buffer):
 		
 			point = match.start()
-
-			# If view buffer is changed, usually differs a few characters, so have the half of length match as compensation
-			if "comment" in view.scope_name(point + round((match.end() - point) / 2)) :
+			scope = view.scope_name(point + round((match.end() - point) / 2))
+			# If view buffer is changed, usually differs a few characters, so have the half of length match as compensation.
+			if "comment" in scope or "string" in scope :
 				continue
 
 			sections.add( SectionData(begin_point, point - 1, buffer) )
@@ -1771,27 +2071,28 @@ class  CodeAnalyzer:
 
 		return sections
 
-	def load_include_file(self, parent_file_path, include, parent_node, base_node, base_includes):
+	def load_include_file(self, parent_file_path, include, parent_node, base_node, includes_used):
 	
 		(file_path, exists) = self.get_include_path(parent_file_path, include)
 		
 		if not exists :
-			debug.info("Include File not found: inc:\"%s\",  file:\"%s\",  parent:\"%s\"" % (include, file_path, parent_file_path))
-
+			debug.info("Include File not found: inc[\"%s\"],  file[\"%s\"] - parent[\"%s\"]" % (include, file_path, parent_file_path))
+			return
+			
 		(node, is_added) = NodeBase.get_or_add(file_path)
 		parent_node.add_child(node)
 
 		if parent_node == base_node :
-			base_includes.add(node)
+			includes_used.add(node)
 
-		if not is_added or not exists:
+		if not is_added:
 			return exists
 
 		with open(file_path, 'r', encoding="utf-8", errors="replace") as file :
 			includes = self.Regex_FIND_INCLUDE.findall(file.read())
 
 		for include in includes :
-			self.load_include_file(parent_file_path, include.strip(), node, base_node, base_includes)
+			self.load_include_file(parent_file_path, include[1].strip(), node, base_node, includes_used)
 
 		with open(node.file_path, 'r', encoding="utf-8", errors="replace") as file :
 			debug.info("Processing Include File \"%s\"" % file_path)
@@ -1800,12 +2101,21 @@ class  CodeAnalyzer:
 		return exists
 
 	def get_include_path(self, parent_file_path, include):
-		if self.Regex_LOCAL_INCLUDE.search(include) == None:
-			file_path = os.path.join(cfg.include_dir, include + ".inc")
-		else:
-			file_path = os.path.join(os.path.dirname(parent_file_path), include)
+	
+		exists = False
 
-		return (file_path, os.path.exists(file_path))
+		if self.Regex_LOCAL_INCLUDE.search(include) :
+			file_path	= os.path.join(os.path.dirname(parent_file_path), include)
+			exists		= os.path.exists(file_path)
+		
+		if not exists :
+			if '.' in include :
+				file_path	= os.path.join(cfg.include_dir, include)
+			else :
+				file_path	= os.path.join(cfg.include_dir, include + ".inc")
+			exists		= os.path.exists(file_path)
+
+		return (file_path, exists)
 		
 
 class TextReader:
@@ -1846,14 +2156,16 @@ class SectionData:
 	
 class NodeBase:
 
-	def __init__(self, file_path):
+	def __init__(self, file_path, readonly=False):
+	
 		self.file_path 		= file_path
 		self.file_name		= os.path.basename(file_path)
+		self.readonly		= readonly
 		
 		self.children 		= set()
 		self.parents 		= set()
 		
-		self.autocomplete = list()
+		self.autocomplete 	= list()
 		self.funclist 		= set()
 		self.constants		= set()
 		self.tags			= dict()
@@ -1863,29 +2175,50 @@ class NodeBase:
 		
 		self.Regex_CONST		= None
 		self.Regex_CONST_CHILD	= None
+		
+		self.cache_all_tags	= None
+		self.cache_autocomplete = None
 
 	def add_child(self, node) :
 		self.children.add(node)
 		node.parents.add(self)
 
 	def remove_child(self, node):
+	
 		self.children.remove(node)
 		node.parents.remove(self)
 
 		if len(node.parents) <= 0 :
+			node.clear()
 			globalvar.nodes.pop(node.file_path)
 
-	def remove_all_children_and_funcs(self):
+	def remove_all_children_and_clear(self):
+	
 		for child in self.children :
 			self.remove_child(node)
-			
+		
+	# unnecessary code ??? apparently python does it automatically
+	def clear(self):
+	
 		self.autocomplete.clear()
 		self.funclist.clear()
+		self.constants.clear()
+		self.tags.clear()
+		
+		self.parse_data.clear()
+		self.old_sections.clear()
+		
+		self.cache_all_tags.clear()
+		self.cache_autocomplete.clear()
+		
+		self.Regex_CONST = None
+		self.Regex_CONST_CHILD = None
+	
 		
 	### Generate recursive list: ########################
-	# @property: Node property name
-	# @outclass: 
-	# @custom_format: def callback(value, curnode):
+	# @property: Node property name.
+	# @outclass: Out Class.
+	# @custom_format: Custom format callback.   // def callback(value/key, curnode, outObj, valueObj):
 	#####################################################
 	def generate_list(self, property, outclass=list, custom_format=None, skip_self=False):
 	
@@ -1905,10 +2238,15 @@ class NodeBase:
 			value = getattr(curnode, property)
 			
 			if issubclass(outclass, list):
-				out.extend(value if not custom_format else map(lambda v:custom_format(v, curnode), value))
-			elif issubclass(outclass, set) or issubclass(outclass, dict):
-				out.update(value if not custom_format else map(lambda v:custom_format(v, curnode), value))
-
+				out.extend(value if not custom_format else map(lambda v:custom_format(v, curnode, out, value), value))
+			elif issubclass(outclass, set) :
+				out.update(value if not custom_format else map(lambda v:custom_format(v, curnode, out, value), value))
+			elif custom_format :
+				for key in value :
+					custom_format(key, curnode, out, value)
+			else :
+				assert issubclass(outclass, dict) and custom_format, "`dict` only work using a custom format callback"
+				
 		if skip_self :
 			visited.add(self)
 			for child in self.children :
@@ -1918,15 +2256,54 @@ class NodeBase:
 
 		return out
 		
+	def organize_and_cache(self):
+	
+		# Auto-complete
+		if self.cache_autocomplete :
+			self.cache_autocomplete.clear()
+		
+		self.cache_autocomplete = ac.generate_autocomplete_list(self)
+		
+		# Tags
+		if self.cache_all_tags :
+			self.cache_all_tags.clear()
+		
+		def organize_tags_data(key, curnode, outObj, valueObj):
+
+			a = outObj.get(key)
+			b = valueObj[key]
+			
+			if not a :
+				a = dict()
+				outObj[key] = a
+				
+			if b.funclist :
+				a[curnode.file_name] = b.funclist
+
+			if b.isenum :
+				a['enum'] = b
+
+		self.cache_all_tags = self.generate_list("tags", dict, organize_tags_data)
+
 	@staticmethod
 	def get_or_add(file_path):
+	
 		node = globalvar.nodes.get(file_path)
+		
 		if node is None :
-			node = NodeBase(file_path)
+		
+			readonly = False
+			for d in globalvar.include_dirs :
+				if d in file_path :
+					readonly = True
+					break
+			
+			node = NodeBase(file_path, readonly)
 			globalvar.nodes[file_path] = node
 			return (node, True)
 
 		return (node, False)
+
 
 def get_view_node(view):
 	return globalvar.nodes.get(util.get_filename_by_view(view))
@@ -1984,14 +2361,14 @@ def constants_highlight(view, clear=True):
 
 def invalid_functions_highlight(view, clear=True):
 
-	if not cfg.enable_check_invalid :
+	if not cfg.enable_marking_error :
 		return
 		
 	node = get_view_node(view)
 	if not node :
 		return
 		
-	def get_name(func, curnode):
+	def get_name(func, curnode, outObj, valueObj):
 		return func.name
 
 	funclist = node.generate_list("funclist", set, get_name)

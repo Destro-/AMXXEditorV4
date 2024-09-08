@@ -3,28 +3,29 @@
 
 	"build_profiles":
 	{
-		/*"AMXX-1.8.2":
+		"AMXX-1.8.2":
 		{
 			"amxxpc_debug": 2,
 			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\amxxpc.exe",
-			"includes_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\include",
-			"output_dir": "D:\\archivos\\plugins"
+			"include_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\include",
+			"output_dir": "D:\\gameservers\\hlds_default\\cstrike\\addons\\amxmodx\\plugins"
 		},
-		"AMXX-1.9":
+		"AMXX-1.9-Nicxes":
 		{
-			"amxxpc_debug": 2,
-			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.9\\amxxpc.exe",
-			"includes_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.9\\include",
-			"output_dir": "D:\\archivos\\plugins"
-		}*/
+			"amxxpc_debug": 2, // En esta version ya esta por default en 2!!!
+			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.9\\scripting\\amxxpc.exe",
+			"include_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.9\\scripting\\include",
+			"output_dir": "D:\\gameservers\\reHLDS\\cstrike\\addons\\amxmodx\\plugins"
+		}
 	},
+	
 	
 
 	/* EDITOR */
 	"enable_tooltip": 				true,	// ( true / false )
 	"enable_buildversion": 			true,	// ( true / false )
-	"enable_check_invalid": 		true,	// ( true / false )
-	"enable_dynamic_highlight": 	true,	// ( true / false )
+	"enable_marking_error": 		true,	// ( true / false )
+	"enable_const_highlight": 		true,	// ( true / false )
 	
 	"ac_enable": 			true,		// ( true / false )
 	"ac_keywords": 			2,			// ( 0 disable, 1 normal, 2 insert parents )
@@ -35,26 +36,26 @@
 	"ac_extra_sorted":		true,		// ( true / false )
 	"ac_explicit_mode": 	false,		// ( true / false )
 	
-	"live_refresh_delay": 	1.5, 		// ( 0.5 ~ 5.0 ) 		Delay before regenerating Auto-Completion
+	"live_refresh_delay": 	1.5, 		// ( 0.5 ~ 5.0 ) 	Delay before the code is parsed again.
 
-	"popup_style_mode":		0,			// 0: Using CSS style file, 1: Using Editor color-scheme file.
-	
 	"style_editor": 		"AMXXStudio", 	// ( stylename / "default" )
 	"style_console": 		"AMXXStudio",	// ( stylename / "default" )
 	"style_popup": 			"AMXXStudio", 	// ( stylename  )
+	"style_popup_mode": 	0, 	// 0: Using CSS style file, 1: Using Editor color-scheme file.
 	
 	
-		
 	/**********************************************
 	* Enable editor debug messages:
 	* ""   - Disabled debugging.
 	* "a"  - Errors messages.
 	* "b"  - Warnings messages.
 	* "c"  - Info messages.
-	* "d"  - Analyzer parser.
-	* "e"  - Sublime EventListener.
-	* "f"  - Show scope on hover (tool for syntax  dev).
+	* "d"  - Dev messages.
+	* "e"  - Dev PawnParser.
+	* "f"  - Sublime EventListener.
+	* "g"  - Show scope on hover (tool for syntax  dev).
+	* "z"  - Enable ViewDebugMode, show sections region (the code in view is parsed into small sections).
 	* "*"  - All debugging levels at the same time.
 	***********************************************/
-	"debug_flags": "abcf",
+	"debug_flags": "abg",
 }

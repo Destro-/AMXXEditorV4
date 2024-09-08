@@ -78,36 +78,6 @@ def parse_current_arguments(text):
 	#}
 
 	return params
-	
-
-def show_popup(view, location=-1, top="", content="", bottom="", on_navigate=None):
-
-		fontsize = view.settings().get("font_size", 10) + 1
-		
-		html  = """<html>
-<style>
-html {
-	font-size: %dpx;
-}
-%s
-%s
-</style>
-<body>
-	<div class="top">%s</div>
-	<div class="content">%s</div>
-	<div class="bottom">%s</div>
-</body>
-</html>
-""" % (
-			fontsize,
-			globalvar.cachePopupCSS,
-			globalvar.autoPopupCSS,
-			top,
-			content,
-			bottom
-		)
-		
-		view.show_popup(html, sublime.HIDE_ON_MOUSE_MOVE_AWAY, location, max_width=800, on_navigate=on_navigate)
 
 def pawn_highlight(str):
 
@@ -123,7 +93,7 @@ def pawn_highlight(str):
 	
 	str = re.sub(r',(\w)', r', \1', str)
 	str = re.sub(r'([A-Za-z_][\w_]*)\(', r'<span class="pawnFunction">\1</span>(', str)
-	str = re.sub(r'([a-zA-Z_]\w*:)', r'<span class="pawnTag"><a href="@\1">\1</a></span>', str)
+	str = re.sub(r'([a-zA-Z_]\w*):', r'<a class="pawnTag" href="showtag:\1">\1:</a>', str)
 	str = re.sub(r'([\(\)\[\]&]|\.\.\.)', r'<span class="pawnKeyword">\1</span>', str)
 	str = re.sub(r'\b(\d+(.\d+)?)\b', r'<span class="pawnNumber">\1</span>', str)
 
@@ -140,7 +110,7 @@ def pawn_highlight(str):
 		r = '<span class="pawnTag">{'
 		for tag in m.group(1).split(',') :
 			tag = tag.strip()
-			r += '<a href="@%s">%s</a>, ' % (tag, tag)
+			r += '<a class="pawnTag" href="showtag:%s">%s</a>, ' % (tag, tag)
 			
 		return r[0:-2] + '}:</span>'
 	
