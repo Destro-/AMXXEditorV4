@@ -1,83 +1,332 @@
-# Sublime AMXX-Editor by Destro
+# Sublime AMXXPawn-Editor 4.0 by Destro
 
 import os
 import re
-import string
 import sys
 import sublime, sublime_plugin
 import webbrowser
 import time
 import urllib.request
-from collections import defaultdict
-from queue import *
-from threading import Timer, Thread
+import threading
 
-sys.path.append(os.path.dirname(__file__))
+BASE_PATH = os.path.dirname(__file__)
+
+sys.path.append(BASE_PATH)
+sys.path.append( os.path.join(BASE_PATH, "AMXXcore", "3rdparty") )
+
+
+# 3rdparty dependencies.
 import watchdog.events
 import watchdog.observers
-import watchdog.utils
-from watchdog.utils.bricks import OrderedSetQueue
+from watchdog.utils.bricks 	import OrderedSetQueue
+from pathtools.path 		import list_files
 
-from pathtools.path import list_files
+# Core AMXXPawn-Editor.
+from AMXXcore.core 			import *
+from AMXXcore.completions 	import *
+from AMXXcore.find_replace 	import *
+from AMXXcore.pawn_parse 	import pawnParse
+import AMXXcore.tooltip 	as tooltip
+import AMXXcore.debug 		as debug
 
+
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# Global VARs & Initialize
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	
+var.EDITOR_VERSION 		= "4.1"
+var.FUNC_TYPES 			= Enum( [ "function", "public", "stock", "forward", "native" ] )
+
+var.nodes 				= dict()
+var.constants_list 		= set()
+
+g_style_popup 		= { "list": [ ], "path": { }, "active": "" }
+g_style_editor 		= { "list": [ ], "path": { }, "active": "" }
+g_style_console 	= { "list": [ ], "path": { }, "active": "" }
+
+g_invalid_settings	= False
+g_edit_settings 	= False
+g_check_update		= False
+g_fix_view			= False
 
 
 def plugin_loaded() :
-#{
-	from string import Template
-	
-	l = dict()
-	l['lang_my2'] 	= "cuatro"
-	l['lang_your']	= "seiex"
-	
-	t = Template("test lang: ${lang_my} + ${lang_your} = 10")
-	print(t.safe_substitute(l))
 
+	# Log
+	debug.log_open( os.path.join(BASE_PATH, "debug.log") )
 	
-	settings_modified(True)
-	sublime.set_timeout_async(check_update, 2500)
+	# MultiThreads start
+	var.analyzerQueue			= AnalyzerQueueThread()
+	var.monitorScrolled			= MonitorScrolledThread()
+	var.incFileEventHandler		= IncludeFileEventHandler()
+	var.watchDog 				= watchdog.observers.Observer()
+	var.watchDog.start()
+	
+	# Code Analyzer/Parse
+	var.analyzer 				= CodeAnalyzer()
+	var.parse 					= pawnParse(var.analyzerQueue)
+				
+	# Config
+	cfg.init(on_config_change)
+	
+	# NOTA: Mejorar, asegurarse de comprobar el tiempo entre cada chekeo 
+	#sublime.set_timeout_async(check_update, 2500)
+
+def plugin_unloaded() :
+
+	# MultiThreads Stop
+	var.watchDog.stop()
+	var.analyzerQueue.stop()
+	var.monitorScrolled.stop()
+	
+	# Log
+	debug.log_close()
+	
+def on_config_change() :
+
+	# Check package folder
+	packages_path = os.path.join(sublime.packages_path(), "amxmodx")
+	if not os.path.isdir(packages_path) :
+		os.mkdir(packages_path)
+
+		
+	# Profiles
+	cfg.default_profile		= cfg.get('default_profile', "")
+	cfg.profiles 			= cfg.get("build_profiles", None)
+	if not cfg.profiles :
+		validate_profile("", None)
+		print("ERROR: if not cfg.profiles")
+		return
+		
+	cfg.profiles_list = list(cfg.profiles.keys())
+
+	for profile_name in cfg.profiles_list :
+		profile = cfg.profiles[profile_name]
+		if not validate_profile(profile_name, profile) :
+			return
+			
+		# Fix values
+		profile['output_dir'] 		= util.cfg_get_path(profile, 'output_dir')
+		profile['includes_dir'] 	= util.cfg_get_path(profile, 'includes_dir')
+		profile['amxxpc_path'] 		= util.cfg_get_path(profile, 'amxxpc_path')
+		profile['amxxpc_debug'] 	= util.clamp(int(profile['amxxpc_debug']), 0, 2)
+
+	if not cfg.default_profile in cfg.profiles_list :
+		cfg.default_profile = cfg.profiles_list[0]
+		
+
+	# Cache settings
+	cfg.enable_tooltip 			= cfg.get('enable_tooltip', True)
+	cfg.enable_buildversion 	= cfg.get('enable_buildversion', True)
+
+	cfg.ac_enable 				= cfg.get('ac_enable', True)
+	cfg.ac_keywords 			= cfg.get('ac_keywords', 2)
+	cfg.ac_snippets 			= cfg.get('ac_snippets', True)
+	cfg.ac_preprocessor 		= cfg.get('ac_preprocessor', True)
+	cfg.ac_emit_info	 		= cfg.get('ac_emit_info', True)
+	cfg.ac_local_var			= cfg.get('ac_local_var', True)
+	cfg.ac_extra_sorted			= cfg.get('ac_extra_sorted', True)
+	cfg.ac_explicit_mode 		= cfg.get('ac_explicit_mode', False)
+	cfg.ac_add_parameters		= cfg.get('ac_add_parameters', 1)
+	
+	cfg.debug_flags 			= debug.check_flags(cfg.get('debug_flags', ""))
+	cfg.include_dir 			= cfg.profiles[cfg.default_profile]['includes_dir']
+	
+	# Update Live reflesh delay.
+	var.analyzerQueue.delay	= util.clamp(float(cfg.get('live_refresh_delay', 1.5)), 0.5, 5.0)
+	
+	
+	# Generate list of styles
+	global g_style_popup, g_style_editor, g_style_console
+	
+	g_style_popup['list'].clear()
+	g_style_editor['list'].clear()
+	g_style_console['list'].clear()
+	
+	g_style_editor['list'].append("default")
+	g_style_console['list'].append("default")
+	
+	list_styles(g_style_popup,		".pawn-popup.css")
+	list_styles(g_style_editor,		".pawn-editor.sublime-color-scheme")
+	list_styles(g_style_console,	".pawn-console.sublime-color-scheme")
+	
+	validate_active_style(g_style_popup, "style_popup")
+	validate_active_style(g_style_editor, "style_editor")
+	validate_active_style(g_style_console, "style_console")
+
+	# Update style
+	update_editor_style()
+	update_console_style()
+	update_popup_style()
+	
+	
+	var.watchDog.unschedule_all()
+
+	for profile_name in cfg.profiles_list :
+		if list_includes(cfg.profiles[profile_name]):
+			var.watchDog.schedule(var.incFileEventHandler, cfg.profiles[profile_name]['includes_dir'], True)
+			
+	# AutoCompletions.Init()
+	ac.init()
+	
+	
+	# temp
+	cfg.const_REGEX = None
 #}
 
-def unload_handler() :
+
+def list_includes(profile):
+	
+	bad_files = 0
+	profile['includes_list'] = list()
+	
+	for inc in list_files(profile['includes_dir']) :
+		if inc.endswith(".inc") :
+			inc = inc.replace(profile['includes_dir'], "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
+			profile['includes_list'].append(inc)
+		else : # big recursive loop in root folder  (example: C:\\ )
+			bad_files += 1
+			if bad_files >= 50 :
+				debug.warning("Big recursive loop, include_dir: \"%s\"" % profile['includes_dir'])
+				return False
+				
+	profile['includes_list'] = ac.sorted_nicely(profile['includes_list'])
+	return True
+
+def update_editor_style():
+	if "default" == g_style_editor['active'] :
+		newValue = None
+	else :
+		newValue = g_style_editor['path'][g_style_editor['active']]
+		
+	s = OpenSettings("AMXX-Pawn.sublime-settings")
+	s.set("color_scheme", newValue)
+	s.set("extensions",  [ "sma", "inc" ])
+	s.save()
+	
+def update_console_style():
+	if "default" == g_style_console['active'] :
+		newValue = None
+	else :
+		newValue = g_style_console['path'][g_style_console['active']]
+		
+	util.cfg_set_key("AMXX-Console.sublime-settings", "color_scheme", newValue)
+	
+def update_popup_style():
+	var.cache_tooltip_css = sublime.load_resource(g_style_popup['path'][g_style_popup['active']])
+	var.cache_tooltip_css  = var.cache_tooltip_css .replace("\r", "") # Fix
+	
+def list_styles(style, endext):
+	for file in sublime.find_resources("*" + endext) :
+		name = os.path.basename(file).replace(endext, "")
+	
+		if not name in style['list'] :
+			style['list'].append(name)
+			
+		style['path'][name] = file
+		
+def validate_active_style(style, key):
+	style['active']	= cfg.get(key)
+	if not style['active'] in style['list'] :
+		style['active'] = style['list'][0]
+
+def validate_profile(profile_name, profile) :
+
+	error = "Invalid profile configuration :  %s\n\n" % profile_name
+
+	if not profile or not isinstance(profile, dict) or profile.get('amxxpc_path') == None or profile.get('amxxpc_debug') == None or profile.get('includes_dir') == None or profile.get('output_dir') == None :
+		error += "Empty Value\n"
+	elif not os.path.isfile(util.cfg_get_path(profile, 'amxxpc_path')) :
+		error += "amxxpc_directory :  File does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'amxxpc_path')
+	elif not os.path.isdir(util.cfg_get_path(profile, 'includes_dir')) :
+		error += "include_directory :  Directory does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'includes_dir')
+	elif profile.get('output_dir') != "${file_path}" and not os.path.isdir(util.cfg_get_path(profile, 'output_dir')) :
+		error += "output_dir :  Directory does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'output_dir')
+	else :
+		return True
+		
+	global g_invalid_settings, g_edit_settings
+		
+	g_invalid_settings = True
+		
+	sublime.message_dialog("AMXX-Editor:\n\n" + error)
+
+	if g_edit_settings :
+		return False
+
+	g_edit_settings = True
+		
+	file_path = sublime.packages_path() + "/User/AMXX-Editor.sublime-settings"
+		
+	if not os.path.isfile(file_path):
+		default = sublime.load_resource("Packages/amxmodx/AMXX-Editor.sublime-settings")
+		default = default.replace("Example:", "User Settings:")
+		f = open(file_path, "w")
+		f.write(default)
+		f.close()
+
+	sublime.set_timeout_async(run_edit_settings, 250)
+	return False
+	
+def run_edit_settings() :
+	sublime.active_window().run_command("edit_settings", {"base_file": "${packages}/amxmodx/AMXX-Editor.sublime-settings", "default": "{\n\t$0\n}\n"})
+
+
+
+class AmxxProfileCommand(sublime_plugin.ApplicationCommand):
 #{
-	gWatchdogObserver.stop()
-	gProcessQueueThread.stop()
-	g_to_process.put(("", ""))
-	sublime.load_settings("AMXX-Editor.sublime-settings").clear_on_change("amxx")
+	def run(self, index) :
+	#{
+		if index >= len(cfg.profiles_list) :
+			return
+
+		cfg.default_profile = cfg.profiles_list[index]
+		
+		cfg.set("default_profile", cfg.default_profile)
+		cfg.save()
+	#}
+
+	def is_visible(self, index) :
+		return (index < len(cfg.profiles_list))
+		
+	def is_checked(self, index) :
+		return (index < len(cfg.profiles_list) and cfg.profiles_list[index] == cfg.default_profile)
+
+	def description(self, index) :
+		if index < len(cfg.profiles_list) :
+			return cfg.profiles_list[index]
+		return ""
 #}
+
 
 class AmxxEditorStyleCommand(sublime_plugin.ApplicationCommand):
 #{
 	def run(self, index) :
 	#{
-		if index >= g_style_editor['count'] :
+		if index >= len(g_style_editor['list']) :
 			return
 		
 		g_style_editor['active'] = g_style_editor['list'][index]
 		
-		global g_ignore_settings
-		g_ignore_settings = True
-		
-		setting = sublime.load_settings("AMXX-Editor.sublime-settings")
-		
 		if g_style_editor['active'] in g_style_popup['list'] :
-			setting.set("style_popup", g_style_editor['active'])
+			cfg.set("style_popup", g_style_editor['active'])
 		if g_style_editor['active'] in g_style_console['list'] :
-			setting.set("style_console", g_style_editor['active'])
-		setting.set("style_editor", g_style_editor['active'])
-
-		g_ignore_settings = False
-		sublime.save_settings("AMXX-Editor.sublime-settings")
+			cfg.set("style_console", g_style_editor['active'])
+		cfg.set("style_editor", g_style_editor['active'])
+		
+		cfg.save(False)
+		
 	#}
 
 	def is_visible(self, index) :
-		return (index < g_style_editor['count'])
+		return (index < len(g_style_editor['list']))
 		
 	def is_checked(self, index) :
-		return (index < g_style_editor['count'] and g_style_editor['list'][index] == g_style_editor['active'])
+		return (index < len(g_style_editor['list']) and g_style_editor['list'][index] == g_style_editor['active'])
 
 	def description(self, index) :
-		if index < g_style_editor['count'] :
+		if index < len(g_style_editor['list']) :
 			return g_style_editor['list'][index]
 		return ""
 #}
@@ -86,51 +335,60 @@ class AmxxEditorStyleConsoleCommand(sublime_plugin.ApplicationCommand):
 #{
 	def run(self, index) :
 	#{
-		if index >= g_style_console['count'] :
+		if index >= len(g_style_console['list']) :
 			return
 
 		g_style_console['active'] = g_style_console['list'][index]
-		oneset_setting("AMXX-Editor.sublime-settings", "style_console", g_style_console['list'][index])
+		
+		cfg.set("style_console", g_style_console['active'])
+		cfg.save()
+		
+		update_console_style()
 	#}
 
 	def is_visible(self, index) :
-		return (index < g_style_console['count'])
+		return (index < len(g_style_console['list']))
 		
 	def is_checked(self, index) :
-		return (index < g_style_console['count'] and g_style_console['list'][index] == g_style_console['active'])
+		return (index < len(g_style_console['list']) and g_style_console['list'][index] == g_style_console['active'])
 
 	def description(self, index) :
-		if index < g_style_console['count'] :
+		if index < len(g_style_console['list']) :
 			return g_style_console['list'][index]
 		return ""
 #}
+
 class AmxxEditorStylePopupCommand(sublime_plugin.ApplicationCommand):
 #{
 	def run(self, index) :
 	#{
-		if index >= g_style_popup['count'] :
+		if index >= len(g_style_popup['list']) :
 			return
 
 		g_style_popup['active'] = g_style_popup['list'][index]
-		oneset_setting("AMXX-Editor.sublime-settings", "style_popup", g_style_popup['list'][index])
+		
+		cfg.set("style_popup", g_style_popup['active'])
+		cfg.save()
+		
+		update_popup_style()
 	#}
 
 	def is_visible(self, index) :
-		return (index < g_style_popup['count'])
+		return (index < len(g_style_popup['list']))
 		
 	def is_checked(self, index) :
-		return (index < g_style_popup['count'] and g_style_popup['list'][index] == g_style_popup['active'])
+		return (index < len(g_style_popup['list']) and g_style_popup['list'][index] == g_style_popup['active'])
 
 	def description(self, index) :
-		if index < g_style_popup['count'] :
+		if index < len(g_style_popup['list']) :
 			return g_style_popup['list'][index]
 		return ""
 #}
 
-class NewAmxxIncludeCommand(sublime_plugin.WindowCommand):
+class AmxxNewIncludeCommand(sublime_plugin.WindowCommand):
 	def run(self):
 		new_file("inc")
-class NewAmxxPluginCommand(sublime_plugin.WindowCommand):
+class AmxxNewPluginCommand(sublime_plugin.WindowCommand):
 	def run(self):
 		new_file("sma")
 
@@ -147,61 +405,34 @@ def new_file(type):
 	view.run_command("insert_snippet", {"contents": plugin_template})
 #}
 		
-class AboutAmxxEditorCommand(sublime_plugin.WindowCommand):
-#{
-	def run(self):
-	#{
-		about = """
-Sublime AMXX-Editor v""" + EDITOR_VERSION + """ by Destro
-		
-CREDITs:
-- Great:
-   ppalex7     (SourcePawn Completions)
-		
-- Contributors:
-   sasske        (white color scheme)
-   addons_zz (npp color scheme)
-   KliPPy        (build version)
-   Mistrick     (mistrick color scheme)
-"""
-		sublime.message_dialog(about)
-	#}
-#}
-		
-class UpdateAmxxEditorCommand(sublime_plugin.WindowCommand):
-#{
-	def run(self) :
-		global g_check_update
-		g_check_update = True
-		sublime.set_timeout_async(self.check_update_async, 100)
+def updating_message():
 
-	def is_enabled(self) :
-		if g_check_update :
-			return False
-		return True
-		
-	def description(self) :
-		if g_check_update :
-			return "Get info..."
-		return "Check for Updates"
-		
-	def check_update_async(self) :
-		check_update(True)
-#}
-		
+	global g_check_update
+	
+	if not g_check_update :
+		return
+	
+	progess = "." * (g_check_update % 4)
+	g_check_update += 1
+	
+	sublime.active_window().status_message("AMXX Check update: " + progess)
+	sublime.set_timeout(updating_message, 300)
+	
 def check_update(bycommand=0) :
 #{
 	global g_check_update
 	
 	g_check_update = True
-	
+	updating_message()
+
 	try:
 		c = urllib.request.urlopen("https://amxmodx-es.com/st.php")
 	except:
 		if bycommand :
-			sublime.error_message("Error 'urlopen' in check_update()")
-		else :
-			print_debug(0, "Error 'urlopen' in check_update()")
+			sublime.error_message("ERROR: timeout 'urlopen' in check_update()")
+	
+		debug.error("timeout 'urlopen' in check_update()")
+		sublime.active_window().status_message("AMXX Check update: failed")
 		c = None
 		
 	g_check_update = False
@@ -213,331 +444,188 @@ def check_update(bycommand=0) :
 
 	if data :
 	#{
+		sublime.active_window().status_message("AMXX Check update: successful")
+		
 		data = data.split("\n", 1)
 		
 		fCheckVersion = float(data[0])
-		fCurrentVersion = float(EDITOR_VERSION)
+		fCurrentVersion = float(var.EDITOR_VERSION)
 			
-		if fCheckVersion == fCurrentVersion and bycommand :
-			msg = "AMXX: You are using the latest version v"+ EDITOR_VERSION
-			sublime.ok_cancel_dialog(msg, "OK")
-
+		if fCheckVersion == fCurrentVersion and bycommand:
+			sublime.ok_cancel_dialog("AMXX: You are already using the latest version:  v"+ var.EDITOR_VERSION, "OK")
+			
 		if fCheckVersion > fCurrentVersion :
-		#{
-			msg  = "AMXX: A new version available v"+ data[0]
-			msg += "\n\nNews:\n" + data[1]
-			ok = sublime.ok_cancel_dialog(msg, "Update")
+			msg  = "AMXX: A new version is available:  v"+ data[0]
+			if len(data) > 1 :
+				msg += "\n\nNews:\n" + data[1]
+				
+			ok = sublime.ok_cancel_dialog(msg, "Download Update")
 			
 			if ok :
 				webbrowser.open_new_tab("https://amxmodx-es.com/showthread.php?tid=12316")
-		#}
 	#}
 #}
 
-class FindAllAmxxEditorCommand(sublime_plugin.WindowCommand):
-	def __init__(self, a) :
-		self.quickpanel	= False
-		self.replace 	= None
-		self.input 		= "help::"
-		self.type 		= 0
-		self.org_view 	= [ ]
-		self.result 	= [ ]
-		self.quicklist	= [ ]
+
+
+class FindReplaceInputHandler(sublime_plugin.TextInputHandler):
+	def __init__(self, core):
+		self.core = core
+		self.is_valid = False
+
+	def preview(self, text):
+	
+		print("preview()", self.core.window.active_view().id())
+		
+		if self.core.last_error :
+			error = self.core.last_error
+			self.core.last_error = ""
+		else : # current error
+			error = self.core.process(text, True)
+		
+		if error or not text :
+			self.is_valid = False
+		else:
+			self.is_valid = True
+
+		if text == "help_replace::" :
+			body = """
+			<b>REPLACE EXAMPLEs:</b>
+			<br>
+			source = "new g_menu, g_menu_select, g_menu_id"
+			<br>
+			<br>
+			input  = "word::g_menu::replace::menu2"
+			<br>
+			result = "new menu2, g_menu_select, g_menu_id"
+			<br>
+			<br>
+			input  = "re::(\\w*)_(\\w*)_(\\w*)::replace::\\3_\\2_\\1"
+			<br>
+			result = "new g_menu, select_menu_g, id_menu_g"
+			<br>
+			<br>
+			input  = "g_menu_::replace::menu2_"
+			<br>
+			result = "new g_menu, g_menu2_select, g_menu2_id"
+			"""
+		elif not text :
+			body = """
+			<b>ESPECIAL WORDs:</b>
+			<br>
+			re::
+			<br>
+			word::
+			<br>
+			::replace::
+			<br>
+			help_replace::
+			"""
+		else :
+			
+			if not self.core.search_type :
+				body = "<b>Search:</b> %s" % self.core.search
+			else :
+				body = "<b>Pattern:</b> %s" % self.core.search_pattern
+
+			if not self.core.replace == None :
+				body += "<br><b>Replace:</b> %s" % self.core.replace
+				
+			
+		###################################################################
+		if error :
+			body += "<br><br><span><b>Error:</b> %s</span>" % error
+
+
+		content = """
+		<html>
+		<style>
+		body {
+			color: #000;
+			margin-top: 0px;
+			margin-bottom: 2px;
+			font-size: 13px;
+		}
+
+		h1 { 
+			font-size: 16px;
+			color: #ff9933;
+		}
+
+		b {
+			font-size: 13px;
+		}
+
+		i {
+			font-size: 12px;
+		}
+
+		span {
+			font-size: 13px;
+			color: #f00;
+		}
+
+		</style>
+		<body>
+		""" + body + """
+		</body>
+		</html>
+		"""
+
+		return sublime.Html(content)
+
+	def placeholder(self):
+		return "Search"
+		
+	def initial_text(self):
+		return self.core.initial_text
+	
+	def validate(self, value):
+		return self.is_valid
+		
+	def confirm(self, value):
+		pass
+
+	def cancel(self):
+		self.core.initial_text = ""
+
+class AmxxFindReplaceCommand(sublime_plugin.WindowCommand):
+	def __init__(self, window):
+		self.window = window
+		self.core 	= AmxxFindReplace(window)
+	
+	def run(self, find_replace):
+
+		global g_fix_view
+		if g_fix_view :
+			g_fix_view = False
+			self.core.view = self.window.active_view()
+		
+		error = self.core.process(find_replace)
+		if error :
+			self.window.run_command("amxx_find_replace")
+
+	def is_enabled(self):
+		return is_amxmodx_view(self.window.active_view())
+	
+	def input(self, args):
+		self.core.view = self.window.active_view()
+		return FindReplaceInputHandler(self.core)
+		
+	def input_description(self):
+		#return "Search:"
+		return "🔍"
+
+		
+class AmxxTreeCommand(sublime_plugin.WindowCommand):
+	def __init__(self, window):
+		self.window = window
+		self.quickpanel = False
 		
 	def run(self):
-		window = sublime.active_window()
-		view = window.active_view()
-		
-		if self.quickpanel :
-			self.quickpanel = False
-			window.run_command("hide_overlay")
-			
-		window.show_input_panel("Find/Replace : ", self.input, self.on_done, self.on_change, self.on_cancel)
-
-	def is_enabled(self) :
-		window = sublime.active_window()
-		view = window.active_view()
-		
-		if not is_amxmodx_file(view) :
-			return False
-		
-		return True
-		
-	def on_change(self, find):
-		pass
-		
-	def on_cancel(self):
-		pass
-		
-	def on_done(self, input):
-		self.window = sublime.active_window()
 		view = self.window.active_view()
 		
-		if not is_amxmodx_file(view) or not input :
-			return
-		
-		flags = re.MULTILINE
-		search = ""
-		search_pattern = ""
-		self.replace = None
-		self.type = 0
-			
-		if input == "help::" :
-			self.help()
-			self.run(1)
-			return
-				
-		r = input.split("::replace::", 1)
-		search = r[0]
-		if len(r) == 2 :
-			self.replace = r[1]
-			
-		if search.startswith("word::") :
-			search = search[6:]
-			if len(search) > 1 :
-				self.type = 2
-				search_pattern = r"\b" +re.escape(search)+ r"\b"
-				
-		elif search.startswith("re::") :
-			self.type = 1
-			search_pattern = search = search[4:]
-		else :
-			if len(search) > 1 :
-				search_pattern = r"([a-zA-Z_]*)(" +re.escape(search)+ r")(\w*)"
-				if not self.replace == None :
-					self.replace = r"\1" +self.replace+ r"\3"
-				flags |= re.IGNORECASE
-					
-		if len(search) < 2 :
-			self.window.status_message(" Find min chars is 2")
-			self.run(1)
-			return
-				
-		self.input = input
-			
-		try:
-			self.regex = re.compile(search_pattern, flags)
-		except Exception as e:
-			self.window.status_message(" Regex ERROR: %s" % str(e).title())
-			self.run(1)
-			return
-
-		self.result 	= [ ]
-		includes 		= self.get_includes(view)
-
-		for inc in includes :
-			text = self.read_text(inc)
-			self.result += self.search_all(text, inc)
-			
-		if not self.result :
-			self.window.status_message(" Unable to find: %s" % self.input)
-			self.run(1)
-			return
-			
-		if self.replace == None :
-			self.quicklist = [ [ "- Total Results:  %d" % len(self.result), "Find: %s" % search ] ]
-		
-			for result in self.result :
-				self.quicklist += [ [ result[0], os.path.basename(result[3]) ] ]
-			
-		else :
-			self.quicklist = [ [ "Replace All? :  NO" , ""] ]
-			self.quicklist += [ [ "Replace All? :  YES" , "" ] ]
-			self.quicklist += [ [ "- Total Results:  %d" % len(self.result), "Find: %s  -  Replace: %s" % (search, r[1]) ] ]
-			
-			if self.type == 1 :
-				for result in self.result :
-					preview = self.regex.sub(self.replace, result[0])
-					self.quicklist += [ [ "", result[0] + "  ->  " + preview ] ]
-			else :
-				for result in self.result :
-					self.quicklist += [ [ "", result[0] + "  -  " + os.path.basename(result[3]) ] ]
-					
-			
 		self.window.run_command("hide_overlay")
-			
-		region = view.sel()[0]
-		scroll = view.viewport_position()
-		self.org_view = [ view, region, scroll ]
-		
-		self.show_panel(-1)
-
-	def show_panel(self, index) :
-		self.quickpanel = True
-		self.window.show_quick_panel(self.quicklist, self.on_select, sublime.KEEP_OPEN_ON_FOCUS_LOST, index, self.on_highlight)
-		
-	def on_select(self, index):
-		self.quickpanel = False
-		
-		if self.replace == None :
-			if index == -1 :
-				self.restore_org(True)
-				return
-				
-			if index == 0 :
-				self.show_panel(0)
-				return
-				
-			index -= 1
-				
-			id = goto_definition(self.result[index][3], "", (self.result[index][1], self.result[index][2]), False)
-			
-			if id != self.org_view[0].id() :
-				self.restore_org(False)
-		else :
-			if index == 0 :
-				self.window.status_message(" Cancel Replace All")
-			elif index == 1 :
-				self.window.status_message(" Replace All")
-				self.confirm_replace()
-			elif index > 1 :
-				self.show_panel(index)
-		
-	def on_highlight(self, index):
-		if not index or not self.replace == None :
-			return
-			
-		index -= 1
-		
-		goto_definition(self.result[index][3], "", (self.result[index][1], self.result[index][2]), True)
-		
-	def restore_org(self, focus=False):
-		if self.org_view :
-			view 	= self.org_view[0]
-			region 	= self.org_view[1]
-			scroll 	= self.org_view[2]
-				
-			if focus :
-				self.window.focus_view(view)
-				
-			view.sel().clear()
-			view.sel().add(region)
-			view.set_viewport_position(scroll, False)
-				
-			self.org_view = []
-	
-	def help(self):
-		help = """
-AMXX-Editor :  Find/Replace in all local Includes
-
-  ESPECIAL WORDs:
-    re::
-    word::
-    help::
-    ::replace::
-
-
-  REPLACE EXAMPLEs:
-    source = "new g_menu, g_menu_select, g_menu_id"
-   
-
-    input  = "word::g_menu::replace::menu2"
-    result = "new menu2, g_menu_select, g_menu_id"
-   
-    input  = "re::(\\w*)_(\\w*)_(\\w*)::replace::\\3_\\2_\\1"
-    result = "new g_menu, select_menu_g, id_menu_g"
-   
-    input  = "g_menu_::replace::menu2_"
-    result = "new g_menu, g_menu2_select, g_menu2_id"
- 
-"""
-		sublime.message_dialog(help)
-		
-	def confirm_replace(self):
-	
-		view = self.window.active_view()
-		
-		includes = self.get_includes(view)
-
-		for inc in includes :
-			text = self.read_text(inc)
-			text = self.regex.sub(self.replace, text)
-			self.write_text(text, inc)
-			
-			
-	def search_all(self, text, file):
-		
-		result = [ ]
-		count = 0
-		
-		for match in self.regex.finditer(text) :
-			if self.type == 0 :
-				result += [ [ match.group(0), match.start(2), match.end(2), file ] ]
-			else :
-				result += [ [ match.group(0), match.start(), match.end(), file ] ]
-			count += 1
-			if count > 200 :
-				self.window.status_message(" ALERT! (%s) Find stopet at 200 results" % file)
-				break
-
-		return result
-		
-	def read_text(self, file_path):
-	
-		view = self.window.find_open_file(file_path)
-		if view :
-			return view.substr(sublime.Region(0, view.size()))
-		
-		fopen = open(file_path, encoding="utf-8", errors="replace")
-		if not fopen :
-			return ""
-			
-		content = fopen.read()
-		fopen.close()
-		
-		return content
-		
-	def write_text(self, text, file_path):
-	
-		view = self.window.find_open_file(file_path)
-		if view :
-			scroll = view.viewport_position()
-			
-			view.run_command("select_all")
-			view.run_command("left_delete")
-			view.run_command('append', {'characters': text, 'force': True, 'scroll_to_end': False})
-			
-			view.set_viewport_position(scroll, False)
-		else :
-			fopen = open(file_path, mode='w', encoding="utf-8", errors="replace")
-			if not fopen :
-				return
-			
-			content = fopen.write(text)
-			fopen.close()
-			
-		
-	def get_includes(self, view):
-		includes 	= [ ]
-		visited 	= [ ]
-		node 		= g_nodes[view.file_name()]
-
-		self.includes_recur(node, includes, visited)
-		
-		return includes
-		
-	def includes_recur(self, node, includes, visited) :
-		if node.file_name in visited :
-			return
-
-		visited += [ node.file_name ]
-
-		if g_include_dir != os.path.dirname(node.file_name) :
-			includes += [ node.file_name ]
-
-		for child in node.children :
-			self.includes_recur(child, includes, visited)
-
-	
-class IncTreeAmxxEditorCommand(sublime_plugin.WindowCommand):
-	def __init__(self, a) :
-		self.quickpanel = False
-		
-	def run(self):
-		window = sublime.active_window()
-		view = window.active_view()
-		
-		window.run_command("hide_overlay")
 		
 		if self.quickpanel :
 			self.quickpanel = False
@@ -545,7 +633,7 @@ class IncTreeAmxxEditorCommand(sublime_plugin.WindowCommand):
 			includes 	= dict()
 			visited 	= dict()
 			self.tree	= [ ]
-			node 		= g_nodes[view.file_name()]
+			node 		= var.nodes[util.get_filename_by_view(view)]
 
 			self.nodes_tree(node, includes, visited, 0)
 			self.generate_tree(self.tree, includes, visited, 0)
@@ -554,14 +642,13 @@ class IncTreeAmxxEditorCommand(sublime_plugin.WindowCommand):
 			for inc in self.tree :
 				quicklist += [ inc[0] ]
 			
-			window.show_quick_panel(quicklist, self.on_select, 0, -1, None)
+			self.window.show_quick_panel(quicklist, self.on_select, 0, -1, None)
 			self.quickpanel = True
 			
 	def is_enabled(self) :
-		window = sublime.active_window()
-		view = window.active_view()
+		view = self.window.active_view()
 		
-		if not is_amxmodx_file(view) :
+		if not is_amxmodx_view(view) :
 			return False
 		
 		return True
@@ -572,20 +659,20 @@ class IncTreeAmxxEditorCommand(sublime_plugin.WindowCommand):
 		if index == -1 :
 			return
 
-		goto_definition(self.tree[index][1], "", None, False)
+		util.goto_definition(self.tree[index][1], "", None, False)
 	
 	def nodes_tree(self, node, includes, visited, level):
 
 		keys = visited.keys()
-		if node.file_name in keys :
-			if visited[node.file_name] < level :
+		if node.file_path in keys :
+			if visited[node.file_path] < level :
 				return
 
-		visited[node.file_name] = level
-		includes[node.file_name] = { 'level': level, 'ignore': 0 }
+		visited[node.file_path] = level
+		includes[node.file_path] = { 'level': level, 'ignore': 0 }
 		
 		for child in node.children :
-			self.nodes_tree(child, includes[node.file_name], visited, level+1)
+			self.nodes_tree(child, includes[node.file_path], visited, level+1)
 
 	def generate_tree(self, tree, include, visited, level):
 
@@ -593,14 +680,14 @@ class IncTreeAmxxEditorCommand(sublime_plugin.WindowCommand):
 		keys = list(keys)
 		keys.sort()
 		
+		
+		
 		a = ""
+			
 		if level >= 2 :
-			a += "     "
-			if level >= 3 :
-				a += "  |   " * (level - 2)
+				a += "ˑˑˑˑ" * (level - 1)
 				
-		if level >= 1 :
-			a += " +-- "
+		open = True
 		
 		for key in keys:
 			if key == 'level' or key == 'ignore' :
@@ -612,21 +699,28 @@ class IncTreeAmxxEditorCommand(sublime_plugin.WindowCommand):
 			if include[key]['level'] > 2 :
 				include[key]['ignore'] = 1
 			
-			tree += [ [ "%s%s" % (a, os.path.basename(key)), key ] ]
-			
+			if open :
+				open = False
+				if level >= 1 :
+					tree += [ [ "%s└─̵▸%s" % (a, os.path.basename(key)), key ] ]
+				else:
+					tree += [ [ "%s%s" % (a, os.path.basename(key)), key ] ]
+			else :
+				tree += [ [ "%sˑˑˑˑ▸%s" % (a, os.path.basename(key)), key ] ]
+		
 			self.generate_tree(tree, include[key], visited, level+1)
 		
 	
-class FuncListAmxxEditorCommand(sublime_plugin.WindowCommand):
-	def __init__(self, a) :
+class AmxxFuncListCommand(sublime_plugin.WindowCommand):
+	def __init__(self,  window):
+		self.window = window
 		self.quickpanel = False
 		self.org_view 	= [ ]
 		
 	def run(self):
-		window = sublime.active_window()
-		view = window.active_view()
+		view = self.window.active_view()
 		
-		window.run_command("hide_overlay")
+		self.window.run_command("hide_overlay")
 		
 		if self.quickpanel :
 			self.quickpanel = False
@@ -634,34 +728,30 @@ class FuncListAmxxEditorCommand(sublime_plugin.WindowCommand):
 			region = view.sel()[0]
 			scroll = view.viewport_position()
 			
-			self.org_view = [ window, view, region, scroll ]
+			self.org_view = [ self.window, view, region, scroll ]
 			
-			doctset 	= set()
-			visited 	= set()
-			node 		= g_nodes[view.file_name()]
-
-			generate_functions_recur(node, doctset, visited)
+			node = var.nodes[util.get_filename_by_view(view)]
+			
+			funclist = node.generate_list("funclist", set)
 			
 			self.list = []
-			for func in doctset :
-				if not g_include_dir in func[2] :
-					self.list += [ [ func[0], func[2], func[5] ] ]
+			for func in funclist :
+				if not cfg.include_dir in func.file_path :
+					self.list += [ [ func.name, func.file_path, func.start_line ] ]
 
-			self.list = sorted_nicely(self.list)
+			self.list = ac.sorted_nicely(self.list)
 			
 			quicklist = []
 			for list in self.list :
 				quicklist += [ [ list[0], os.path.basename(list[1]) + " : " + str(list[2]) ] ]
 
-			window.show_quick_panel(quicklist, self.on_select, sublime.KEEP_OPEN_ON_FOCUS_LOST, -1, self.on_highlight)
+			self.window.show_quick_panel(quicklist, self.on_select, sublime.KEEP_OPEN_ON_FOCUS_LOST, -1, self.on_highlight)
 			self.quickpanel = True
 
 	def is_enabled(self) :
-
-		window = sublime.active_window()
-		view = window.active_view()
+		view = self.window.active_view()
 		
-		if not is_amxmodx_file(view) :
+		if not is_amxmodx_view(view) :
 			return False
 		
 		return True
@@ -673,14 +763,14 @@ class FuncListAmxxEditorCommand(sublime_plugin.WindowCommand):
 			self.restore_org(True)
 			return
 		
-		id = goto_definition(self.list[index][1], self.list[index][0], self.list[index][2] - 1, False)
+		id = util.goto_definition(self.list[index][1], self.list[index][0], self.list[index][2] - 1, False)
 		
 		if id != self.org_view[1].id() :
 			self.restore_org(False)
 		
 	def on_highlight(self, index):
 
-		goto_definition(self.list[index][1], self.list[index][0], self.list[index][2] - 1, True)
+		util.goto_definition(self.list[index][1], self.list[index][0], self.list[index][2] - 1, True)
 		
 	def restore_org(self, focus=False):
 		if self.org_view :
@@ -698,46 +788,6 @@ class FuncListAmxxEditorCommand(sublime_plugin.WindowCommand):
 				
 			self.org_view = []
 			
-		
-def goto_definition(file, search="", position=None, transient=False):
-	
-	flags = sublime.FORCE_GROUP
-	if transient :
-		flags |= sublime.TRANSIENT
-	
-	window = sublime.active_window()
-	view = window.open_file(file, group=window.active_group(), flags=flags)
-		
-	def do_position():
-		if view.is_loading() :
-			sublime.set_timeout(do_position, 50)
-		else :
-			if isinstance(position, tuple) or isinstance(position, list) :
-				region = sublime.Region(position[0], position[1])
-			elif search :
-				row = 0
-				if position :
-					row = position
-					
-				region = view.find(search, view.text_point(row, 0), sublime.IGNORECASE)
-			else :
-				return view.id()
-				
-			view.sel().clear()
-			view.sel().add(region)
-
-			view.show(region)
-				
-			xy = view.viewport_position()
-			view.set_viewport_position((xy[0] , xy[1]+1), True)
-			view.show(region)
-				
-	if search or position :
-		do_position()
-	
-	return view.id()
-
-		
 class AmxxBuildVerCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 		region = self.view.find("^#define\s+(?:PLUGIN_)?VERSION\s+\".+\"", 0, sublime.IGNORECASE)
@@ -760,878 +810,863 @@ class AmxxBuildVerCommand(sublime_plugin.TextCommand):
 		
 		self.view.replace(edit, region, result.group(1) + str(build) + beta + '\"')
 				
+class AboutInputHandler(sublime_plugin.ListInputHandler):
+	def preview(self, text):
+		content = """
+<html>
+<style>
+html {
+	background-color: #fff2;
+}
+
+body {
+	color: #000;
+	margin-top: 0px;
+}
+
+h1 { 
+	font-size: 20px;
+	color: #000;
+}
+
+b {
+	font-size: 11px;
+}
+
+i {
+	font-size: 9px;
+}
+
+img {
+	height: 80px;
+	width: 200px;
+}
+</style>
+<body>
+
+<h1>Sublime AMXX-Editor v""" + var.EDITOR_VERSION + """ by Destro</h1>
+<b>CREDITs:</b><br>
+ppalex7 <i>(SourcePawn Completions)</i><br>
+<br>
+<b>- Contributors:</b><br>
+sasske <i>(white color scheme)</i><br>
+addons_zz <i>(npp color scheme)</i><br>
+KliPPy <i>(build version)</i><br>
+Mistrick <i>(mistrick color scheme)</i><br>
+
+<div style="background-color: #f00; position: relative; left: 360px; top: -65px; height: 0px; width: 0px;">
+<img src="file://C:/Users/Emanue/Desktop 4/subime pawn logo/logo_pawneditor.png">
+</div>
+
+
+</body>
+</html>
+"""
+
+		return sublime.Html(content)
+
+	def list_items(self):
+		return [ ( "Exit", 0 ), ( "Donate", 1 ), ( "Visit Web", 2 ), ( "Check Updates", 3 ) ]
+
+	def confirm(self, value):
+		if not value :
+			return
+		
+		if value == 1 :
+			webbrowser.open_new_tab("https://amxmodx-es.com/donaciones.php")
+		elif value == 2 :
+			webbrowser.open_new_tab("https://amxmodx-es.com/showthread.php?tid=12316")
+		else :
+			sublime.set_timeout_async( lambda:check_update(True), 10)
+	
+	
+class AmxxAboutCommand(sublime_plugin.WindowCommand):
+	def run(self, about):
+		pass
+	
+	def input(self, args):
+		return AboutInputHandler()
+		
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#:: END Cmd / START Sublime EventListener ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+"""
+class HolaMundo(sublime_plugin.ViewEventListener):
+	def __init__(self, view):
+		self.view = view
+		self.data = 1
+	#	print("__init__", view.id())
+	
+	
+	#def __del__(self):
+	#	print("__del__", self.view.id())
+		
+	def on_deactivated(self):
+		print("on_deactivated3:", self.view.id(), "Mydata:", self.data)
+	
+	def on_activated(self) :
+
+		self.data += 1
+		
+		print("on_activated3:", self.view.id(), "Mydata:", self.data)
+"""
 class SublimeEvents(sublime_plugin.EventListener):
-	def __init__(self) :
-		gProcessQueueThread.start()
-		self.delay_queue = None
-		gWatchdogObserver.start()
 
-	def on_window_command(self, window, cmd, args) :
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:: Util Functions :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	def debug_event(self, *args):
+		debug.debug(debug.FLAG_ST3_EVENT, "SublimeEVENT:", *args)
+		
+	def add_to_queue(self, view):
+		if not is_amxmodx_view(view):
+			return
 
-		#print("cmd [%s] [%s]" % (cmd, args))
+		var.analyzerQueue.add_to_queue(None, view.id())
+
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:: Unused, Dev-Only :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	def on_new(self, view):
+		self.debug_event("on_new() -> view:[%d] - file:[%s]" % (view.id(), view.file_name()))
+
+	def on_close(self, view):
+		self.debug_event("on_close() -> view:[%d] - file:[%s]" % (view.id(), view.file_name()))
+
+	def on_deactivated(self, view):
+		self.debug_event("on_deactivated() -> view:[%d] - file:[%s]" % (view.id(), view.file_name()))
+
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:: Add to Queue :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	def on_activated_async(self, view):
+		# Prevent widget bug
+		window = view.window()
+		if not window :
+			return
+			
+		fix_view = window.active_view()
+		if not is_amxmodx_view(fix_view):
+			return
+			
+		self.debug_event("on_activated_async() -> view:[%d] - fix-view:[%d] - fix-file:[%s]" % (view.id(), fix_view.id(), fix_view.file_name()) )
+	
+		if not util.get_filename_by_view(fix_view) in var.nodes :
+			self.add_to_queue(fix_view)
+		
+	def on_post_save(self, view):
+		self.debug_event("on_post_save() -> view:[%d] - file:[%s]" % (view.id(), view.file_name()))
+		self.add_to_queue(view)
+
+	def on_load(self, view):
+		self.debug_event("on_load() -> view:[%d] - file:[%s]" % (view.id(), view.file_name()))
+		self.add_to_queue(view)
+	
+	# Delayed
+	def on_modified(self, view):
+		
+		if not is_amxmodx_view(view):
+			return
+			
+		self.debug_event("on_modified() -> view:[%d] - file:[%s]" % (view.id(), view.file_name()))
+
+		var.analyzerQueue.add_to_queue_delayed(view)
+		
+		mark_clear(view)
+
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:: Auto Build-Version :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	def on_window_command(self, window, cmd, args):
+
+		self.debug_event("on_window_command() -> cmd:[%s] - arg:[%s]" % (cmd, args))
+		
 		if cmd != "build" :
 			return
 			
+		p = cfg.profiles[cfg.default_profile]
+		
+		build = OpenSettings("AMXX-Compiler.sublime-build")
+		build.set('cmd', [ p['amxxpc_path'], "-d"+str(p['amxxpc_debug']), "-i"+p['includes_dir'], "-o"+p['output_dir']+"/${file_base_name}.amxx", "${file}" ])
+		build.set('syntax', 'AMXX-Console.sublime-syntax')
+		build.set('selector', 'source.sma')
+		build.set('working_dir', os.path.dirname(p['amxxpc_path']))
+		build.save()
+	
 		view = window.active_view()
-		if not is_amxmodx_file(view) or not g_enable_buildversion :
+		if not is_amxmodx_view(view) or not cfg.enable_buildversion :
 			return
+			
+		if not view.file_name() :
+			view.run_command("save")
 			
 		view.run_command("amxx_build_ver")
 		
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:: ToolTip ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 	def on_hover(self, view, point, hover_zone):
-		if hover_zone != sublime.HOVER_TEXT:
-			return
-			
-		if not is_amxmodx_file(view) or not g_enable_inteltip :
-			return
-			
+	
 		scope = view.scope_name(point)
-		print_debug(1, "scope_name: [%s]" % scope)
-		
+		self.debug_event("on_hover() -> view:[%d] - scope_name:[%s]" % (view.id(), scope))
+		debug.debug(debug.FLAG_SHOW_SCOPE, "on_hover() -> scope_name: [%s]" % scope)
+	
+		if not is_amxmodx_view(view) or not cfg.enable_tooltip or hover_zone != sublime.HOVER_TEXT:
+			return
+			
 		if not "support.function.pawn" in scope and not "variable.function.pawn" in scope and not "meta.preprocessor.include.path" in scope :
 			view.hide_popup()
 			return
 
 		if "meta.preprocessor.include.path" in scope :
-			self.inteltip_include(view, point)
+			self.tooltip_include(view, point)
 		else :
-			self.inteltip_function(view, point)
+			self.tooltip_function(view, point)
 		
-	def inteltip_include(self, view, point):
-		location 	= point + 1
+	def tooltip_include(self, view, point):
+	
 		line 		= view.substr(view.line(point))
-		include 	= INC_regex.match(line).group(1)
+		include 	= CodeAnalyzer.Regex_FIND_INCLUDE.match(line).group(1)
 
-		(file_name, exists) = get_file_name(view.file_name(), include)
+
+		(file_path, exists) = var.analyzer.get_include_path(util.get_filename_by_view(view), include)
 		if not exists :
 			return
 
-		fontSize = view.settings().get("font_size", 10) + 1
-		
-		link_local = file_name + '##1'
+		link_local = file_path + '##1'
 		if not '.' in include :
 			link_web = include + '##1'
 			include += ".inc"
 		else :
 			link_web = None
 			
-		html  = '<body><style> html { font-size: '+ str(fontSize)  +'px; }\n'+ g_popupCSS +'</style>'
-		html += '<div class="top">'
-		html += '<a class="include_link" href="'+link_local+'">'+include+'</a>'
+		top = ''
 		if link_web :
-			html += ' | <a class="include_link" href="'+link_web+'">WebAPI</a>'
-			
-		html += '</div><div class="content">'
-		
-		html += '<span class="inc">Location:</span><br>'
-		html += '<span class="incPath">'+file_name+'</span>'
-		html += '</div><div class="bottom"></div></body>'
-			
-		view.show_popup(html, sublime.HIDE_ON_MOUSE_MOVE_AWAY, location, max_width=800, on_navigate=self.on_navigate)
+			top += '<a class="include_link" href="'+link_web+'">WebAPI</a> | '
+		top += '<a class="include_link" href="'+link_local+'">'+include+'</a>'
 	
-	def inteltip_function(self, view, point):
+		content = '<span class="inc">Location:</span><br>'
+		content += '<span class="incPath">'+file_path+'</span>'
+
+		tooltip.show_popup(view, point + 1, top, content, "", self.tooltip_on_click)
+
+	def tooltip_function(self, view, point):
 		
 		word_region = view.word(point)
-		
-		location 	= point + 1
 		search_func = view.substr(word_region)
-		doctset 	= set()
-		visited 	= set()
 		found 		= None
-		node 		= g_nodes[view.file_name()]
+		node 		= var.nodes[util.get_filename_by_view(view)]
 
-		generate_functions_recur(node, doctset, visited)
+		funclist = node.generate_list("funclist", set)
 		
-		for func in doctset :
-			if search_func == func[0] :
+		for func in funclist :
+			if search_func == func.name :
 				found = func
-				if found[3] != 1 :
+				if found.type != var.FUNC_TYPES.public :
 					break
 				
 		if not found :
 			return
 			
-		filename = os.path.basename(found[2])
+		filename = os.path.basename(found.file_path)
 		
-		fontSize = view.settings().get("font_size", 10) + 1
-
-		link_local 	= found[2] + '#' + found[0] + '#' + str(found[5])
+		link_local 	= found.file_path + '#' + found.name + '#' + str(found.start_line)
 		link_web 	= ''
 			
-		if found[3] and os.path.dirname(g_include_dir) == os.path.dirname(found[2]) :
-			link_web = filename.rsplit('.', 1)[0] + '#' + found[0] + '#'
-			
-		html  = '<body><style> html { font-size: '+ str(fontSize)  +'px; }\n'+ g_popupCSS +'</style>'
-		html += '<div class="top">'
-			
-		html += '<a class="include_link" href="'+link_local+'">'+os.path.basename(found[2])+'</a>'
+		if found.type != var.FUNC_TYPES.function and cfg.include_dir == os.path.dirname(found.file_path) :
+			link_web = filename.rsplit('.', 1)[0] + '#' + found.name + '#'
+
+		top = '<a class="include_link" href="@'+search_func+'">Search All</a>'
 		if link_web:
-			html += ' | <a class="include_link" href="'+link_web+'">WebAPI</a>'
-			
-		html += '</div><div class="content">'
-			
-		html += '<span class="function">'+FUNC_TYPES[found[3]]+'&nbsp;:</span>&nbsp;&nbsp;<span class="pawnFunc">'+found[0]+'</span>'
-		html += '<br>'
-		html += '<span class="params">Params&nbsp;:</span>&nbsp;&nbsp;<span class="pawnParams">'+ self.pawn_highlight('('+found[1]+')') +'</span>'
-		html += '<br>'
-			
-		if found[4] :
-			html += '<span class="return">Return&nbsp;:</span>&nbsp;&nbsp;<span class="pawnTag">'+found[4]+'</span>'
-			
-		html += '</div>'
-		html += '<div class="bottom"></div></body>           '
+			top += ' | <a class="include_link" href="'+link_web+'">WebAPI</a>'
+		top += ' | <a class="include_link" href="'+link_local+'">'+filename+'</a>'
 		
-		view.show_popup(html, sublime.HIDE_ON_MOUSE_MOVE_AWAY, location, max_width=800, on_navigate=self.on_navigate)
+		content = ""
+		if found.type :
+			content += '<span class="pawnConstVar"><b>'+var.FUNC_TYPES[found.type]+'</b></span>&nbsp;&nbsp;'
+		if found.return_type :
+			content += '<span class="pawnTag">'+found.return_type+':</span>&nbsp;'
+		content += '<span class="pawnFunc">'+found.name+'</span>' + '<span class="pawnParams">'+ tooltip.pawn_highlight('('+found.parameters+')') +'</span>'
+		content += '<br>'
+		
+		if found.type != var.FUNC_TYPES.public and found.param_list :
+			(row, col) = view.rowcol(point)
+			line = view.substr(view.line(point)).rstrip()
+			text = line[line.find('(', col):]
 			
-	def on_navigate(self, link) :
+			arguments = tooltip.parse_current_arguments(text)
+			maxlen = len(max(found.param_list, key=len)) + 1
+	
+			if len(arguments) >= 1 :
+				content += '<br>'
+				content += '<span class="params">Param-Inspector:</span>'
+				content += '<br><code>'
+			
+				i = 0
+				for value in arguments :
+				
+					if i < len(found.param_list) :
+						param = found.param_list[i]
+					else :
+						param = "..."
+				
+					param = param.ljust(maxlen).replace(" ", "&nbsp;")
+		
+					content += '- '+ param +':&nbsp;'+ tooltip.pawn_highlight( value )
+					content += '<br>'
+					
+					i += 1
+					
+				content += '</code>'
+
+		tooltip.show_popup(view, point + 1, top, content, "", self.tooltip_on_click)
+			
+	def tooltip_on_click(self, link):
+	
+		view = sublime.active_window().active_view()
+		view.hide_popup()
+		
+		if link[0] == '@' :
+			global g_fix_view
+			g_fix_view = True
+			sublime.active_window().run_command("amxx_find_replace", { "find_replace": link[1:] } )
+			return
+			
 		(file, search, line_row) = link.split('#')
 		
 		if "." in file :
-
-			view = sublime.active_window().active_view()
-			view.hide_popup()
-			view.add_regions("inteltip", [ ])
-			
-			goto_definition(file, search, int(line_row)-1, False)
+			util.goto_definition(file, search, int(line_row)-1, False)
 		else :
 			webbrowser.open_new_tab("http://www.amxmodx.org/api/"+file+"/"+search)
-
-	def pawn_highlight(self, str):
-
-		str = str.replace('=', '<hack>')
 		
-		str = re.sub(r',(\w)', r', \1', str)
-		str = re.sub(r'(("[^"]*")|(\'[^\']*\'))', r'<span class="pawnString">\1</span>', str)
-		str = re.sub(r'([\(\)\[\]&]|\.\.\.)', r'<span class="pawnKeyword">\1</span>', str)
-		str = re.sub(r'\b(\d+(.\d+)?)\b', r'<span class="pawnNumber">\1</span>', str)
-		str = re.sub(r'([a-zA-Z_]\w*:)', r'<span class="pawnTag">\1</span>', str)
 
-		str = str.replace('const ', '<span class="pawnConstVar">const </span>')
-		str = str.replace('<hack>', '<span class="pawnKeyword">=</span>')
-		str = str.replace('&', '&amp;')
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:: Fix Bug on Selection :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	def on_selection_modified(self, view):
+		
+		if not is_amxmodx_view(view) :
+			return
+
+		regions = [ ]
+
+		for sel_region in view.sel() :
+			for r in view.get_regions("pawnconst") :
+				intersect = sel_region.intersection(r)
+				if not intersect.empty() :
+					regions.append(intersect)
+
+		view.add_regions("fix_selection", regions, "fixselection", "", sublime.HIDE_ON_MINIMAP|sublime.DRAW_NO_OUTLINE)
+
+
+	"""
+		return
+			
+		region = view.sel()[0]
+		if region.size() > 1 :
+			return
+			
+		return
+			
+		print("on_selection_modified:", view.id())
+		
+		point = region.begin()
+		
+		(row, col) = view.rowcol(point)
+		line = view.substr(view.line(point)).rstrip()
+		
+
+		left = line[0:col]
+		rigth = line[col:]
+		
+
+		print("line: [%s]" % line)
+		print("left:[%s], rigth:[%s]" % (left, rigth))
+		
+		
+		print(line.rfind("(", 0, col))
+		
+		# rigth
+		
+		#print("character:[%s]" % view.substr(point).strip())
+		#print("word:[%s]" % view.substr( view.word(point - 1) ) )
+		
+
+		
+		if view.is_popup_visible() :
+			return
+			
+		view.show_popup("(...param2=-1, const param3[]='')", 0, point, 800, 800, None, self.on_hide_popup)
+		 
+	def on_hide(self):
+		print("on_hide() popup")
+		
+	--------------------------------------------------
 	
-		return str
-		
-	def on_activated(self, view) :
-		if not is_amxmodx_file(view):
-			return
-		if not view.file_name() :
-			return
-		if not view.file_name() in g_nodes :
-			add_to_queue(view)
-
-	def on_modified(self, view) :
-		self.add_to_queue_delayed(view)
-		pawnparse.mark_clear()
-
-	def on_post_save(self, view) :
-		self.add_to_queue_now(view)
-
-	def on_load(self, view) :
-		self.add_to_queue_now(view)
-
-	def add_to_queue_now(self, view) :
-		if not is_amxmodx_file(view):
-			return
-		add_to_queue(view)
-
-	def add_to_queue_delayed(self, view) :
-		if not is_amxmodx_file(view):
-			return
-
-		if self.delay_queue is not None :
-			self.delay_queue.cancel()
-
-		self.delay_queue = Timer(float(g_delay_time), add_to_queue_forward, [ view ])
-		self.delay_queue.start()
-
-	def autocomplete_preprocessor(self):
-		list = [ ]
-		
-		def add(value):
-			list.append(( "#" + value + "\t preprocessor", value ))
+			if view.style_for_scope("")['source_line'] == -1 :
 			
-		list.append(( "#include\t preprocessor", 		"#include <${1}>" ))
-		list.append(( "#tryinclude\t preprocessor", 		"#tryinclude <${1}>" ))
-		
-		add("define ")
-		add("if ")
-		add("elseif ")
-		add("else")
-		add("endif")
-		add("endinput")
-		add("undef ")
-		add("endscript")
-		add("error")
-		add("file ")
-		add("line ")
-		add("emit ")
-		add("assert ")
-		
-		add("pragma amxlimit ")
-		add("pragma codepage ")
-		add("pragma compress ")
-		add("pragma ctrlchar ")
-		add("pragma dynamic ")
-		add("pragma library ")
-		add("pragma reqlib ")
-		add("pragma reqclass ")
-		add("pragma loadlib ")
-		add("pragma explib ")
-		add("pragma expclass ")
-		add("pragma defclasslib ")
-		add("pragma pack ")
-		add("pragma rational ")
-		add("pragma semicolon ")
-		add("pragma tabsize ")
-		add("pragma align")
-		add("pragma unused ")
-		
-		list = sorted_nicely(list)
 			
-		return (list, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-		
-	def autocomplete_emit(self):
-		list = [ ]
 			
-		def addemit(opcode, valuetype, info):
-			if valuetype :
-				list.append(( opcode + "\t emit opcode", opcode + " ${1:<" + valuetype + ">}\t\t// " + info))
-			else:
-				list.append(( opcode + "\t emit opcode", opcode + "\t\t\t// " + info))
-				
-		addemit("LOAD.pri", "address", "PRI   =  [address]")
-		addemit("LOAD.alt", "address", "ALT   =  [address]")
-		addemit("LOAD.S.pri", "offset", "PRI   =  [FRM + offset]")
-		addemit("LOAD.S.alt", "offset", "ALT   =  [FRM + offset]")
-		addemit("LREF.pri", "address", "PRI   =  [ [address] ]")
-		addemit("LREF.alt", "address", "ALT   =  [ [address] ]")
-		addemit("LREF.S.pri", "offset", "PRI   =  [ [FRM + offset] ]")
-		addemit("LREF.S.alt", "offset", "ALT   =  [ [FRM + offset] ]")
-		addemit("LOAD.I", "", "PRI   =  [PRI] (full cell)")
-		addemit("LODB.I", "number", "PRI   =  'number' bytes from [PRI] (read 1/2/4 bytes)")
-		addemit("CONST.pri", "value", "PRI   =  value")
-		addemit("CONST.alt", "value", "ALT   =  value")
-		addemit("ADDR.pri", "offset", "PRI   =  FRM + offset")
-		addemit("ADDR.alt", "offset", "ALT   =  FRM + offset")
-		addemit("STOR.pri", "address", "[address]   =  PRI")
-		addemit("STOR.alt", "address", "[address]   =  ALT")
-		addemit("STOR.S.pri", "offset", "[FRM + offset]   =  PRI")
-		addemit("STOR.S.alt", "offset", "[FRM + offset]   =  ALT")
-		addemit("SREF.pri", "address", "[ [address] ]   =  PRI")
-		addemit("SREF.alt", "address", "[ [address] ]   =  ALT")
-		addemit("SREF.S.pri", "offset", "[ [FRM + offset] ]   =  PRI")
-		addemit("SREF.S.alt", "offset", "[ [FRM + offset] ]   =  ALT")
-		addemit("STOR.I", "", "[ALT]   =  PRI (full cell)")
-		addemit("STRB.I", "number", "'number' bytes at [ALT]   =  PRI (write 1/2/4 bytes)")
-		addemit("LIDX", "", "PRI   =  [ ALT + (PRI * cell size) ]")
-		addemit("LIDX.B", "shift", "PRI   =  [ ALT + (PRI << shift) ]")
-		addemit("IDXADDR", "", "PRI   =  ALT + (PRI * cell size) (calculate indexed address)")
-		addemit("IDXADDR.B", "shift", "PRI   =  ALT + (PRI << shift) (calculate indexed address)")
-		addemit("ALIGN.pri", "number", "Little Endian: PRI ^   =  cell size")
-		addemit("ALIGN.alt", "number", "Little Endian: ALT ^   =  cell size")
-		addemit("LCTRL", "index, PRI is set to the current value of any of the special registers. The index parameter must be: 0  = COD, 1  = DAT, 2  = HEA,3  = STP, 4  = STK, 5  = FRM", "6  = CIP (of the next instruction)")
-		addemit("SCTRL", "index, set the indexed special registers to the value in PRI. The index parameter must be: 2  = HEA, 4  = STK, 5  = FRM", "6  = CIP")
-		addemit("MOVE.pri", "", "PRI  = ALT")
-		addemit("MOVE.alt", "", "ALT  = PRI")
-		addemit("XCHG", "", "Exchange PRI and ALT")
-		addemit("PUSH.pri", ", [STK]   =  PRI", "STK   =  STK ")
-		addemit("PUSH.alt", ", [STK]   =  ALT", "STK   =  STK ")
-		addemit("PUSH.R", "value, Repeat value: [STK]   =  PRI", "STK   =  STK ")
-		addemit("PUSH.C", "value, [STK]   =  value", "STK   =  STK ")
-		addemit("PUSH", "address, [STK]   =  [address]", "STK   =  STK ")
-		addemit("PUSH.S", "offset, [STK]   =  [FRM + offset]", "STK   =  STK ")
-		addemit("POP.pri", ", STK   =  STK + cell size", "PRI   =  [STK]")
-		addemit("POP.alt", ", STK   =  STK + cell size", "ALT   =  [STK]")
-		addemit("STACK", "value, ALT   =  STK", "STK   =  STK + value")
-		addemit("HEAP", "value, ALT   =  HEA", "HEA   =  HEA + value")
-		addemit("PROC", ", [STK]   =  FRM", "STK   =  STK ")
-		addemit("RET", ", STK   =  STK + cell size, FRM   =  [STK], STK   =  STK + cell size, CIP   =  [STK]", "The RET instruction cleans up the stack frame and returns from the function to the instruction after the call.")
-		addemit("RETN", ", STK   =  STK + cell size, FRM   =  [STK], STK   =  STK + cell size, CIP   =  [STK]", "STK   =  STK + [STK] The RETN instruction removes a specifed number of bytes from the stack. The value to adjust STK with must be pushed prior to the call.")
-		addemit("CALL", "address, [STK]   =  CIP + 5", "STK   =  STK The CALL instruction jumps to an address after storing the address of the next sequential instruction on the stack.")
-		addemit("CALL.pri", ", [STK]   =  CIP + 1", "STK   =  STK ")
-		addemit("JUMP", "address", "CIP   =  address (jump to the address)")
-		addemit("JREL", "offset", "CIP   =  CIP + offset (jump offset bytes from currentposition)")
-		addemit("JZER", "address", "if PRI   =   =  0 then CIP   =  [CIP + 1]")
-		addemit("JNZ", "address", "if PRI !  =  0 then CIP   =  [CIP + 1]")
-		addemit("JEQ", "address", "if PRI   =   =  ALT then CIP   =  [CIP + 1]")
-		addemit("JNEQ", "address", "if PRI !  =  ALT then CIP   =  [CIP + 1]")
-		addemit("JLESS", "address", "if PRI < ALT then CIP   =  [CIP + 1] (unsigned)")
-		addemit("JLEQ", "address", "if PRI <   =  ALT then CIP   =  [CIP + 1] (unsigned)")
-		addemit("JGRTR", "address", "if PRI > ALT then CIP   =  [CIP + 1] (unsigned)")
-		addemit("JGEQ", "address", "if PRI >   =  ALT then CIP   =  [CIP + 1] (unsigned)")
-		addemit("JSLESS", "address", "if PRI < ALT then CIP   =  [CIP + 1] (signed)")
-		addemit("JSLEQ", "address", "if PRI <   =  ALT then CIP   =  [CIP + 1] (signed)")
-		addemit("JSGRTR", "address", "if PRI > ALT then CIP   =  [CIP + 1] (signed)")
-		addemit("JSGEQ", "address", "if PRI >   =  ALT then CIP   =  [CIP + 1] (signed)")
-		addemit("SHL", "", "PRI   =  PRI << ALT")
-		addemit("SHR", "", "PRI   =  PRI >> ALT (without sign extension)")
-		addemit("SSHR", "", "PRI   =  PRI >> ALT with sign extension")
-		addemit("SHL.C.pri", "value", "PRI   =  PRI << value")
-		addemit("SHL.C.alt", "value", "ALT   =  ALT << value")
-		addemit("SHR.C.pri", "value", "PRI   =  PRI >> value (without sign extension)")
-		addemit("SHR.C.alt", "value", "ALT   =  ALT >> value (without sign extension)")
-		addemit("SMUL", "", "PRI   =  PRI * ALT (signed multiply)")
-		addemit("SDIV", ", PRI   =  PRI / ALT (signed divide)", "ALT   =  PRI mod ALT")
-		addemit("SDIV.alt", ", PRI   =  ALT / PRI (signed divide)", "ALT   =  ALT mod PRI")
-		addemit("UMUL", "", "PRI   =  PRI * ALT (unsigned multiply)")
-		addemit("UDIV", ", PRI   =  PRI / ALT (unsigned divide)", "ALT   =  PRI mod ALT")
-		addemit("UDIV.alt", ", PRI   =  ALT / PRI (unsigned divide)", "ALT   =  ALT mod PRI")
-		addemit("ADD", "", "PRI   =  PRI + ALT")
-		addemit("SUB", "", "PRI   =  PRI - ALT")
-		addemit("SUB.alt", "", "PRI   =  ALT - PRI")
-		addemit("AND", "", "PRI   =  PRI & ALT")
-		addemit("OR", "", "PRI   =  PRI | ALT")
-		addemit("XOR", "", "PRI   =  PRI ^ ALT")
-		addemit("NOT", "", "PRI   =  !PRI")
-		addemit("NEG", "", "PRI   =  PRI   =  --PRI")
-		addemit("INVERT", "", "PRI   =  ~ PRI")
-		addemit("ADD.C", "value", "PRI   =  PRI + value")
-		addemit("SMUL.C", "value", "PRI   =  PRI * value")
-		addemit("ZERO.pri", "", "PRI   =  0")
-		addemit("ZERO.alt", "", "ALT   =  0")
-		addemit("ZERO", "address", "[address]   =  0")
-		addemit("ZERO.S", "offset", "[FRM + offset]   =  0")
-		addemit("SIGN.pri", "", "sign extent the byte in PRI to a cell")
-		addemit("SIGN.alt", "", "sign extent the byte in ALT to a cell")
-		addemit("EQ", "", "PRI   =  PRI   =   =  ALT ? 1 : 0")
-		addemit("NEQ", "", "PRI   =  PRI !  =  ALT ? 1 : 0")
-		addemit("LESS", "", "PRI   =  PRI < ALT ? 1 : 0 (unsigned)")
-		addemit("LEQ", "", "PRI   =  PRI <   =  ALT ? 1 : 0 (unsigned)")
-		addemit("GRTR", "", "PRI   =  PRI > ALT ? 1 : 0 (unsigned)")
-		addemit("GEQ", "", "PRI   =  PRI >   =  ALT ? 1 : 0 (unsigned)")
-		addemit("SLESS", "", "PRI   =  PRI < ALT ? 1 : 0 (signed)")
-		addemit("SLEQ", "", "PRI   =  PRI <   =  ALT ? 1 : 0 (signed)")
-		addemit("SGRTR", "", "PRI   =  PRI > ALT ? 1 : 0 (signed)")
-		addemit("SGEQ", "", "PRI   =  PRI >   =  ALT ? 1 : 0 (signed)")
-		addemit("EQ.C.pri", "value", "PRI   =  PRI   =   =  value ? 1 : 0")
-		addemit("EQ.C.alt", "value", "PRI   =  ALT   =   =  value ? 1 : 0")
-		addemit("INC.pri", "", "PRI   =  PRI + 1")
-		addemit("INC.alt", "", "ALT   =  ALT + 1")
-		addemit("INC", "address", "[address]   =  [address] + 1")
-		addemit("INC.S", "offset", "[FRM + offset]   =  [FRM + offset] + 1")
-		addemit("INC.I", "", "[PRI]   =  [PRI] + 1")
-		addemit("DEC.pri", "", "PRI   =  PRI - 1")
-		addemit("DEC.alt", "", "PRI   =  PRI - 1")
-		addemit("DEC", "address", "[address]   =  [address]  - 1")
-		addemit("DEC.S", "offset", "[FRM + offset]   =  [FRM + offset]  - 1")
-		addemit("DEC.I", "", "[PRI]   =  [PRI] - 1")
-		addemit("MOVS", "number", "Copy memory from [PRI] to [ALT]. The parameter specifes the number of bytes. The blocks should not overlap.")
-		addemit("CMPS", "number", "Compare memory blocks at [PRI] and [ALT]. The parameter specifes the number of bytes. The blocks should not overlap.")
-		addemit("FILL", "number, Fill memory at [ALT] with value in [PRI]. The parameter specifes the number of bytes", "which must be a multiple of the cell size.")
-		addemit("HALT", "0, Abort execution (exit value in PRI)", "parameters other than 0 have a special meaning.")
-		addemit("BOUNDS", "value", "Abort execution if PRI > value or if PRI < 0")
-		addemit("SYSREQ.pri", ", call system service", "service number in PRI")
-		addemit("SYSREQ.C", "value", "call system service")
-		addemit("FILE", "size ord name...", "source file information pair: name and ordinal (see below)")
-		addemit("LINE", "line ord", "source line number and file ordinal (see below)")
-		addemit("SYMBOL", "sze off flg name...", "symbol information (see below)")
-		addemit("SRANGE", "lvl size", "symbol range and dimensions (see below)")
-		addemit("JUMP.pri", "", "CIP   =  PRI (indirect jump)")
-		addemit("SWITCH", "address", "Compare PRI to the values in the case table (whose address is passed) and jump to the associated address.")
-		addemit("CASETBL", "... ", "casetbl num default num*[case jump]")
-		addemit("SWAP.pri", "", "[STK]   =  PRI and PRI   =  [STK]")
-		addemit("SWAP.alt", "", "[STK]   =  ALT and ALT   =  [STK]")
-		addemit("PUSHADDR", "offset, [STK]   =  FRM + offset", "STK   =  STK ")
-		addemit("NOP", ", no-operation", "for code alignment")
-		addemit("SYSREQ.D", "address", "call system service directly (by address)")
-		addemit("SYMTAG", "value", "symbol tag")
-		addemit("BREAK", "", "invokes  optional debugger")
-		
-		return (list, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-		
-	def autocomplete_includes(self, text):
-		list = [ ]
-		op = "<"
-		cl = ">"
-		
-		if text.find("<") != -1 :
-			op = ""
-		if text.find(">") != -1 :
-			cl = ""
+			p = sublime.Phantom(sublime.Region(1, 2), 'we <b>hola</b> <br> asd', sublime.LAYOUT_INLINE, on_navigate=self.on_navigate)
+
+			updater = sublime.PhantomSet(view, "daa")
 			
-		for inc in g_includes_list :
-			list.append(( inc + "\t inc", op + inc + cl ))
-			
-		return (list, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+			updater.update([ p ])
 		
+			
+			
+			view.erase_phantoms("mytest")
+			view.add_phantom("mytest", sublime.Region(0, 0), "<b>B</b>", sublime.LAYOUT_INLINE, on_navigate=None)
+			
+			view.show_popup("<b>Popup xd</b>", sublime.COOPERATE_WITH_AUTO_COMPLETE, 15, max_width=800)
+			
+			#view.add_phantom("mytest", sublime.Region(0, 0), "<b>B</b>", sublime.LAYOUT_INLINE, on_navigate=None)
+			
+			print("add Phantom")
+
+	
+	"""
+	
+
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:: Auto-Completions :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 	def on_query_completions(self, view, prefix, locations):
-		if not is_amxmodx_file(view) or not g_AC_enable:
+		
+		if not is_amxmodx_view(view) or not cfg.ac_enable:
 			return None
 			
 		if view.match_selector(locations[0], 'source.sma string') :
 			return ([ ], sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 			
 		word = view.substr(view.word(locations[0]))
-		print("debug: [%s][%s][%s]" % (view.substr(locations[0]-1), prefix, word))
-				
-		fullLine 	= view.substr(view.full_line(locations[0])).strip()
+		self.debug_event("on_selection_modified() -> prefix:[%s] - word:[%s] - location:[%d]" % (prefix, word, locations[0]))
+		
+		fullLine = view.substr(view.full_line(locations[0])).strip()
 		if fullLine[0] == '#' :
 
 			if fullLine.startswith("#include") or fullLine.startswith("#tryinclude"):
-				return self.autocomplete_includes(fullLine)
+				return ( ac.generate_includes_list(cfg.profiles[cfg.default_profile]['includes_list'], fullLine), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
 			if fullLine.startswith("#emit"):
-				return self.autocomplete_emit()
+				return ( ac.cache_emit, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 				
 			pos = fullLine.rfind(prefix)
 			if pos != -1 and fullLine.find(" ", 0, pos) == -1:
-				return self.autocomplete_preprocessor()
+				return ( ac.cache_preprocessor, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 				
 			return ([ ], sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 			
-		if len(prefix) > 1 :
-			return None
-
-		line 		= view.rowcol(locations[0])[0] + 1
-		file_name 	= view.file_name()
-		funcset 	= set()
-		visited 	= set()
-		node 		= g_nodes[file_name]
+		if fullLine.startswith("new ") or fullLine.startswith("for") :
 		
-		self.generate_autocompletion_recur(node, funcset, visited)
-		
-		if g_AC_keywords :
-		#{
-			if g_AC_keywords == 1 :
-				funcset.add(( "if\t if conditional", 			"if" ))
-				funcset.add(( "for\t for loop", 				"for" ))
-				funcset.add(( "while\t while loop", 			"while" ))
-				funcset.add(( "switch\t switch conditional", 	"switch" ))
-				funcset.add(( "case\t switch case", 			"case" ))
-			else :
-				funcset.add(( "if()\t if conditional", 			"if(${1})" ))
-				funcset.add(( "for()\t for loop", 				"for(${1}; ${2}; ${3})\n{\n\t${4}\n}" ))
-				funcset.add(( "while()\t while loop", 			"while(${1})" ))
-				funcset.add(( "switch()\t switch conditional", 	"switch(${1})" ))
-				funcset.add(( "case\t switch case", 			"case ${1}:" ))
-				
-			funcset.add(( "return\t return keywords", 			"return" ))
-			funcset.add(( "break\t loop break ", 				"break" ))
-			funcset.add(( "default\t switch default", 			"default:" ))
-			funcset.add(( "continue\t loop continue", 			"continue" ))
-			funcset.add(( "forward\t external pre-declaration", "forward" ))
-			funcset.add(( "native\t external pre-declaration", 	"native" ))
-		#}	
-		
-		if g_AC_local_var :
-		#{
-			for func in node.functions :
-			#{
-				if func[5] <= line and line <= func[6] :
-				#{
-					for var in func[7] :
-					#{
-						funcset.add(( var + "\t local var", var ))
-					#}
-					break
-				#}
-			#}
-		#}
-		
-		funclist = []
-		
-		if g_AC_begin_explicit :
-			for func in funcset :
-			#{
-				if func[0][0] == prefix[0] :
-					funclist += [ func ]
-			#}
-		else :
-			funclist = funcset
-		
-		funclist = sorted_nicely(funclist)
-		return (funclist, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-
-	def generate_autocompletion_recur(self, node, funcset, visited) :
-		if node in visited :
-			return
-
-		visited.add(node)
-		for child in node.children :
-			self.generate_autocompletion_recur(child, funcset, visited)
-
-		funcset.update(node.autocompletion)
-		
-def generate_functions_recur(node, doctset, visited) :
-	if node in visited :
-		return
-
-	visited.add(node)
-	for child in node.children :
-		generate_functions_recur(child, doctset, visited)
-
-	doctset.update(node.functions)
-
-def is_amxmodx_file(view) :
-	return view.file_name() is not None and view.match_selector(0, 'source.sma') and not g_invalid_settings
-		
-def on_settings_modified() :
-	settings_modified()
-
-def settings_modified(register_callback = False) :
-#{
-	global g_invalid_settings, g_ignore_settings, g_edit_settings
-	
-	if g_ignore_settings :
-		return
-		
-	print("on_settings_modified:")
-
-	settings = sublime.load_settings("AMXX-Editor.sublime-settings")
-	if register_callback :
-		settings.add_on_change('amxx', on_settings_modified)
-
-	# check package path
-	packages_path = sublime.packages_path() + "/amxmodx"
-	if not os.path.isdir(packages_path) :
-		os.mkdir(packages_path)
-
-	# fix-path
-	g_ignore_settings = True
-	fix_path(settings, 'amxxpc_directory')
-	fix_path(settings, 'include_directory')
-	fix_path(settings, 'output_directory')
-	g_ignore_settings = False
-	
-	g_invalid_settings = False
-	
-	invalid = is_invalid_settings(settings)
-	if invalid :
-	#{
-		g_invalid_settings = True
-		
-		sublime.message_dialog("AMXX-Editor:\n\n" + invalid)
-
-		if g_edit_settings :
-			return
-
-		g_edit_settings = True
-		
-		file_name = sublime.packages_path() + "/User/AMXX-Editor.sublime-settings"
-		
-		if not os.path.isfile(file_name):
-			default = sublime.load_resource("Packages/amxmodx/AMXX-Editor.sublime-settings")
-			default = default.replace("Example:", "User Setting:")
-			f = open(file_name, "w")
-			f.write(default)
-			f.close()
-
-		sublime.set_timeout_async(run_edit_settings, 250)
-		return
-	#}
-		
-	# Cache Settings
-	global g_enable_inteltip, g_enable_buildversion, g_AC_enable, g_AC_keywords, g_AC_local_var, g_AC_begin_explicit, g_debug_level, g_delay_time, g_include_dir, g_popupCSS
-	
-	g_enable_inteltip 		= settings.get('enable_inteltip', True)
-	g_enable_buildversion 	= settings.get('enable_buildversion', False)
-	g_AC_enable 			= settings.get('ac_enable', True)
-	g_AC_keywords 			= settings.get('ac_keywords', 2)
-	g_AC_local_var			= settings.get('ac_local_var', True)
-	g_AC_begin_explicit 	= settings.get('ac_begin_explicit', False)
-	g_debug_level 			= settings.get('debug_level', 0)
-	g_delay_time			= settings.get('live_refresh_delay', 1.5)
-	g_include_dir 			= settings.get('include_directory')
-
-	# Generate list of styles
-	global g_style_popup, g_style_editor, g_style_console
-	
-	g_style_popup['list']		= STYLES_POPUP[:]
-	g_style_editor['list']		= STYLES_EDITOR[:]
-	g_style_console['list']		= STYLES_CONSOLE[:]
-	
-	g_style_popup['active']		= settings.get("style_popup")
-	g_style_editor['active']	= settings.get("style_editor")
-	g_style_console['active']	= settings.get("style_console")
-	
-	print("color active: popup(%s) editor(%s) console(%s)" % (g_style_popup['active'], g_style_editor['active'], g_style_console['active']))
-
-	load_styles(g_style_popup,	"-popup.css")
-	load_styles(g_style_editor,	"-pawn.sublime-color-scheme")
-	load_styles(g_style_console,"-console.sublime-color-scheme")
-	
-	# Popup CSS
-	g_popupCSS = sublime.load_resource("Packages/amxmodx/style/"+ g_style_popup['active'] + "-popup.css")
-	g_popupCSS = g_popupCSS.replace("\r", "") # Fix Newlines
-	
-	
-	# build-system
-	build_filename = 'AMXX-Compiler.sublime-build'
-	build = sublime.load_settings(build_filename)
-	build.set('cmd', [ settings.get('amxxpc_directory'), "-d"+str(settings.get('amxxpc_debug')), "-i"+settings.get('include_directory'), "-o"+settings.get('output_directory')+"/${file_base_name}.amxx", "${file}" ])
-	build.set('syntax', 'AMXX-Console.sublime-syntax')
-	build.set('selector', 'source.sma')
-	build.set('working_dir', os.path.dirname(settings.get('amxxpc_directory')))
-	sublime.save_settings(build_filename)
-	
-	
-	# AMXX-Pawn.sublime-settings ( Syntax Settings )
-	if "default" == g_style_editor['active'] :
-		newValue = None
-	else :
-		newValue = "Packages/amxmodx/style/"+ g_style_editor['active'] +"-pawn.sublime-color-scheme"
-	oneset_setting("AMXX-Pawn.sublime-settings", "color_scheme", newValue)
-	oneset_setting("AMXX-Pawn.sublime-settings", "extensions",  [ "sma", "inc" ])
-	
-	# AMXX-Console.sublime-settings ( Syntax Settings )
-	if "default" == g_style_console['active'] :
-		newValue = None
-	else :
-		newValue = "Packages/amxmodx/style/"+ g_style_console['active'] +"-console.sublime-color-scheme"
-	oneset_setting("AMXX-Console.sublime-settings", "color_scheme", newValue)
-
-	gWatchdogObserver.unschedule_all()
-	gWatchdogObserver.schedule(gObserverHandler, g_include_dir, True)
-	
-	global g_includes_list
-	g_includes_list.clear()
-	for inc in list_files(g_include_dir) :
-		if inc.endswith(".inc") :
-			inc = inc.replace(g_include_dir, "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
-			g_includes_list.append(inc)
+			(row, col) = view.rowcol(locations[0])
+			text = view.substr(view.full_line(locations[0]))[0:col]
 			
-	g_includes_list = sorted_nicely(g_includes_list)
-#}
+			pos = text.find("new ")
+			if pos != -1 and ac.block_on_varname(text[pos+4:]) :
+				return ([ ], sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
-def load_styles(style, endswith) :
-#{
-	for file in os.listdir(sublime.packages_path()+"/amxmodx/style") :
-	#{
-		if file.endswith(endswith) :
-			name = file.replace(endswith, "")
-			if not name in style['list'] :
-				style['list'] += [ name ]
-	#}
 	
-	if not style['active'] in style['list'] :
-		style['active'] = style['list'][0]
-	
-	style['count'] = len(style['list'])
-#}
-
-def oneset_setting(settingfile, key, value=None) :
-#{
-	setting = sublime.load_settings(settingfile)
-	
-	if value == None :
-		setting.erase(key)
-	else :
-		setting.set(key, value)
+		#if len(prefix) > 1 :
+		#	return None
 		
-	sublime.save_settings(settingfile)
-#}
-
-def is_invalid_settings(settings) :
-#{
-	if settings.get('amxxpc_directory') is None or settings.get('amxxpc_debug') is None or settings.get('include_directory') is None or settings.get('output_directory') is None :
-		return "You are not set correctly settings for AMXX-Editor.\n\nNo has configurado correctamente el AMXX-Editor."
 		
-	temp = settings.get('amxxpc_directory')
-	if not os.path.isfile(temp) :
-		return "amxxpc_directory :  File not exist. \n\"%s\"" % temp
+		line 		= view.rowcol(locations[0])[0] + 1
+		file_path 	= util.get_filename_by_view(view)
+		node 		= var.nodes[file_path]
 		
-	temp = settings.get('include_directory')
-	if not os.path.isdir(temp) :
-		return "include_directory :  Directory not exist. \n\"%s\"" % temp
-		
-	temp = settings.get('output_directory')
-	if temp is "${file_path}" and not os.path.isdir(temp) :
-		return "output_directory :  Directory not exist. \n\"%s\"" % temp
-		
-	return None
-#}
+		list = ac.generate_autocompletion_list(node)
 	
-def fix_path(settings, key) :
-#{
-	org_path = settings.get(key)
-	
-	if org_path is "${file_path}" :
-		return
-
-	org_path = org_path.replace("${packages}", sublime.packages_path())
-	if sublime.platform() != "windows" :
-		org_path = org_path.replace(".exe", "")
-	
-	path = os.path.normpath(org_path)
+		if cfg.ac_local_var :
+			list.extend(ac.generate_local_vars_list(node, line))
+		if cfg.ac_keywords :
+			list.extend(ac.generate_keywords_list(cfg.ac_keywords))
+		if cfg.ac_snippets :
+			list.extend(ac.cache_snippets)
 		
-	settings.set(key, path)
-#}
+		
+		newlist = [ ]
 
-def run_edit_settings() :
-	sublime.active_window().run_command("edit_settings", {"base_file": "${packages}/amxmodx/AMXX-Editor.sublime-settings", "default": "{\n\t$0\n}\n"})
+		if cfg.ac_explicit_mode :
+			for item in list :
+				if item[0][0] == prefix[0] :
+					newlist += [ item ]
+		else :
+			newlist = list
 
+		if cfg.ac_extra_sorted :
+			newlist = ac.sorted_nicely(newlist)
+			
+		#newlist[0] = ( prefix + ":\t                                                               --- ", "" )
+		
+		return (newlist, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+
+#:: Monitor on Scrolled Thread ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+class MonitorScrolledThread(threading.Thread):
+
+	viewport_oldpos = { }
+
+	def __init__(self):
+		threading.Thread.__init__(self)
+
+		self.daemon = True
+		self.stoped = False
 	
-def sorted_nicely( l ):
-	""" Sort the given iterable in the way that humans expect."""
-	convert = lambda text: int(text) if text.isdigit() else text
-	alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key[0]) ]
-	return sorted(l, key = alphanum_key)
+		self.start()
+		
+	def run(self):
+		while not self.stoped:
+			self.monitor_scrolled()
+			time.sleep(1.0)
 
-def add_to_queue_forward(view) :
-	sublime.set_timeout(lambda: add_to_queue(view), 0)
+	def monitor_scrolled(self):
+		view = sublime.active_window().active_view()
+		if not view or not is_amxmodx_view(view) :
+			return
+			
+		viewid = view.id()
+		pos = view.viewport_position()[1]
+		
+		if self.viewport_oldpos.get(viewid) == None :
+			self.viewport_oldpos[viewid] = pos
+		elif self.viewport_oldpos[viewid] != pos :
+			self.viewport_oldpos[viewid] = pos
+			self.on_scrolled(view)
+			
+	def on_scrolled(self, view):
+		constants_highlight(view, False)
+		invalid_functions_highlight(view, False)
 
-def add_to_queue(view) :
-	# The view can only be accessed from the main thread, so run the regex
-	# now and process the results later
-	g_to_process.put((view.file_name(), view.substr(sublime.Region(0, view.size()))))
+	def stop(self):
+		self.stoped = True
+	
 
-def add_include_to_queue(file_name) :
-	g_to_process.put((file_name, None))
+#:: Analyzer Queue Thread :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler):
 
-class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler) :
-	def __init__(self) :
+	def __init__(self):
 		watchdog.events.FileSystemEventHandler.__init__(self)
 
-	def on_created(self, event) :
-		sublime.set_timeout(lambda: on_modified_main_thread(event.src_path), 0)
+	# If file is in used, update it.
+	def on_created(self, event):
+		if event.src_path in var.nodes :
+			var.analyzerQueue.add_to_queue(event.src_path)
 
-	def on_modified(self, event) :
-		sublime.set_timeout(lambda: on_modified_main_thread(event.src_path), 0)
+	def on_modified(self, event):
+		if event.src_path in var.nodes :
+			var.analyzerQueue.add_to_queue(event.src_path)
 
-	def on_deleted(self, event) :
-		sublime.set_timeout(lambda: on_deleted_main_thread(event.src_path), 0)
-
-def on_modified_main_thread(file_path) :
-	if not is_active(file_path) :
-		add_include_to_queue(file_path)
-
-def on_deleted_main_thread(file_path) :
-	if is_active(file_path) :
+	# If file not has a open view, free the memory ( remove children ).
+	def on_deleted(self, event):
+		if util.get_open_view_by_filename(event.src_path) :
 			return
 
-	node = g_nodes.get(file_path)
-	if node is None :
-		return
+		node = var.nodes.get(event.src_path)
+		if node is None :
+			return
 
-	node.remove_all_children_and_funcs()
+		node.remove_all_children_and_funcs()
 
-def is_active(file_name) :
-	return sublime.active_window().active_view().file_name() == file_name
 
-class ProcessQueueThread(watchdog.utils.DaemonThread) :
-	def run(self) :
-		while self.should_keep_running() :
-			(file_name, view_buffer) = g_to_process.get()
-			if view_buffer is None :
-				self.process_existing_include(file_name)
+#:: Analyzer Queue Thread :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+class AnalyzerQueueThread(threading.Thread):
+
+	def __init__(self):
+		threading.Thread.__init__(self)
+		
+		self.daemon = True
+		self.stoped = False
+		
+		self.queue = OrderedSetQueue()
+		self.delayed = DelayedTimer(2, self.add_to_queue)
+
+		self.start()
+		
+	def run(self):
+	
+		while not self.stoped :
+
+			(file_path, view_id) = self.queue.get()
+
+			if self.stoped :
+				return
+			
+			view = None
+			
+			if view_id :
+				view = sublime.View(view_id)
+				if not view.is_valid() :
+					continue
+		
+			if view :
+				buffer = view.substr(sublime.Region(0, view.size()))
+				file_path = util.get_filename_by_view(view)
 			else :
-				self.process(file_name, view_buffer)
+				with open(file_path, 'r', encoding="utf-8", errors="replace") as f :
+					buffer = f.read()
+			
+			var.analyzer.process(view, file_path, buffer)
 
-	def process(self, view_file_name, view_buffer) :
-		(current_node, node_added) = get_or_add_node(view_file_name)
+	def stop(self):
+		self.delayed.stop()
+		self.stoped = True
+		self.queue.put( (None,None) )
 
+	def add_to_queue(self, file_path, view_id=None):
+		self.queue.put(( file_path, view_id ))
+		
+	def add_to_queue_delayed(self, view):
+		self.delayed.update_args(None, view.id())
+		self.delayed.touch(False)
+
+	@property
+	def delay(self):
+		return self.delayed.delay_time
+			
+	@delay.setter
+	def delay(self, value):
+		self.delayed.delay_time = value
+
+
+#:: Code Analyzer ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+class  CodeAnalyzer:
+
+	Regex_FIND_INCLUDE 		= re.compile(r'^[\s]*#include[\s]+[<"]([^>"]+)[>"]', re.M)
+	Regex_LOCAL_INCLUDE 	= re.compile(r'\.(sma|inc|inl)$')
+	Regex_FIND_FUNC 		= re.compile(r'^(stock |public )?(\w*:)?([A-Za-z_][\w_]*)\s*\(', re.M)
+
+	debug.performance.init("total")
+	debug.performance.init("generate_sections")
+	
+	def __init__(self):
+		pass
+	
+	def process(self, view, file_path, buffer):
+		
+		(current_node, is_added) = NodeBase.get_or_add(file_path)
+	
 		base_includes = set()
+		error_regions = [ ]
 
-		includes = INC_regex.findall(view_buffer)
-
-		for include in includes:
-			self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
+		for match in self.Regex_FIND_INCLUDE.finditer(buffer):
+			exists = self.load_include_file(file_path, match.group(1), current_node, current_node, base_includes)
+			if view and not exists :
+				error_regions.append(sublime.Region(match.start(), match.end()))
 
 		for removed_node in current_node.children.difference(base_includes) :
 			current_node.remove_child(removed_node)
 
-		process_buffer(view_buffer, current_node)
+		self.process_parse(view, buffer, None, current_node, error_regions)
+	
+	def process_parse(self, view, buffer, pFile, node, error_regions=[]):
+		
+		#:: Debug Performance :::::::::::::::::
+		debug.performance.start("total", True)
+		debug.performance.clear("pawnparse")
+		debug.performance.clear("enum")
+		debug.performance.clear("var")
+		debug.performance.clear("func")
+		#::::::::::::::::::::::::::::::::::::::
 
-	def process_existing_include(self, file_name) :
-		current_node = g_nodes.get(file_name)
-		if current_node is None :
+		debug.info("(Analizer) Starting parser: -> \"%s\"" % node.file_name)
+		
+		#:: Parse include file ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+		if pFile :
+
+			data = var.parse.process(pFile, node)
+			
+			node.autocompletion = data.autocompletion
+			node.funclist = data.funclist
+			node.constants = data.constants
+			
+			debug.info("(Analizer) Finished: -> Total: %.3fsec\n" % debug.performance.end("total") )
 			return
+		#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+		
+		
+		# Separate code in sections
+		debug.performance.start("generate_sections", True)
+		new_sections = self.generate_sections(view, buffer)
+		debug.performance.end("generate_sections")
+			
+		# Parse new sections
+		difference = new_sections - node.old_sections
+		for section in difference :
+			line = view.rowcol(section.begin)[0] # NOTE: @InsecureThreadBuffer
+			node.parse_data[section] = var.parse.process( TextReader( buffer[section.begin:section.end] ), node, line)
+				
+		# Delete old data
+		for old in node.old_sections - new_sections :
+			del node.parse_data[old]
+		node.old_sections = new_sections
+			
+		# Crear and Update node data
+		node.autocompletion.clear()
+		node.funclist.clear()
+		node.constants.clear()
 
-		base_includes = set()
+		for section in new_sections :
+			data = node.parse_data[section]
+			base_line = view.rowcol(section.begin)[0] # NOTE: @InsecureThreadBuffer
+			
+			node.autocompletion.extend(data.autocompletion)
+			node.constants.update(data.constants)
 
-		with open(file_name, 'r', encoding="utf-8", errors="replace") as f :
-			print_debug(0, "(analyzer) ProcessingB Include File %s" % file_name)
-			includes = INC_regex.findall(f.read())
+			for func in data.funclist :
+				func.update_line(base_line) # Update current line position, used for autocompletion and tooltip
+			node.funclist.update(data.funclist)
+				
+			# Mark error lines
+			for error in data.error_lines :
+				start_line	= base_line + error[0] - 1
+				end_line	= base_line + error[1]
+				
+				begin = view.text_point(start_line, 0)
+				end = view.text_point(end_line, 0)
+				end = view.line(end).end()
 
-		for include in includes:
-			self.load_from_file(file_name, include, current_node, current_node, base_includes)
+				error_regions.append(sublime.Region(begin, end))
+		# Show errors
+		mark_show(view, error_regions)
+		
+	
+		
+		"""
+		# Debug
+		r_color1 = [ ]
+		r_color2 = [ ]
+		color = False
+		for section in sorted(new_sections, key=lambda o: o.begin) :
+			color = not color
+			if color :
+				r_color1.append(sublime.Region(section.begin, section.end))
+			else:
+				r_color2.append(sublime.Region(section.begin, section.end))
+		view.add_regions("color1", r_color1, "region.greenish", "", 0)
+		view.add_regions("color2", r_color2, "region.pinkish", "", 0)
+		"""
+		
+		# Compile regex of constants
+		debug.performance.init("const")
+		node.Regex_CONST		= self.compile_constants(node.constants)
+		node.Regex_CONST_CHILD	= self.compile_constants(node.generate_list("constants", set, skip_self=True))
 
-		for removed_node in current_node.children.difference(base_includes) :
-			current_node.remove_child(removed_node)
+		debug.performance.end("const")
+		
+		# Dynamic Highlight
+		debug.performance.init("highlight")
 
-		process_include_file(current_node)
+		constants_highlight(view, True)
+		invalid_functions_highlight(view, True)
+
+		debug.performance.end("highlight")
 
 
-	def load_from_file(self, view_file_name, base_file_name, parent_node, base_node, base_includes) :
-		(file_name, exists) = get_file_name(view_file_name, base_file_name)
+		#:: Debug performance :::::::::::::::::
+		debug.info("(Analizer) Generate %d sections: %.3fsec  -  Region-Highlight: %.3fsec" % (len(new_sections), debug.performance.end("generate_sections"), debug.performance.end("highlight")) )
+		debug.info("(Analizer) Parsing %d sections: %.3fsec" % (len(difference), debug.performance.end("pawnparse")) )
+		debug.info("(Analizer) Enum: %.3fsec - var: %.3fsec - func: %.3fsec - const: %.3fsec" % (
+			debug.performance.end("enum"),
+			debug.performance.end("var"),
+			debug.performance.end("func"),
+			debug.performance.end("const")
+		))
+		debug.info("(Analizer) Finished: -> Total: %.3fsec\n" % debug.performance.end("total") )
+		#::::::::::::::::::::::::::::::::::::::
+		
+	def compile_constants(self, constlist):
+	
+		constants = "___test"
+		for const in constlist :
+			constants += "|" + const
+
+		pattern = "\\b(" + constants + ")\\b"
+		
+		return re.compile(pattern)
+		
+		
+	#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	# NOTE: @InsecureThreadBuffer
+	#   View buffer may change while this function is running. Therefore, view.find_by_selector() is insecure.
+	#
+	#	"comment" in view.scope_name()    AND    view.rowcol()
+	#	- It is not perfect, but less likely to cause failures.
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	def generate_sections(self, view, buffer):
+	
+		sections = set()
+		begin_point = 0
+		
+		for match in self.Regex_FIND_FUNC.finditer(buffer):
+		
+			point = match.start()
+
+			# If view buffer is changed, usually differs a few characters, so have the half of length match as compensation
+			if "comment" in view.scope_name(point + round((match.end() - point) / 2)) :
+				continue
+
+			sections.add( SectionData(begin_point, point - 1, buffer) )
+			
+			begin_point = point
+	
+		sections.add( SectionData(begin_point, len(buffer), buffer) )
+
+		return sections
+
+	def load_include_file(self, parent_file_path, include, parent_node, base_node, base_includes):
+	
+		(file_path, exists) = self.get_include_path(parent_file_path, include)
+		
 		if not exists :
-			print_debug(0, "(analyzer) Include File Not Found: %s - %s - %s" % (base_file_name, file_name, view_file_name))
+			debug.info("Include File not found: inc:\"%s\",  file:\"%s\",  parent:\"%s\"" % (include, file_path, parent_file_path))
 
-		(node, node_added) = get_or_add_node(file_name)
+		(node, is_added) = NodeBase.get_or_add(file_path)
 		parent_node.add_child(node)
 
 		if parent_node == base_node :
 			base_includes.add(node)
 
-		if not node_added or not exists:
-			return
-			
+		if not is_added or not exists:
+			return exists
 
-		with open(file_name, 'r', encoding="utf-8", errors="replace") as f :
-			print_debug(0, "(analyzer) Processing Include File %s" % file_name)
-			includes = INC_regex.findall(f.read())
+		with open(file_path, 'r', encoding="utf-8", errors="replace") as file :
+			includes = self.Regex_FIND_INCLUDE.findall(file.read())
 
 		for include in includes :
-			self.load_from_file(view_file_name, include, node, base_node, base_includes)
+			self.load_include_file(parent_file_path, include, node, base_node, base_includes)
 
-		process_include_file(node)
-
-
-def get_file_name(view_file_name, base_file_name) :
-	if INC_LOCAL_regex.search(base_file_name) == None:
-		file_name = os.path.join(g_include_dir, base_file_name + '.inc')
-	else:
-		file_name = os.path.join(os.path.dirname(view_file_name), base_file_name)
-
-	return (file_name, os.path.exists(file_name))
-
-def get_or_add_node( file_name) :
-	node = g_nodes.get(file_name)
-	if node is None :
-		node = NodeIncData(file_name)
-		g_nodes[file_name] = node
-		return (node, True)
-
-	return (node, False)
-
-# ============= NEW CODE ------------------------------------------------------------------------------------------------------------
-class NodeIncData :
-#{
-	def __init__(self, file_name):
-		self.file_name 		= file_name
-		self.children 		= set()
-		self.parents 		= set()
-		self.autocompletion = set()
-		self.functions 		= set()
-
-	def add_child(self, node) :
-		self.children.add(node)
-		node.parents.add(self)
-
-	def remove_child(self, node):
-		self.children.remove(node)
-		node.parents.remove(self)
-
-		if len(node.parents) <= 0 :
-			g_nodes.pop(node.file_name)
-
-	def remove_all_children_and_funcs(self):
-		for child in self.children :
-			self.remove_child(node)
+		with open(node.file_path, 'r', encoding="utf-8", errors="replace") as file :
+			debug.info("Processing Include File \"%s\"" % file_path)
+			self.process_parse(None, None, file, node)
 			
-		self.autocompletion.clear()
-		self.functions.clear()
-#}
+		return exists
+
+	def get_include_path(self, parent_file_path, include):
+		if self.Regex_LOCAL_INCLUDE.search(include) == None:
+			file_path = os.path.join(cfg.include_dir, include + ".inc")
+		else:
+			file_path = os.path.join(os.path.dirname(parent_file_path), include)
+
+		return (file_path, os.path.exists(file_path))
+		
 
 class TextReader:
-#{
-	def __init__(self, text) :
+
+	def __init__(self, text):
 		self.text = text.splitlines()
 		self.position = -1
 
 	def readline(self) :
-	#{
 		self.position += 1
 
 		if self.position < len(self.text) :
@@ -1642,1024 +1677,188 @@ class TextReader:
 				return retval
 		else :
 			return ''
-	#}
-#}
 
-class pawnParse:
-#{
-	def __init__(self):
-		self.save_const_timer = None
-		self.constants_count = 0
+class SectionData:
+	def __init__(self, begin, end, buffer):
+		s = buffer[begin:end]
 		
-		self.DEBUG_PERF_ENUM = 0
-		self.DEBUG_PERF_VARS = 1
-		self.DEBUG_PERF_FUNC = 2
+		self.begin 	= begin
+		self.end 	= end
+		self.hash 	= hash(s)
+		self.len 	= len(s)
 		
-		self.PARAMS_regex 		= re.compile("(const\s*)?([A-Za-z_][\w_]*)")
-		self.DEFINE_regex 		= re.compile("#define[\s]+([^\s]+)[\s]+(.+)")
-		self.GET_NAME_regex 	= re.compile("([A-Za-z_][\w_]*)")
-		self.VALID_NAME_regex 	= re.compile("^[A-Za-z_][\w_]*$")
-		
-		self.invalidNames = [ "new", "const", "static", "stock", "enum", "public", "native", "forward", "if", "else", "for", "while", "switch", "case", "return", "continue" ]
-		
-	def start(self, pFile, node):
-	#{
-		# Debug performance
-		self.total_perf			= time.perf_counter()
-		self.start_perf			= [ 0.0, 0.0, 0.0]
-		self.performance		= [ 0.0, 0.0, 0.0]
-		###############################################
-		
-		self.file 				= pFile
-		self.file_name			= os.path.basename(node.file_name)
-		self.node 				= node
-		self.found_comment 		= False
-		self.found_enum 		= False
-		self.enum_contents 		= ""
-		self.line_position 		= 0
-		self.start_position		= 0
-		self.line_org_len		= 0
-		self.region_multiline	= False
-		self.region_fix_skip	= False
-		self.string_regions		= [ ]
-		self.mark_regions		= [ ]
-		self.restore_buffer 	= ""
-		self.view				= None
+	def __hash__(self):
+		return self.hash
 
-		view = sublime.active_window().active_view()
-		if view.file_name() == self.node.file_name :
-			self.view = view
+	def __eq__(self, other):
+		return self.hash == other.hash and self.len == other.len
 		
-		self.node.autocompletion.clear()
-		self.node.functions.clear()
-		self.mark_clear()
-		
-		if self.constants_count != len(g_constants_list) :
-		#{
-			if self.save_const_timer :
-				self.save_const_timer.cancel()
-			
-			self.save_const_timer = Timer(4.0, self.save_constants)
-			self.save_const_timer.start()
-		#}
-
-		
-		print_debug(1, "(analyzer) CODE PARSE  Start! \t-  \"%s\" ->" % self.file_name)
-		
-		self.start_parse()
-		
-		print_debug(1,
-		"(analyzer) CODE PARSE  End! \t\t-  total:(%.3fsec), enum:(%.3fsec), vars:(%.3fsec), func:(%.3fsec)" % (
-		(time.perf_counter() - self.total_perf),
-		self.performance[self.DEBUG_PERF_ENUM],
-		self.performance[self.DEBUG_PERF_VARS],
-		self.performance[self.DEBUG_PERF_FUNC]
-		))
-	#}
+	def __repr__(self):
+		return "<SectionData: begin=%d, end=%d, hash=%d, len=%d>" % ( self.begin, self.end, self.hash, self.len )
 	
-	def debug_performance(self, start, type):
-	#{
-		if start :
-			self.start_perf[type] = time.perf_counter()
-		else :
-			self.performance[type] += (time.perf_counter() - self.start_perf[type])
-	#}
-	
-	def debug_print(self, level, func, info):
-		print_debug(level, "(analyzer) %s:  < %s >  -  line:(%d-%d)" % (func, info, self.start_position, self.line_position))
-	
-	def save_constants(self):
-	#{
-		self.save_const_timer 	= None
-		self.constants_count 	= len(g_constants_list)
-		
-		constants = "___test"
-		for const in g_constants_list :
-			constants += "|" + const
-			
-		syntax = "%YAML 1.2\n---\nscope: source.sma\ncontexts:\n  main:\n    - match: \\b(" + constants + ")\\b\n      scope: constant.vars.pawn"
-		
-		file_name = sublime.packages_path() + "/amxmodx/const.sublime-syntax"
-		
-		f = open(file_name, 'w')
-		f.write(syntax)
-		f.close()
-		
-		print_debug(2, "(analyzer) call save_constants()")
-	#}
+class NodeBase:
 
-	def mark_add(self, line_start, line_end=None):
-	#{
-		if not self.view :
-			return
-			
-		if line_end == None :
-			line_end = self.line_position
+	def __init__(self, file_path):
+		self.file_path 		= file_path
+		self.file_name		= os.path.basename(file_path)
 		
-		begin = self.view.text_point(line_start-1, 0)
-		if line_end > line_start :
-			end = self.view.text_point(line_end-1, 0)
-		else :
-			end = begin + self.line_org_len + 1
-			
-		r = sublime.Region(begin, end)
+		self.children 		= set()
+		self.parents 		= set()
 		
-		self.mark_regions += [ r ]
-		self.view.add_regions("pawnmark", self.mark_regions, "invalid.illegal", "dot", sublime.PERSISTENT)
-	#}
+		self.autocompletion = list()
+		self.funclist 		= set()
+		self.constants		= set()
 		
-	def mark_clear(self):
-	#{
-		if not self.view :
-			return
-			
-		self.view.erase_regions("pawnmark")
-		self.mark_regions = [ ]
-	#}
+		self.parse_data		= dict()
+		self.old_sections 	= set()
 		
-	def read_line(self):
-	#{
-		if self.restore_buffer :
-			line = self.restore_buffer
-			self.restore_buffer = ""
-		else :
-			self.line_position += 1
-			line = self.file.readline()
-			
-		self.line_org_len = len(line)
-		if self.line_org_len > 0 :
-			return line
-		else :
-			return None
-	#}
-			
-	def read_string(self):
-	#{
-		buffer = self.read_line()
-		
-		if buffer is None :
-			return None
-		
-		buffer = buffer.replace('\t', ' ')
-		while '  ' in buffer :
-			buffer = buffer.replace("  ", ' ')
-			
-		result = ""
-		
-		pos = -1
-		total = 0
-		start_valid = 0
-		start_coment = -1
-			
-		self.region_fix_skip = self.region_multiline
-		self.calculate_regions(buffer)
-		
-		# REMOVE Coments
-		while True :
-		#{
-			if self.found_comment :
-			#{
-				pos = buffer.find("*/", pos+1)
-				if pos != -1 :
-					if not self.intersect_regions(pos) :
-						start_valid = (pos + 2)
-						total += start_valid - start_coment
-						self.found_comment = False
-				else :
-					break
-			#}
-			else :
-			#{
-				start_coment = buffer.find("/*", start_coment+1)
-				if start_coment != -1 :
-					if not self.intersect_regions(start_coment) :
-						result += buffer[start_valid:start_coment]
-						self.found_comment = True
-				else :
-					break
-			#}
-		#}
-		
-		if not self.found_comment :
-			result += buffer[start_valid:]
-		
-		pos = -1
-		while True :
-		#{
-			pos = result.find("//", pos+1)
-			if pos != -1 :
-				if not self.intersect_regions(pos+total) :
-					start_coment = pos+total
-					result = result[0:pos]
-					break
-			else :
-				break
-		#}
-		
-		result = result.strip()
-		
-		#print("org: [%s] vs [%s]" % (org , result))
+		self.Regex_CONST		= None
+		self.Regex_CONST_CHILD	= None
 
-		if not result :
-			result = self.read_string()
+	def add_child(self, node) :
+		self.children.add(node)
+		node.parents.add(self)
 
-		return result
-	#}
-	
-	def calculate_regions(self, buffer):
-	#{
-		start = -1
-		if self.region_multiline :
-			self.region_multiline = False
-			start = 0
-	
-		self.string_regions = []
-		
-		pos = buffer.find('"')
+	def remove_child(self, node):
+		self.children.remove(node)
+		node.parents.remove(self)
 
-		while pos != -1 :
-		#{
-			if not pos or buffer[pos - 1] != '^' :
-			#{
-				if start == -1 :
-					start = pos
-				else :
-					self.string_regions += [ [ start, pos ] ]
-					start = -1
-			#}
+		if len(node.parents) <= 0 :
+			var.nodes.pop(node.file_path)
 
-			pos = buffer.find('"', (pos + 1))
-		#}
-
-		if start != -1 and buffer[len(buffer)-1] == '\\':
-			self.string_regions += [ [ start, len(buffer)-1 ] ]
-			self.region_multiline = True
-	#}
+	def remove_all_children_and_funcs(self):
+		for child in self.children :
+			self.remove_child(node)
+			
+		self.autocompletion.clear()
+		self.funclist.clear()
+		
+	### Generate recursive list: ########################
+	# @property: Node property name
+	# @out_class: 
+	# @custom_format: def callback(value, curnode):
+	#####################################################
+	def generate_list(self, property, out_class=list, custom_format=None, skip_self=False):
 	
-	def intersect_regions(self, pos):
-	#{
-		if not self.string_regions :
-			return False
-			
-		for r in self.string_regions :
-			if r[0] <= pos and pos <= r[1] :
-				return True
-			
-		return False
-	#}
+		assert issubclass(out_class, list) or issubclass(out_class, set), "Invalid Class Type (only support base list/set)"
 		
-	def skip_function_block(self, buffer):
-	#{
-		num_brace = 0
-		inString = False
-		localvars = []
-		invalidKeywords = [ "stock", "public", "native", "forward" ]
-
-		if not buffer :
-			buffer = self.read_string()
-			
-		if not buffer or buffer[0] != '{' :
-			return localvars
-				
-		while buffer :
-		#{
-			if buffer.split(' ', 1)[0] in invalidKeywords :
-				self.restore_buffer = buffer
-				return self.function_block_finish(localvars)
-			
-			if g_AC_local_var :
-				while buffer.startswith("new ") or buffer.startswith("static ") or buffer.startswith("for") :
-				#{
-					pos = 0
-					if buffer.startswith("for") :
-						pos = buffer.find("new ")
+		out 	= out_class()
+		visited = set()
 		
-					if pos == -1 :
-						break
-						
-					localvars += self.parse_variable(buffer[pos:], True)
-		
-					buffer = self.read_string()
-					if not buffer :
-						return self.function_block_finish(localvars)
-				#}
-			
-			#print("buff: [%s]" % buffer)
-			
-			old = self.region_multiline
-			self.region_multiline = self.region_fix_skip
-			self.calculate_regions(buffer)
-			self.region_multiline = old
-			
-			pos = buffer.find('{')
-			while pos != -1 :
-			#{
-				if not self.intersect_regions(pos) and (not pos or buffer[pos - 1] != "'") :
-					num_brace += 1
-					
-				pos = buffer.find('{', (pos + 1))
-			#}
-				
-			pos = buffer.find('}')
-			while pos != -1 :
-			#{
-				if not self.intersect_regions(pos) and (not pos or buffer[pos - 1] != "'") :
-					num_brace -= 1
-					
-				pos = buffer.find('}', (pos + 1))
-			#}
-				
-			
-			if num_brace <= 0 :
-			#{
-				self.restore_buffer = buffer[pos:]
-				return localvars
-			#}
-			
-			buffer = self.read_string()
-		#}
-		
-		return self.function_block_finish(localvars)
-	#}
-	
-	def function_block_finish(self, localvars):
-		self.mark_add(self.start_position)
-		
-		self.debug_print(1, "ERROR: parse_function", "bad function closed detected, misses '}'")
-		
-		return localvars
-	
-	def valid_name(self, name):
-	#{
-		if not name :
-			return False
-			
-		if name in self.invalidNames :
-			return False
-			
-		return self.VALID_NAME_regex.search(name) is not None
-	#}
-	
-	def add_constant(self, name):
-	#{
-		fixname = self.GET_NAME_regex.search(name)
-		if fixname :
-			name = fixname.group(1)
-			g_constants_list.add(name)
-	#}
-	
-	def add_enum(self, buffer, line):
-	#{
-		buffer = buffer.strip()
-		if not buffer :
-			return
-			
-		split = buffer.split('[')
-		
-		if not self.valid_name(split[0]) :
-			self.mark_add(self.start_position+line-1, self.start_position+line)
-			self.debug_print(1, "ERROR: parse_enum", "invalid enum name [%s]" % split[0])
-			return
-
-		self.add_autocompletion(buffer, "enum", split[0])
-		self.add_constant(split[0])
-		
-		self.debug_print(2, "INFO: parse_enum", "add -> [%s]" % split[0])
-	#}
-	
-	def add_autocompletion(self, name, info, autocompletion):
-	#{
-		self.node.autocompletion.add((name +"\t "+  self.file_name +" - "+ info + " ", autocompletion))
-	#}
-		
-	def start_parse(self):
-	#{
-		while True :
-		#{
-			buffer = self.read_string()
-
-			if buffer is None :
+		def recur_func(curnode) :
+			if curnode in visited :
 				return
-				
-			#if "sma" in self.node.file_name :
-			#	print("read: [%s]" % (buffer))
 
-				
-			self.start_position = self.line_position
+			visited.add(curnode)
+			for child in curnode.children :
+				recur_func(child)
+
+			value = getattr(curnode, property)
 			
-			# Fix XS include (Temp!)
-			buffer = buffer.replace("XS_LIBFUNC_ATTRIB", "stock")
-			
-			if buffer.startswith("#pragma deprecated") :
-				buffer = self.read_string()
-				if buffer and self.startswith(buffer, "stock") :
-					self.parse_function(buffer, -1)
-			elif buffer.startswith("#define ") :
-				buffer = self.parse_define(buffer)
-			elif buffer.startswith("enum") :
-				self.parse_enum(buffer)
-			elif self.startswith(buffer, "const") :
-				buffer = self.parse_const(buffer)
-			elif self.startswith(buffer, "new") :
-				self.parse_variable(buffer, False)
-			elif self.startswith(buffer, "public") :
-				self.parse_function(buffer, 1)
-			elif self.startswith(buffer, "stock") :
-				self.parse_function(buffer, 2)
-			elif self.startswith(buffer, "forward") :
-				self.parse_function(buffer, 3)
-			elif self.startswith(buffer, "native") :
-				self.parse_function(buffer, 4)
-			elif buffer[0] == '_' or buffer[0].isalpha() :
-				self.parse_function(buffer, 0)
-		#}
-	#}
+			if issubclass(out_class, list):
+				out.extend(value if not custom_format else map(lambda v:custom_format(v, curnode), value))
+			elif issubclass(out_class, set):
+				out.update(value if not custom_format else map(lambda v:custom_format(v, curnode), value))
+
+		if skip_self :
+			visited.add(self)
+			for child in self.children :
+				recur_func(child)
+		else :
+			recur_func(self)
+
+		return out
+		
+	@staticmethod
+	def get_or_add(file_path):
+		node = var.nodes.get(file_path)
+		if node is None :
+			node = NodeBase(file_path)
+			var.nodes[file_path] = node
+			return (node, True)
+
+		return (node, False)
+
+
+def intelli_highlight(view, key, pattern_or_regex, scope, flags=0, check_scope_callback=None, clear=True):
+
+	visible_region = view.visible_region()
+
+	line_start 	= view.rowcol(visible_region.begin())[0]
+	line_end 	= view.rowcol(visible_region.end())[0]
+		
+	extra_lines = round((line_end - line_start) / 2)
+		
+	line_start 	-= extra_lines
+	line_end 	+= extra_lines
+		
+	visible_region = sublime.Region(view.text_point(line_start, 0), view.text_point(line_end, 0))
+		
+	buff = view.substr(visible_region)
+		
+	regions = [ ]
 	
-	def startswith(self, buffer, str):
-	#{
-		if not buffer.startswith(str) :
+	if isinstance(pattern_or_regex, str) :
+		iterator = re.finditer(pattern_or_regex, buff)
+	else :
+		iterator = pattern_or_regex.finditer(buff)
+	
+	for match in iterator:
+	
+		s = match.start() + visible_region.begin()
+		e = match.end() + visible_region.begin()
+		
+		if not check_scope_callback or check_scope_callback(view.scope_name(s), match.group(0)) :
+			regions.append(sublime.Region(s, e))
+
+	if not clear :
+		regions.extend(view.get_regions(key))
+		
+	view.add_regions(key, regions, scope, "", flags)
+
+
+def constants_highlight(view, clear=True):
+
+	node = var.nodes[util.get_filename_by_view(view)]
+	if not node.Regex_CONST :
+		return
+	
+
+	def check_scope(scope, word):
+		return scope == "source.sma "
+
+	intelli_highlight(view, "pawnconst", node.Regex_CONST, "constant.vars.pawn", sublime.HIDE_ON_MINIMAP|sublime.DRAW_NO_OUTLINE, check_scope, clear)
+	intelli_highlight(view, "pawnconst", node.Regex_CONST_CHILD, "constant.vars.pawn", sublime.HIDE_ON_MINIMAP|sublime.DRAW_NO_OUTLINE, check_scope, False)
+
+
+def invalid_functions_highlight(view, clear=True):
+
+	def get_name(func, curnode):
+		return func.name
+		
+	node = var.nodes[util.get_filename_by_view(view)]
+	funclist = node.generate_list("funclist", set, get_name)
+			
+	def check_scope(scope, word):
+		if scope != "source.sma variable.function.pawn " :
 			return False
 			
-		if len(str) == len(buffer) :
-			return True
+		if word in funclist :
+			return False
 			
-		if buffer[len(str)] == ' ' :
-			return True
-			
-		return False
-	#}
-	
-	def parse_define(self, buffer):
-	#{
-		define = self.DEFINE_regex.search(buffer)
-		if define :
-		#{
-			name = define.group(1)
-			value = define.group(2).strip()
-			self.add_autocompletion(name, "define: "+value, name)
-			self.add_constant(name)
-			
-			self.debug_print(2, "INFO: parse_define", "add -> [%s]" % name)
-		#}
-	#}
-	
-	def parse_const(self, buffer):
-	#{
-		buffer = buffer[6:]
-		
-		split 	= buffer.split('=', 1)
-		if len(split) < 2 :
-			return
-			
-		name 	= split[0].strip()
-		value 	= split[1].strip()
-		
-		newline = value.find(';')
-		if (newline != -1) :
-		#{
-			self.restore_buffer = value[newline+1:].strip()
-			value = value[0:newline]
-		#}
-		
-		self.add_autocompletion(name, "const: "+value, name)
-		self.add_constant(name)
-		self.debug_print(2, "INFO: parse_const", "add -> [%s]" % name)
-	#}
+		return True
 
-	def parse_variable(self, buffer, local):
-	#{
-		self.debug_performance(True, self.DEBUG_PERF_VARS)
-		
-		classChecked	= False
-		varName 		= ""
-		
-		oldChar 		= ''
-		i 				= 0
-		pos 			= 0
-		
-		num_bracket		= 0
-		num_parent		= 0
-		num_brace 		= 0
-		checkMissComa	= False
-		emptyValue		= True
-		multiLines 		= True
-		skipSpaces 		= False
-		skipValue 		= False
-		parseName 		= True
-		inBrackets 		= False
-		inParents		= False
-		inBraces 		= False
-		inString 		= False
-		found_line 		= self.line_position
-		localvars		= [ ]
-		
-		buffer = buffer.replace("new", "", 1).replace("static", "", 1).strip()
-		if not buffer :
-		#{
-			buffer = self.read_string()
-			if not buffer :
-				return self.vars_force_finish(found_line, localvars)
-		#}
-		
-		while multiLines :
-		#{
-			multiLines = False
-			
-			for c in buffer :
-			#{
-				i += 1
-				
-				if c == '"' :
-				#{
-					if inString and oldChar != '^' :
-						inString = False
-					else :
-						inString = True
-				#}
-				
-				oldChar = c
-				
-				#print("A:: varName[%s] buff[%s] c[%s] - inString %d inBrackets %d inBraces %d inParents %d skipValue %d skipSpaces %d parseName %d" % (varName, buffer, c, inString, inBrackets, inBraces, inParents, skipValue, skipSpaces, parseName ))
-
-				
-				if not inString :
-				#{
-					if c == '{' :
-						num_brace += 1
-						inBraces = True
-					elif c == '}' :
-						num_brace -= 1
-						if num_brace == 0 :
-							inBraces = False
-					elif c == '[' :
-						num_bracket += 1
-						inBrackets = True
-					elif c == ']' :
-						num_bracket -= 1
-						if num_bracket == 0 :
-							inBrackets = False
-					elif c == '(' :
-						num_parent += 1
-						inParents = True
-					elif c == ')' :
-						num_parent -= 1
-						if num_parent == 0 :
-							inParents = False
-				#}
-				
-				if inString or inBrackets or inBraces or inParents :
-					continue
-					
-				if skipSpaces :
-				#{
-					if c.isspace() :
-						continue
-					else :
-						skipSpaces = False
-						if c == '=' :
-							skipValue = True
-						elif not skipValue :
-							parseName = True
-				#}
-				
-				if skipValue :
-				#{
-					if c == ',' or c == ';' :
-						if emptyValue :
-							return self.vars_force_finish(found_line, localvars)
-						emptyValue = True
-						skipValue = False
-					else :
-						if c != ' ' :
-							emptyValue = False
-						continue
-				#}
-				
-				if checkMissComa and c.isalpha() :
-					return self.vars_force_finish(found_line, localvars)
-				
-		
-				#print("B:: varName[%s] buff[%s] c[%s] - inString %d inBrackets %d inBraces %d inParents %d skipValue %d skipSpaces %d parseName %d" % (varName, buffer, c, inString, inBrackets, inBraces, inParents, skipValue, skipSpaces, parseName ))
-				
-				
-				if parseName :
-				#{
-					if c == ':' :
-						skipSpaces = True
-						varName = ""
-					elif c == ' ' :
-					#{
-						varName = varName.strip()
-						if varName == "const" :
-						#{
-							if not classChecked :
-								skipSpaces = True
-								classChecked = True
-							else :
-								return self.vars_force_finish(found_line, localvars)
-								
-							varName = ""
-						#}
-						else :
-							checkMissComa = True
-					#}
-					elif c == '=' or c == ';' or c == ',' :
-					#{
-						varName = varName.strip()
-						
-						if varName != "" :
-						#{
-							if not self.valid_name(varName) :
-								return self.vars_force_finish(found_line, localvars)
-							else :
-							#{
-								if local :
-									localvars += [ varName ]
-									found_line = self.line_position
-								else :
-									self.add_autocompletion(varName, "var", varName)
-									self.debug_print(2, "INFO: parse_variable", "add1 -> [%s]" % varName)
-									
-								checkMissComa = False
-								classChecked = False
-							#}
-						#}
-						else :
-							return self.vars_force_finish(found_line, localvars)
-							
-						varName = ""
-						parseName = False
-						skipSpaces = True
-
-						if c == '=' :
-							skipValue = True
-					#}
-					elif c != ']' :
-						varName += c
-				#}
-				
-				
-				#print("C:: varName[%s] buff[%s] c[%s] - inString %d inBrackets %d inBraces %d inParents %d skipValue %d skipSpaces %d parseName %d" % (varName, buffer, c, inString, inBrackets, inBraces, inParents, skipValue, skipSpaces, parseName ))
-
-				
-				if not inString and not inBrackets and not inBraces and not inParents :
-				#{
-					if not parseName :
-						if c == ';' :
-							self.restore_buffer = buffer[i:].strip()
-							self.debug_performance(False, self.DEBUG_PERF_VARS)
-							return localvars
-						elif not skipSpaces and not skipValue and c != ' ' and c != ',' :
-							return self.vars_force_finish(found_line, localvars)
-	
-				
-					if c == ',' :
-						skipSpaces = True
-				#}
-
-			#}
-			
-			if not inString and not inBrackets and not inBraces and not inParents and c != '=':
-				skipValue = False
-					
-			if inString or inBrackets or inBraces or inParents or skipValue :
-				multiLines = True
-				
-			if inString and c != '\\' :
-				return self.vars_force_finish(found_line, localvars)
-				
-			#print("D:: varName[%s] buff[%s] c[%s] - inString %d inBrackets %d inBraces %d inParents %d skipValue %d skipSpaces %d parseName %d multiLines %d" % (varName, buffer, c, inString, inBrackets, inBraces, inParents, skipValue, skipSpaces, parseName, multiLines ))
-			
-
-			if c != ',' :
-			#{
-				varName = varName.strip()
-				
-				if varName != "" :
-				#{
-					if varName == "const" :
-					#{
-						if not classChecked :
-							skipSpaces = True
-							classChecked = True
-						else :
-							return self.vars_force_finish(found_line, localvars)
-								
-						varName = ""
-						parseName = True
-						multiLines = True
-					#}
-					elif not self.valid_name(varName) :
-						return self.vars_force_finish(found_line, localvars)
-					else :
-					#{
-						if local :
-							localvars += [ varName ]
-							found_line = self.line_position
-						else :
-							self.add_autocompletion(varName, "var", varName)
-							self.debug_print(2, "INFO: parse_variable", "add2 -> [%s]" % varName)
-							
-						checkMissComa = False
-						classChecked = False
-						parseName = False
-					#}
-				#}
-				
-			#}
-			else :
-				multiLines = True
-			
-			c = None
-			i = 0
-			varName = ""
-
-			buffer = self.read_string()
-			if not buffer :
-				self.debug_performance(False, self.DEBUG_PERF_VARS)
-				return localvars
-				
-			if (skipValue or inBrackets or inBraces or inParents) :
-				if buffer[0] == '#' or buffer.split(' ', 1)[0] in self.invalidNames or buffer.split('(', 1)[0] in self.invalidNames :
-					self.restore_buffer = buffer
-					return self.vars_force_finish(found_line, localvars)
-			
-			if not multiLines :
-				if buffer[0] == '=' or  buffer[0] == ',' or  buffer[0] == '[' or  buffer[0] == '{' :
-					if buffer[0] == ',' :
-						skipSpaces = True
-						skipValue = False
-					if buffer[0] == '=' :
-						skipValue = True						
-						
-					multiLines = True
-				else :
-					self.restore_buffer = buffer
-			elif not inBraces and buffer[0] == '}' :
-					self.restore_buffer = buffer
-					return self.vars_force_finish(found_line, localvars)
-				
-			#print("E:: varName[%s] buff[%s] c[%s] - inString %d inBrackets %d inBraces %d inParents %d skipValue %d skipSpaces %d parseName %d multiLines %d" % (varName, buffer, c, inString, inBrackets, inBraces, inParents, skipValue, skipSpaces, parseName, multiLines ))
-			
-		#}
-		
-		self.debug_performance(False, self.DEBUG_PERF_VARS)
-		
-		return localvars
-	#}
-	
-	def vars_force_finish(self, found_line, localvars):
-		self.mark_add(found_line)
-		self.debug_print(1, "ERROR: parse_vars", "invalid sintax")
-		
-		self.debug_performance(False, self.DEBUG_PERF_VARS)
-		
-		return localvars
-	
-	def parse_enum(self, buffer):
-	#{
-		self.debug_performance(True, self.DEBUG_PERF_ENUM)
-		
-		if len(buffer) != 4 and buffer[4] != '{' and buffer[4] != ' ' :
-			return
-	
-		contents = ""
-		enum = ""
-		ignore = True
-	
-		while buffer :
-		#{
-			if not ignore and buffer.split(' ', 1)[0] in self.invalidNames :
-				self.restore_buffer = buffer
-				self.mark_add(self.start_position)
-				self.debug_print(1, "ERROR: parse_enum", "bad enum closed detected, misses '}'")
-				self.debug_performance(False, self.DEBUG_PERF_ENUM)
-				return
-			
-			pos = buffer.find('}')
-			
-			if pos == -1 :
-				contents = "%s\n%s" % (contents, buffer)
-				buffer = self.read_string()
-			else :
-				contents = "%s\n%s" % (contents, buffer[0:pos])
-				self.restore_buffer = buffer[pos+1:].strip("; ")
-				break
-				
-			ignore = False
-		#}
-
-		pos = contents.find('{')
-		line = contents[0:pos].count('\n')
-		contents = contents[pos + 1:]
-		
-		for c in contents :
-		#{
-			if c == '=' or c == '#' :
-				ignore = True
-			elif c == '\n':
-				line += 1
-				ignore = False
-			elif c == ':' :
-				enum = ""
-				continue
-			elif c == ',' :
-				self.add_enum(enum, line)
-				enum = ""
-					
-				ignore = False
-				continue
-
-			if not ignore :
-				enum += c
-		#}
-
-		self.add_enum(enum, line-1)
-		
-		self.debug_performance(False, self.DEBUG_PERF_ENUM)
-	#}
-	
-	def parse_function(self, buffer, type):
-	#{
-		self.debug_performance(True, self.DEBUG_PERF_FUNC)
-		
-		multi_line = False
-		temp = ""
-		full_func_str = ""
-		open_paren_found = False
-		
-		while buffer :
-		#{
-
-			if not open_paren_found :
-			#{
-				parenpos = buffer.find('(')
-			
-				if parenpos == -1 :
-					return
-				
-				open_paren_found = True
-			#}
-			
-			if open_paren_found :
-			#{
-				pos = buffer.find(')')
-				if pos != -1 :
-					full_func_str = buffer[0:pos + 1]
-					buffer = buffer[pos+1:].strip()
-					
-					if multi_line :
-						full_func_str = '%s%s' % (temp, full_func_str)
-
-					break
-
-				multi_line = True
-				temp = '%s%s' % (temp, buffer)
-			#}
-
-			buffer = self.read_string()
-		#}
-
-		if full_func_str :
-			self.parse_function_params(buffer, full_func_str, type)
-			
-		self.debug_performance(False, self.DEBUG_PERF_FUNC)
-	#}
-	
-	def parse_function_params(self, buffer, func, type):
-	#{
-		if type == 0 :
-			remaining = func
-		else :
-			split = func.split(' ', 1)
-			remaining = split[1]
-		
-		split = remaining.split('(', 1)
-		if len(split) < 2 :
-			self.debug_print(1, "ERROR: parse_function_params", "return1 [%s]" % split)
-			return
-			
-		remaining = split[1]
-		returntype = ''
-		funcname_and_return = split[0].strip()
-		split_funcname_and_return = funcname_and_return.split(':')
-		if len(split_funcname_and_return) > 1 :
-			funcname = split_funcname_and_return[1].strip()
-			returntype = split_funcname_and_return[0].strip()
-		else :
-			funcname = split_funcname_and_return[0].strip()
-			
-		# Fix float.inc
-		if funcname.startswith("operator") :
-			self.skip_function_block(buffer)
-			return
-			
-		if not self.valid_name(funcname) :
-			self.debug_print(1, "ERROR: parse_function_params", "invalid name: [%s] - buffer[%s]" % (funcname, buffer))
-			return
-	
-		if type == -1 : # Deprecated !
-			self.skip_function_block(buffer)
-		else :
-		#{
-			remaining = remaining.strip()
-			if remaining == ')' :
-				params = []
-			else :
-				params = remaining[:-1].split(',')
-
-			params_list = [ ]
-				
-			autocompletion = funcname + '('
-			i = 1
-			for param in params :
-				param_var = param.strip()
-				
-				if i > 1 :
-					autocompletion += ', '
-				autocompletion += '${%d:%s}' % (i, param_var)
-				i += 1
-
-				result = self.PARAMS_regex.match(param_var)
-				if result :
-					params_list += [ result.group(2) ]
-
-			autocompletion += ')'
-			funcparams = func[func.find("(")+1:-1]
-			
-			self.add_autocompletion(funcname, FUNC_TYPES[type].lower(), autocompletion)
-			self.debug_print(2, "INFO: parse_function_params", "add -> [%s]" % func)
-			
-			# Function Block&Local vars #############
-			endline = startline = self.start_position
-			
-			localvars = [ ]
-			
-			if type <= 2 :
-				localvars 	= self.skip_function_block(buffer)
-				endline 	= self.line_position
-				
-			localvars += params_list
-
-			self.node.functions.add((funcname, funcparams, self.node.file_name, type, returntype, startline, endline, tuple(localvars)))
-		#}
-	#}
-#}
-
-def process_buffer(text, node):
-#{
-	text_reader = TextReader(text)
-	pawnparse.start(text_reader, node)
-#}
-
-def process_include_file(node):
-#{
-	with open(node.file_name, 'r', encoding="utf-8", errors="replace") as file :
-		pawnparse.start(file, node)
-#}
-
-def print_debug(level, msg):
-#{
-	if g_debug_level >= level :
-		print("[AMXX-Editor - %s]: %s" % (time.strftime("%H:%M:%S"), msg))
-#}
-
-EDITOR_VERSION 		= "3.0"
-FUNC_TYPES 			= [ "Function", "Public", "Stock", "Forward", "Native" ]
-
-STYLES_POPUP		= [ "white", "dark" ]
-STYLES_EDITOR		= [ "default", "dark", "npp" ]
-STYLES_CONSOLE		= [ "default", "dark" ]
-
-g_style_popup 		= { "list": [ ], "count": 0, "active": "" }
-g_style_editor 		= { "list": [ ], "count": 0, "active": "" }
-g_style_console 	= { "list": [ ], "count": 0, "active": "" }
+	intelli_highlight(view, "invalidfunc", r"\b[A-Za-z_][\w_]*\b", "invalid.illegal", sublime.DRAW_NO_OUTLINE|sublime.DRAW_NO_FILL|sublime.DRAW_SQUIGGLY_UNDERLINE, check_scope, clear)	
 
 
-g_constants_list 	= set()
-g_includes_list		= list()
-g_popupCSS 			= ""
-g_AC_enable				= False
-g_AC_keywords			= 2
-g_AC_local_var 			= False
-g_AC_begin_explicit 	= False
-g_enable_inteltip 		= False
-g_enable_buildversion 	= False
-g_debug_level 		= 0
-g_delay_time 		= 1.5
-g_include_dir 		= "."
-g_invalid_settings	= False
-g_ignore_settings 	= False
-g_edit_settings 	= False
-g_check_update		= False
+def is_amxmodx_view(view) :
+	return view.match_selector(0, 'source.sma') and not g_invalid_settings
 
-g_to_process 		= OrderedSetQueue()
-g_nodes 			= dict()
-gWatchdogObserver 	= watchdog.observers.Observer()
-gProcessQueueThread = ProcessQueueThread()
-gObserverHandler 	= IncludeFileEventHandler()
-INC_regex 			= re.compile('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', re.M)
-INC_LOCAL_regex 	= re.compile('\\.(sma|inc)$')
-pawnparse 			= pawnParse()
+
+def mark_show(view, regions):
+	view.add_regions("pawnmark", regions, "invalid.illegal", "dot", sublime.DRAW_NO_OUTLINE|sublime.DRAW_NO_FILL|sublime.DRAW_SQUIGGLY_UNDERLINE)
+
+def mark_clear(view):
+	view.erase_regions("pawnmark")
 
 

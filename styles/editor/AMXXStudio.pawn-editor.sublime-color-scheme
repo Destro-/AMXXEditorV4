@@ -1,0 +1,125 @@
+/************************************************************
+*  Color scheme based on AMXXStudio - by Destro
+*
+*  Guide:
+*    https://www.sublimetext.com/docs/3/color_schemes.html
+*************************************************************/
+{
+	"name": "AMXXStudio",
+	"author": "Destro",
+	"amxxeditor":
+	{
+		"is_dark": false,
+		"default_popup": "classic",
+		"default_console": "classic",
+		"syntax_settings":
+		{
+			// Custom settings...
+		}
+	},
+	"variables":
+    {
+        "main-color": 			"#000080",
+        "main-background": 		"#F0F0F0",
+        "selection-color": 		"#eee",
+		"selection-background": "#28e",
+    },
+	"globals":
+	{
+		"foreground": "var(main-color)",
+		"background": "var(main-background)",
+		"caret": "#000",
+		
+		/* Text Selection */
+		"selection": "var(selection-background)",
+		"selection_foreground": "var(selection-color)",
+		"selection_corner_style": "square",
+		"invisibles": "#4af", // TAB / SPACE
+		
+		/* Find Highlight */
+		"find_highlight": "#BCE617",
+		"find_highlight_foreground": "#000",
+		
+		/* Highlight active brackets */
+		"brackets_foreground": "#000",
+		"brackets_options": "bold foreground",
+		"bracket_contents_foreground": "#f00",
+		"bracket_contents_options": "underline",
+		
+		/* Indentation guides */
+		"guide": "#bbb",
+		"stack_guide": "#ddd",
+		"active_guide": "#666",
+		
+		/* Line numbers */
+		"gutter": "#eee", 
+		"gutter_foreground": "#888", 
+		"line_highlight": "#E6E6FF"
+	},
+	
+	"rules":
+	[
+		{
+			"name": "Comment",
+			"scope": "comment",
+			"foreground": "#FF8040",
+			"font_style": "italic"
+		},
+		{
+			"name": "Built-in constant / Bool",
+			"scope": "constant.language",
+			"font_style": "bold"
+		},
+		{
+			"name": "Pawn Function - Pawn String",
+			"scope": "support.function, variable.function, string",
+			"foreground": "#FF0000"
+		},
+		{
+			"name": "Pawn Define Constant - Pawn Include Path - Pawn Define/Include",
+			"scope": "entity.name.constant.preprocessor, meta.preprocessor.include.path, meta.preprocessor",
+			"foreground": "#FF8040"
+		},
+		
+		
+		{
+			"name": "Pawn control - Pawn operator - Pawn coma - Function parens - Parens",
+			"scope": "keyword, parens, punctuation.separator",
+			"foreground": "#007700"
+		},
+		
+		{
+			"name": "Pawn Vars Types",
+			"scope": "storage.type.vars, storage.modifier",
+			"foreground": "#007700",
+			"font_style": ""
+		},
+		{
+			"name": "Pawn Tag",
+			"scope": "storage.modifier.tag",
+			"foreground": "#007700",
+			"font_style": "italic"
+		},
+		
+		{
+			"name": "Pawn Constant",
+			"scope": "constant.vars",
+			"foreground": "#00b",
+			"background": "color(var(main-background) l(+ 0.3%))" // Fix bug, reverse foreground/background
+		},
+		{
+			/* Fix selection highlight */
+			"name": "Fix Constant Selection",
+			"scope": "fixselection",
+			"foreground": "var(selection-color)",
+			"background": "var(selection-background)",
+		},
+	
+		{
+			"name": "Invalid – Illegal",
+			"scope": "invalid.illegal",
+			"foreground": "#000000",
+			"background": "#ff2D5699"
+		}	
+	]
+}

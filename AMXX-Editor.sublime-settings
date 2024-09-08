@@ -1,26 +1,56 @@
 {
 	// Example: AMXXEditor 3.0.0 by Destro
 
-	/* COMPILER */
-	"include_directory":	"C:\\amxmodx\\scripting\\include\\",	// Path to includes folder
-	"output_directory": 	"C:\\amxmodx\\plugins\\",				// Path to save compiled plugin
-	"amxxpc_directory": 	"C:\\amxmodx\\scripting\\amxxpc.exe",	// Path to AMXXPC ( Compile program )
+	"build_profiles":
+	{
+		"amxx-1.8.2":
+		{
+			"amxxpc_debug": 2,
+			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\amxxpc.exe",
+			"includes_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\include",
+			"output_dir": "D:\\archivos\\plugins"
+		},
+		"amxx-1.8.3":
+		{
+			"amxxpc_debug": 1,
+			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\amxxpc.exe",
+			"includes_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\include",
+			"output_dir": "D:\\archivos\\plugins"
+		}
+	},
 	
-	"amxxpc_debug": 		2,			// ( 0 ~ 2 )			AMXXPC debug level ( in AMXX-Studio default is 2 )
 
-	
 	/* EDITOR */
-	"enable_inteltip": 		true,		// ( true / false ) 	Enable IntelTip PopUp
-	"enable_buildversion": 	true,		// ( true / false ) 	Enable Auto-Increment Build/Version
+	"enable_popup": 		true,		// ( true / false )
+	"enable_buildversion": 	true,		// ( true / false )
+
+	"ac_enable": 			true,		// ( true / false )
+	"ac_keywords": 			2,			// ( 0 disable, 1 normal, 2 insert parents )
+	"ac_snippets": 			true,		// ( true / false )
+	"ac_preprocessor": 		true,		// ( true / false )
+	"ac_emit_info": 		true,		// ( true / false )
+	"ac_local_var": 		true,		// ( true / false )
+	"ac_extra_sorted":		true,		// ( true / false )
+	"ac_explicit_mode": 	false,		// ( true / false )
 	
-	"ac_enable": 			true,		// ( true / false ) 	Enable Auto-Completion
-	"ac_local_var": 		true,		// ( true / false ) 	Scan in functions for find local vars
-	"ac_begin_explicit": 	false,		// ( true / false ) 	Explicit begin with first character
-	"ac_keywords": 			2,			// ( 0 ~ 2 ) 			Auto-Completion keywords ( 0 disable, 1 normal, 2 snippet )
 	"live_refresh_delay": 	1.5, 		// ( 0.5 ~ 5.0 ) 		Delay before regenerating Auto-Completion
-	"debug_level": 			0,			// ( 0 ~ 3 ) 			Enable debug messages
 
 	"style_popup": 			"dark", 	// ( color name  )
 	"style_editor": 		"dark", 	// ( color name / default )
-	"style_console": 		"dark"	 	// ( color name / default )
+	"style_console": 		"dark",	 	// ( color name / default )
+	
+	
+		
+	/**********************************************
+	* Enable editor debug messages:
+	* ""   - Disabled debugging.
+	* "a"  - Errors messages.
+	* "b"  - Warnings messages.
+	* "c"  - Info messages.
+	* "d"  - Analyzer parser.
+	* "e"  - Sublime EventListener.
+	* "f"  - Show scope on hover (tool for syntax  dev).
+	* "*"  - All debugging levels at the same time.
+	***********************************************/
+	"debug_flags": "cf",
 }

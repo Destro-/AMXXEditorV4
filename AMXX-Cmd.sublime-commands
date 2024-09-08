@@ -1,0 +1,8 @@
+[
+	{ "caption": "AMXX: About", 			"command": "amxx_about" },
+	{ "caption": "AMXX: Functions List", 	"command": "amxx_func_list" },
+	{ "caption": "AMXX: Includes Tree", 	"command": "amxx_tree" },
+	{ "caption": "AMXX: Find/Replace", 		"command": "amxx_find_replace" },
+	{ "caption": "AMXX: New Header-Inc", 	"command": "amxx_new_include" },
+	{ "caption": "AMXX: New Plug-In", 		"command": "amxx_new_plugin" },
+]

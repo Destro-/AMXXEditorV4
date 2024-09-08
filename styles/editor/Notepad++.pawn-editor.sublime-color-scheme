@@ -11,8 +11,10 @@
 		"selection": "#60606055",
 		"selection_border": "#60606055",
 		"invisibles": "#aaa", // TAB / SPACE
+		
 
 		/* Find Highlight */
+		"highlight": "#000",
 		"find_highlight": "#BCE617",
 		"find_highlight_foreground": "#000",
 		
@@ -68,19 +70,19 @@
 		},
 		{
 			"name": "Pawn Function parens",
-			"scope": "function.parens.pawn",
+			"scope": "function.parens",
 			"foreground": "#505090",
 			"font_style": "bold"
 		},
 		
 		{
 			"name": "Pawn Define Constant",
-			"scope": "entity.name.constant.preprocessor.pawn",
+			"scope": "entity.name.constant.preprocessor",
 			"foreground": "#804000"
 		},
 		{
 			"name": "Pawn Include path",
-			"scope": "meta.preprocessor.include.path.pawn",
+			"scope": "meta.preprocessor.include.path",
 			"foreground": "#ff0000"
 		},
 		{
@@ -108,19 +110,19 @@
 		
 		{
 			"name": "Pawn Brackets",
-			"scope": "meta.brackets.pawn",
+			"scope": "meta.brackets",
 			"foreground": "#111",
 			"font_style": "bold"
 		},
 		{
 			"name": "Pawn Parens",
-			"scope": "parens.pawn",
+			"scope": "parens",
 			"foreground": "#111",
 			"font_style": "bold"
 		},
 		{
 			"name": "Pawn Brace",
-			"scope": "keyword.brace.pawn",
+			"scope": "keyword.brace",
 			"foreground": "#111"
 		},
 		{
@@ -130,24 +132,18 @@
 		},
 		{
 			"name": "Pawn Function Types",
-			"scope": "storage.modifier.function.pawn",
+			"scope": "storage.modifier.function",
 			"foreground": "#9700CC"
 		},
 		{
 			"name": "Pawn Vars Types",
-			"scope": "storage.type.vars.pawn",
+			"scope": "storage.type.vars",
 			"foreground": "#0000FF"
 		},
 		{
 			"name": "Pawn Tag",
-			"scope": "storage.modifier.tag.pawn",
+			"scope": "storage.modifier.tag",
 			"foreground": "#3366CC",
-			"font_style": "italic"
-		},
-		{
-			"name": "Pawn Constant Vars",
-			"scope": "constant.vars.pawn",
-			"foreground": "#000080",
 			"font_style": "italic"
 		},
 		{
@@ -160,6 +156,22 @@
 			"name": "Pawn String Escape",
 			"scope": "string constant",
 			"foreground": "#333"
+		},
+	
+		{
+			"name": "Pawn Constant Vars",
+			"scope": "constant.vars",
+			"foreground": "#000080",
+			"background": "#f0f0f1",
+			"font_style": "italic"
+		},
+		
+		{
+			"name": "Fix Constant Selection",
+			"scope": "fixselection",
+			"foreground": "#000080",
+			"background": "#f0f0f1",
+			"font_style": "italic"
 		},
 		
 		{

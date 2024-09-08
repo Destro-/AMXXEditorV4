@@ -2,10 +2,10 @@
 	{ "keys": ["f9"], "command": "build", "context":
 		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
 	},
-	{ "keys": ["ctrl+r"], "command": "func_list_amxx_editor", "context":
+	{ "keys": ["ctrl+r"], "command": "amxx_func_list", "context":
 		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
 	},
-	{ "keys": ["ctrl+alt+f"], "command": "find_all_amxx_editor", "context":
+	{ "keys": ["ctrl+alt+f"], "command": "amxx_find_replace", "context":
 		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
 	}
 ]

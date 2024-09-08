@@ -5,11 +5,8 @@
 		"children":
 		[
 			{
-				"command": "about_amxx_editor",
+				"command": "amxx_about",
 				"caption": "About AMXX-Editor"
-			},
-			{
-				"command": "update_amxx_editor"
 			},
 			{ "caption": "-" },
 			{
@@ -107,6 +104,23 @@
 					},
 				]
 			},
+			{
+				"caption": "Build Profile",
+				"children":
+				[
+					{ "command": "amxx_profile", "args": {"index": 0} },
+					{ "command": "amxx_profile", "args": {"index": 1} },
+					{ "command": "amxx_profile", "args": {"index": 2} },
+					{ "command": "amxx_profile", "args": {"index": 3} },
+					{ "command": "amxx_profile", "args": {"index": 4} },
+					{ "command": "amxx_profile", "args": {"index": 5} },
+					{ "command": "amxx_profile", "args": {"index": 6} },
+					{ "command": "amxx_profile", "args": {"index": 7} },
+					{ "command": "amxx_profile", "args": {"index": 8} },
+					{ "command": "amxx_profile", "args": {"index": 9} },
+					{ "command": "amxx_profile", "args": {"index": 10} }
+						]
+					},
 			{ "caption": "-" },
 			{
 				"caption": "HTML Tools",
@@ -122,39 +136,29 @@
 					{ "command": "run_tool_amxx", "args": {"index": 7} },
 					{ "command": "run_tool_amxx", "args": {"index": 8} },
 					{ "command": "run_tool_amxx", "args": {"index": 9} },
-					{ "command": "run_tool_amxx", "args": {"index": 10} },
-					{ "command": "run_tool_amxx", "args": {"index": 11} },
-					{ "command": "run_tool_amxx", "args": {"index": 12} },
-					{ "command": "run_tool_amxx", "args": {"index": 13} },
-					{ "command": "run_tool_amxx", "args": {"index": 14} },
-					{ "command": "run_tool_amxx", "args": {"index": 15} },
-					{ "command": "run_tool_amxx", "args": {"index": 16} },
-					{ "command": "run_tool_amxx", "args": {"index": 17} },
-					{ "command": "run_tool_amxx", "args": {"index": 18} },
-					{ "command": "run_tool_amxx", "args": {"index": 19} },
-					{ "command": "run_tool_amxx", "args": {"index": 20} }
+					{ "command": "run_tool_amxx", "args": {"index": 10} }
 				]
 			},
 			{ "caption": "-" },
 			{
-				"command": 	"func_list_amxx_editor",
+				"command": 	"amxx_func_list",
 				"caption": 	"Functions List"
 			},
 			{
-				"command": 	"inc_tree_amxx_editor",
+				"command": 	"amxx_tree",
 				"caption": 	"Includes Tree"
 			},
 			{
-				"command": 	"find_all_amxx_editor",
-				"caption": 	"Find/Replace in Includes"
+				"command": 	"amxx_find_replace",
+				"caption": 	"Find/Replace"
 			},
 			{ "caption": "-" },
 			{
-				"command": "new_amxx_include",
-				"caption": "New Include"
+				"command": "amxx_new_include",
+				"caption": "New Header-Inc"
 			},
 			{
-				"command": "new_amxx_plugin",
+				"command": "amxx_new_plugin",
 				"caption": "New Plug-In"
 			}
 		]

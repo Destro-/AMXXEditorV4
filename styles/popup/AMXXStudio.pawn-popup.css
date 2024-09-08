@@ -31,7 +31,7 @@ body {
 .inc { color: #000; font-weight: bold;}
 .incPath { color: #ff8040; font-weight: bold;}
 
-.pawnFunc { color: #e00; font-weight: bold; }
+.pawnFunc { color: #e00; }
 .pawnParams { color: #000080; font-family: Verdana; }
 .pawnString { color: #f00; }
 .pawnKeyword { color: #007700; }

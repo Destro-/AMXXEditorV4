@@ -1,7 +1,7 @@
 %YAML 1.2
 ---
 name: AMXX-Pawn
-file_extensions: [sma, inc]
+file_extensions: [sma, inc, inl]
 scope: source.sma
 contexts:
 
@@ -22,8 +22,6 @@ contexts:
     # Constants
     - match: (true|false)
       scope: constant.language
-    - include: Packages/amxmodx/const.sublime-syntax
-
 
   ########################################################
 
@@ -77,7 +75,7 @@ contexts:
     
 
   directive_include:
-    - match: (include|tryinclude)\s+((["][\t ]*[\w\-\/]*\.(inc|sma)?[\t ]*["])|([<][\t ]*[\w\-\/]*[\t ]*[>])|([^\s]*))
+    - match: (include|tryinclude)\s+((["][\t ]*[\w\-\/]*\.(inc|sma|inl)?[\t ]*["])|([<][\t ]*[\w\-\/]*[\t ]*[>])|([^\s]*))
       captures:
         1: meta.preprocessor.include.pawn
         3: meta.preprocessor.include.path.pawn
@@ -281,7 +279,6 @@ contexts:
     - match: \(
       scope: parens.pawn
       push:
-        - meta_scope: meta.group.c
         - match: \)
           scope: parens.pawn
           pop: true
