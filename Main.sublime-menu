@@ -1,0 +1,162 @@
+[
+	{
+		"caption": "AMX Mod-X",
+		"id": "amxmodx",
+		"children":
+		[
+			{
+				"command": "about_amxx_editor",
+				"caption": "About AMXX-Editor"
+			},
+			{
+				"command": "update_amxx_editor"
+			},
+			{ "caption": "-" },
+			{
+				"command": "edit_settings", "args":
+				{
+					"base_file": "${packages}/amxmodx/AMXX-Editor.sublime-settings",
+					"default": "{\n\t$0\n}\n"
+				},
+				"caption": "Edit Settings"
+			},
+			{
+				"caption": "Color Style",
+				"children":
+				[
+					{
+						"caption": "Editor",
+						"children":
+						[
+							{ "command": "amxx_editor_style", "args": {"index": 0} },
+							{ "command": "amxx_editor_style", "args": {"index": 1} },
+							{ "command": "amxx_editor_style", "args": {"index": 2} },
+							{ "command": "amxx_editor_style", "args": {"index": 3} },
+							{ "command": "amxx_editor_style", "args": {"index": 4} },
+							{ "command": "amxx_editor_style", "args": {"index": 5} },
+							{ "command": "amxx_editor_style", "args": {"index": 6} },
+							{ "command": "amxx_editor_style", "args": {"index": 7} },
+							{ "command": "amxx_editor_style", "args": {"index": 8} },
+							{ "command": "amxx_editor_style", "args": {"index": 9} },
+							{ "command": "amxx_editor_style", "args": {"index": 10} },
+							{ "command": "amxx_editor_style", "args": {"index": 11} },
+							{ "command": "amxx_editor_style", "args": {"index": 12} },
+							{ "command": "amxx_editor_style", "args": {"index": 13} },
+							{ "command": "amxx_editor_style", "args": {"index": 14} },
+							{ "command": "amxx_editor_style", "args": {"index": 15} },
+							{ "command": "amxx_editor_style", "args": {"index": 16} },
+							{ "command": "amxx_editor_style", "args": {"index": 17} },
+							{ "command": "amxx_editor_style", "args": {"index": 18} },
+							{ "command": "amxx_editor_style", "args": {"index": 19} },
+							{ "command": "amxx_editor_style", "args": {"index": 20} }
+						]
+					},
+					{
+						"caption": "Console",
+						"children":
+						[
+							{ "command": "amxx_editor_style_console", "args": {"index": 0} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 1} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 2} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 3} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 4} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 5} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 6} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 7} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 8} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 9} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 10} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 11} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 12} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 13} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 14} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 15} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 16} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 17} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 18} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 19} },
+							{ "command": "amxx_editor_style_console", "args": {"index": 20} }
+						]
+					},
+					{
+						"caption": "Popup",
+						"children":
+						[
+							{ "command": "amxx_editor_style_popup", "args": {"index": 0} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 1} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 2} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 3} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 4} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 5} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 6} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 7} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 8} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 9} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 10} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 11} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 12} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 13} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 14} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 15} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 16} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 17} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 18} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 19} },
+							{ "command": "amxx_editor_style_popup", "args": {"index": 20} }
+						]
+					},
+				]
+			},
+			{ "caption": "-" },
+			{
+				"caption": "HTML Tools",
+				"children":
+				[
+					{ "command": "run_tool_amxx", "args": {"index": 0} },
+					{ "command": "run_tool_amxx", "args": {"index": 1} },
+					{ "command": "run_tool_amxx", "args": {"index": 2} },
+					{ "command": "run_tool_amxx", "args": {"index": 3} },
+					{ "command": "run_tool_amxx", "args": {"index": 4} },
+					{ "command": "run_tool_amxx", "args": {"index": 5} },
+					{ "command": "run_tool_amxx", "args": {"index": 6} },
+					{ "command": "run_tool_amxx", "args": {"index": 7} },
+					{ "command": "run_tool_amxx", "args": {"index": 8} },
+					{ "command": "run_tool_amxx", "args": {"index": 9} },
+					{ "command": "run_tool_amxx", "args": {"index": 10} },
+					{ "command": "run_tool_amxx", "args": {"index": 11} },
+					{ "command": "run_tool_amxx", "args": {"index": 12} },
+					{ "command": "run_tool_amxx", "args": {"index": 13} },
+					{ "command": "run_tool_amxx", "args": {"index": 14} },
+					{ "command": "run_tool_amxx", "args": {"index": 15} },
+					{ "command": "run_tool_amxx", "args": {"index": 16} },
+					{ "command": "run_tool_amxx", "args": {"index": 17} },
+					{ "command": "run_tool_amxx", "args": {"index": 18} },
+					{ "command": "run_tool_amxx", "args": {"index": 19} },
+					{ "command": "run_tool_amxx", "args": {"index": 20} }
+				]
+			},
+			{ "caption": "-" },
+			{
+				"command": 	"func_list_amxx_editor",
+				"caption": 	"Functions List"
+			},
+			{
+				"command": 	"inc_tree_amxx_editor",
+				"caption": 	"Includes Tree"
+			},
+			{
+				"command": 	"find_all_amxx_editor",
+				"caption": 	"Find/Replace in Includes"
+			},
+			{ "caption": "-" },
+			{
+				"command": "new_amxx_include",
+				"caption": "New Include"
+			},
+			{
+				"command": "new_amxx_plugin",
+				"caption": "New Plug-In"
+			}
+		]
+	}
+]

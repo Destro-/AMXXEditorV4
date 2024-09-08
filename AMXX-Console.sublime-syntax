@@ -1,0 +1,51 @@
+%YAML 1.2
+---
+name: Pawn Console Result
+scope: source.sma
+contexts:
+  main:
+    # Start comment
+    - match: ^(Welcome|Copyright).*
+      scope: console.comment
+
+    # File path
+    - match: ^(.*\.(sma|inc))(\(.*\)) (:)
+      captures:
+        1: console.line_path
+        3: console.line_num
+        4: console.line_path
+
+    - match: '(fatal )?(error \d*:) (.*)'
+      captures:
+        1: console.error
+        2: console.error
+        3: console.others
+
+    - match: '(warning \d*:) (.*)'
+      captures:
+        1: console.warning
+        2: console.others
+
+    - match: Compilation aborted\.
+      scope: console.error
+
+    - match: ^(Could not locate output file)(.*)(\(.*\)\.)
+      captures:
+        1: console.others
+        2: console.line_path
+        3: console.error
+
+    - match: '(^.*:)\s*(\d*) (.*)'
+      captures:
+        1: console.info
+        2: console.info_value
+        3: console.others
+
+    - match: '(^Done.)|(\d* Warning.)|(\d* Errors\.)'
+      scope: console.others
+
+    - match: (\[Finished in (.*)\])
+      captures:
+        1: console.finished
+        2: console.time
+

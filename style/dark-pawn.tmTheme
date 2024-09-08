@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>author</key>
+	<string>Destro</string>
+	<key>name</key>
+	<string>Dark - Sublime AMXX-Editor</string>
+	<key>settings</key>
+	<array>
+		<dict>
+			<key>settings</key>
+			<dict>
+				<key>background</key>
+				<string>#111111</string>
+				<key>foreground</key>
+				<string>#ccc</string>
+				<key>invisibles</key>
+				<string>#444</string>
+				
+				<key>selection</key>
+				<string>#DDF0FF33</string>
+				
+				<key>caret</key>
+				<string>#aaa</string>
+				
+				<!--  Find Highlight -->
+				<key>findHighlight</key>
+				<string>#BCE617</string>
+				<key>findHighlightForeground</key>
+				<string>#000</string>
+				
+				<!--  Find Highlight -->
+				<key>highlight</key>
+				<string>#c00</string>
+				
+				<!-- Bracket Highlight -->
+				<key>bracketsForeground</key>
+				<string>#a00</string>
+				<key>bracketsOptions</key>
+				<string>foreground</string>
+				<key>bracketContentsForeground</key>
+				<string>#fff</string>
+				<key>bracketContentsOptions</key>
+				<string>underline</string>
+				
+				<!--  Tab guides -->
+				<key>guide</key>
+				<string>#444</string>
+				<key>stackGuide</key>
+				<string>#444</string>
+				<key>activeGuide</key>
+				<string>#666</string>
+				
+				<!--  Line numbers -->
+				<key>gutter</key>
+				<string>#151515</string>
+				<key>gutterForeground</key>
+				<string>#677985</string>
+				
+				<key>lineHighlight</key>
+				<string>#10B2E844</string>
+			</dict>
+		</dict>
+		
+		<dict>
+			<key>name</key>
+			<string>Comment</string>
+			<key>scope</key>
+			<string>comment</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>italic</string>
+				<key>foreground</key>
+				<string>#754D08</string>
+			</dict>
+		</dict>
+
+		<dict>
+			<key>name</key>
+			<string>Constant Numbers</string>
+			<key>scope</key>
+			<string>constant.numeric</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#3C7D96</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Constant Float</string>
+			<key>scope</key>
+			<string>constant.numeric.float</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>italic</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Constant Bool</string>
+			<key>scope</key>
+			<string>constant.language</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+			</dict>
+		</dict>
+		
+		<dict>
+			<key>name</key>
+			<string>Pawn Functions</string>
+			<key>scope</key>
+			<string>support.function.definition.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#89BDFF</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn function call</string>
+			<key>scope</key>
+			<string>support.function.call.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#3880D1</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn function parens</string>
+			<key>scope</key>
+			<string>function.parens.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#575A7D</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn Function IntelTip Selection</string>
+			<key>scope</key>
+			<string>inteltip.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#17A1EBff</string>
+				<key>background</key>
+				<string>#17A1EB22</string>
+			</dict>
+		</dict>
+		
+		<dict>
+			<key>name</key>
+			<string>Pawn Define Constant</string>
+			<key>scope</key>
+			<string>entity.name.constant.preprocessor</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#CF8506</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn Include path</string>
+			<key>scope</key>
+			<string>include_path</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#B4DE0D</string>
+			</dict>
+		</dict>
+
+		<dict>
+			<key>name</key>
+			<string>Pawn Define/Include</string>
+			<key>scope</key>
+			<string>keyword.other.preprocessor</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#FFA60D</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn Define var group</string>
+			<key>scope</key>
+			<string>keyword.other.preprocessor.group</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#B4DE0D</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn control</string>
+			<key>scope</key>
+			<string>keyword.control.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#738F10</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn operator</string>
+			<key>scope</key>
+			<string>keyword.operator</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#BAAE09</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn brackets</string>
+			<key>scope</key>
+			<string>keyword.brackets.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#738F10</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn Parens</string>
+			<key>scope</key>
+			<string>parens.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#738F10</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn Brace</string>
+			<key>scope</key>
+			<string>keyword.brace.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#9A72B5</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn Coma</string>
+			<key>scope</key>
+			<string>keyword.coma.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#9A72B5</string>
+			</dict>
+		</dict>
+		
+		<dict>
+			<key>name</key>
+			<string>Pawn Function Types</string>
+			<key>scope</key>
+			<string>storage.type.function.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#5BC718</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn Vars Types</string>
+			<key>scope</key>
+			<string>storage.type.vars.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#5BC718</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn Tag</string>
+			<key>scope</key>
+			<string>storage.modifier.tag.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>italic</string>
+				<key>foreground</key>
+				<string>#4EAD13</string>
+			</dict>
+		</dict>
+		
+		<dict>
+			<key>name</key>
+			<string>Pawn Constant Vars</string>
+			<key>scope</key>
+			<string>constant.vars.pawn</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>italic</string>
+				<key>foreground</key>
+				<string>#7F98BA</string>
+			</dict>
+		</dict>
+		
+		<dict>
+			<key>name</key>
+			<string>Pawn String</string>
+			<key>scope</key>
+			<string>string</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string></string>
+				<key>foreground</key>
+				<string>#aa0000</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Pawn String Escape</string>
+			<key>scope</key>
+			<string>string constant</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#A8430C</string>
+			</dict>
+		</dict>
+		
+		<dict>
+			<key>name</key>
+			<string>Invalid – Illegal</string>
+			<key>scope</key>
+			<string>invalid.illegal</string>
+			<key>settings</key>
+			<dict>
+				<key>background</key>
+				<string>#ff2D5699</string>
+				<key>foreground</key>
+				<string>#000000</string>
+			</dict>
+		</dict>
+		
+		<!------------------ CONSOLE! ---------------------->
+		<dict>
+			<key>name</key>
+			<string>Console Comment</string>
+			<key>scope</key>
+			<string>console.comment</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#B6C720</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Line path</string>
+			<key>scope</key>
+			<string>console.line_path</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#3880D1</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Line number</string>
+			<key>scope</key>
+			<string>console.line_num</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#B4DE0D</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Error</string>
+			<key>scope</key>
+			<string>console.error</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#dd0000</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Warning</string>
+			<key>scope</key>
+			<string>console.warning</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#CF8506</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Info</string>
+			<key>scope</key>
+			<string>console.info</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#41B5C4</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Info Value</string>
+			<key>scope</key>
+			<string>console.info_value</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#2B5D8A</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Finished</string>
+			<key>scope</key>
+			<string>console.finished</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#3A8518</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Time</string>
+			<key>scope</key>
+			<string>console.time</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#5ECF29</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Console Others</string>
+			<key>scope</key>
+			<string>console.others</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#3C7D96</string>
+			</dict>
+		</dict>
+		
+	</array>
+</dict>
+</plist>

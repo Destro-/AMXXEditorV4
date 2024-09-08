@@ -1,0 +1,93 @@
+{
+	"name": "AMXXConsole: Dark",
+	"author": "Destro",
+	"globals":
+	{
+		"foreground": "#ccc",
+		"background": "#111",
+		"caret": "#ddd",
+		
+		/* Text Selection */
+		"selection": "#DDF0FF33",
+		"selection_border": "#DDF0FF33",
+		"invisibles": "#444", // TAB / SPACE
+
+		/* Find Highlight */
+		"find_highlight": "#BCE617",
+		"find_highlight_foreground": "#000",
+		
+		/* Highlight active brackets */
+		"brackets_foreground": "#f00",
+		"brackets_options": "foreground",
+		"bracket_contents_foreground": "#679",
+		"bracket_contents_options": "underline",
+		
+		/* Indentation guides */
+		"guide": "#444",
+		"stack_guide": "#444",
+		"active_guide": "#666",
+		
+		/* Line numbers */
+		"gutter": "#151515", 
+		"gutter_foreground": "#677985", 
+		"line_highlight": "#10B2E844",
+	},
+	
+	"rules":
+	[
+		{
+			"name": "Console Comment",
+			"scope": "console.comment",
+			"foreground": "#B6C720",
+		},
+		{
+			"name": "Console Line path",
+			"scope": "console.line_path",
+			"foreground": "#3880D1",
+			"font_style": "bold"
+		},
+		{
+			"name": "Console Line number",
+			"scope": "console.line_num",
+			"foreground": "#B4DE0D"
+		},
+		{
+			"name": "Console Error",
+			"scope": "console.error",
+			"foreground": "#dd0000",
+			"font_style": "bold"
+		},
+		{
+			"name": "Console Warning",
+			"scope": "console.warning",
+			"foreground": "#CF8506",
+			"font_style": "bold"
+		},
+		{
+			"name": "Console Info",
+			"scope": "console.info",
+			"foreground": "#41B5C4"
+		},
+		{
+			"name": "Console Info Value",
+			"scope": "console.info_value",
+			"foreground": "#2B5D8A"
+		},
+		{
+			"name": "Console Finished",
+			"scope": "console.finished",
+			"foreground": "#3A8518",
+			"font_style": "bold"
+		},
+		{
+			"name": "Console Time",
+			"scope": "console.time",
+			"foreground": "#5ECF29"
+		},
+		{
+			"name": "Console Others",
+			"scope": "cconsole.others",
+			"foreground": "#3C7D96"
+		}
+	]
+}

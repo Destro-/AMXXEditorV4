@@ -1,0 +1,293 @@
+%YAML 1.2
+---
+name: AMXX-Pawn
+file_extensions: [sma, inc]
+scope: source.sma
+contexts:
+
+  # "AMXX-Pawn Syntax"
+  main:
+    - include: pawn_string
+    - include: pawn_character
+    - include: pawn_coment
+    - include: pawn_directives
+    - include: pawn_numbers
+    - include: pawn_keywords
+    - include: pawn_function
+    - include: pawn_post_keywords
+
+    - include: parens
+    - include: check_brackets
+
+    # Constants
+    - match: (true|false)
+      scope: constant.language
+    - include: Packages/amxmodx/const.sublime-syntax
+
+
+  ########################################################
+
+  # "PAWN Comments"
+  pawn_coment:
+    - match: ^/\* =(\s*.*?)\s*= \*/$\n?
+      scope: comment.block.pawn
+      captures:
+        1: meta.toc-list.banner.block.pawn
+    - match: /\*
+      scope: punctuation.definition.comment.pawn
+      push:
+        - meta_scope: comment.block.pawn
+        - match: \*/
+          scope: punctuation.definition.comment.pawn
+          pop: true
+    - match: \*/
+      scope: invalid.illegal.stray-comment-end.pawn
+    - match: ^// =(\s*.*?)\s*=\s*$\n?
+      scope: comment.line.banner.pawn
+      captures:
+        1: meta.toc-list.banner.line.pawn
+    - match: //
+      scope: punctuation.definition.comment.pawn
+      push:
+        - meta_scope: comment.line.double-slash.pawn
+        - match: '(\\)$\n'
+          captures:
+            1: punctuation.separator.continuation.pawn
+        - match: \n
+          pop: true
+    - match: '//'
+      scope: punctuation.definition.comment.pawn
+      push:
+        - meta_scope: comment.line.pawn
+        - match: $
+          pop: true
+  ########################################################
+
+  # "Pawn Directives"
+  pawn_directives:
+    - match: ^\s*#
+      scope: meta.preprocessor.pawn
+      push:
+        - include: directive_include
+        - include: directive_define
+        - include: directive_others
+        - include: directive_invalid
+    - match: '%\d' # Colored %1 %2...
+      scope: meta.preprocessor.group.pawn
+    
+
+  directive_include:
+    - match: (include|tryinclude)\s+((["][\t ]*[\w\-\/]*\.(inc|sma)?[\t ]*["])|([<][\t ]*[\w\-\/]*[\t ]*[>])|([^\s]*))
+      captures:
+        1: meta.preprocessor.include.pawn
+        3: meta.preprocessor.include.path.pawn
+        4: meta.preprocessor.include.path.pawn
+        5: meta.preprocessor.include.path.pawn
+        6: invalid.illegal.preprocessor.pawn
+      pop: true
+
+  directive_define:
+    - match: (define)\s+(([a-zA-Z_][^\s]*)|([^\s]*))
+      captures:
+        1: meta.preprocessor.define.pawn
+        3: entity.name.constant.preprocessor.pawn
+        4: invalid.illegal.preprocessor.pawn
+      pop: true
+
+  directive_others:
+    - match: (if|elseif|else|endif|endinput|undef|endscript|error|file|line|tryinclude|emit|pragma|assert)\s+([^/]*)
+      captures:
+        1: meta.preprocessor.others.pawn
+        2: entity.name.constant.preprocessor.pawn
+      pop: true
+
+  directive_invalid:
+    - match: '[^\n]*'
+      scope: iinvalid.illegal.preprocessor.pawn
+      pop: true
+
+
+
+  ########################################################
+
+   # "PAWN String"
+  pawn_string:
+    - match: '"'
+      scope: punctuation.definition.string.begin.pawn
+      push:
+      - meta_scope: string.quoted.double.pawn
+      - match: '(")|(?<=^|[^\\])\s*(\n)'
+        captures:
+          1: punctuation.definition.string.end.pawn
+          2: invalid.illegal.unexpected-end-of-line.pawn
+        pop: true
+      - include: string_escaped_char
+      - include: string_placeholder
+
+  string_escaped_char:
+    - match: \^(\^|[abefnprtv\'"?]|[0-3]\d{,2}|[4-7]\d?|x[a-fA-F0-9]{,2}|u[a-fA-F0-9]{,4}|U[a-fA-F0-9]{,8})
+      scope: constant.character.escape.pawn
+    - match: '\\[drywR]'
+      scope: constant.character.escape.pawn
+    - match: \^.
+      scope: invalid.illegal.unknown-escape.pawn
+
+  string_placeholder:
+    - match: |-
+        (?x)%
+            ((-?\d+)|\*(-?\d+\$)?)?         # minimum field width
+            (\.((-?\d+)|\*(-?\d+\$)?)?)?    # precision
+            [cbdiufXxasLNn%]                # conversion type
+      scope: constant.other.placeholder.pawn
+
+  pawn_character:
+    - match: ('[\^]?.')|('.(.+'))
+      captures:
+        1: string.quoted.single.pawn
+        2: invalid.illegal.invalid-character.pawn
+  ########################################################
+
+  # "PAWN Function"
+  pawn_function:
+    - include: function_definition
+    - include: function_call
+
+  function_definition:
+    - match: ^[\s;]*(public|stock|native|forward)\s+([A-Za-z_]\w*:\s*)?([A-Za-z_][\w_]*)[\s]*(\()
+      captures:
+        1: storage.modifier.function.pawn
+        2: storage.modifier.tag.pawn
+        3: support.function.pawn
+        4: function.parens.pawn
+      push:
+        - match: \)
+          scope: function.parens.pawn
+          pop: true
+        - include: main
+        - include: function_block
+    - match: '^[ ;]*([A-Za-z_]\w*:)?([A-Za-z_][\w_]*)[\s]*(\()'
+      captures:
+        1: storage.modifier.tag.pawn
+        2: support.function.pawn
+        3: function.parens.pawn
+      push:
+        - match: \)
+          scope: function.parens.pawn
+          pop: true
+        - include: main
+        - include: function_block
+
+  function_block:
+    - match: '\{'
+      scope: punctuation.definition.group.start
+      push:
+        - meta_scope: meta.block.pawn
+        - match: '\}'
+          scope: punctuation.definition.group.end
+          pop: true
+        - include: main
+        - include: function_call
+    - include: main
+
+
+  function_call:
+    - match: \s*([A-Za-z_][\w_]*)[\s]*(\()
+      captures:
+        1: variable.function.pawn
+        2: function.parens.pawn
+      push:
+        - match: \)
+          scope: function.parens.pawn
+          pop: true
+        - include: main
+
+  ########################################################
+
+  # "PAWN Numbers"
+  pawn_numbers:
+    - match: '(\d+)(\.{2})(\d+)'
+      captures:
+        1: constant.numeric.int.pawn
+        2: keyword.operator.switch-range.pawn
+        3: constant.numeric.int.pawn
+
+    - match: ([-]?0x[\da-fA-F]{1,8})
+      scope: constant.numeric.hex.pawn
+
+    - match: \b(\d+\.\d+)\b
+      scope: constant.numeric.float.pawn
+
+    - match: \b(\d+)\b
+      scope: constant.numeric.int.pawn
+  ########################################################
+
+  # "PAWN Keywords"
+  pawn_post_keywords:
+    - match: '(?<!\?)\b[A-Za-z_]\w*\:'
+      scope: storage.modifier.tag.pawn
+
+    - match: \s*\b(public|stock|native|forward)\b
+      scope: storage.modifier.function.pawn
+
+    - match: (\[|\]|)
+      scope: meta.brackets.pawn
+
+  pawn_keywords:
+    - match: \s*(case (.*):)\s+
+      captures:
+        1: keyword.control.pawn
+        2: storage.type.vars.pawn
+
+    - match: \s*\b(sizeof|charsmax|assert|break|case|continue|default|do|else|exit|for|goto|if|return|state|switch|while)\b
+      scope: keyword.control.pawn
+
+    - match: \s*\b(Float|new|enum|char|const|static)\b
+      scope: storage.type.vars.pawn
+
+    - match: (any\:\.\.\.)
+      scope: storage.modifier.tag.pawn
+
+    - match: (\-|\+|\*|\/|%|&|\||\^|<<|>>)?=
+      scope: keyword.operator.assignment.pawn
+
+    - match: (==|!=|<=|>=|<>|<|>)
+      scope: keyword.operator.comparison.pawn
+
+    - match: (\-\-|\+\+)
+      scope: keyword.operator.increment-decrement.pawn
+
+    - match: (\?|:)
+      scope: keyword.operator.ternary.pawn
+
+    - match: (\-|\+|\*|\/|%)
+      scope: keyword.operator.arithmetic.pawn
+
+    - match: (!|&&|\|\|)
+      scope: keyword.operator.logical.pawn
+
+    - match: (~|&|\||\^|<<|>>)
+      scope: keyword.operator.bitwise.pawn
+
+    - match: (\,|;)
+      scope: punctuation.separator.pawn
+
+    - match: ({|})
+      scope: keyword.brace.pawn
+  ########################################################
+
+
+  # "Check Brackets Closed"
+  parens:
+    - match: \(
+      scope: parens.pawn
+      push:
+        - meta_scope: meta.group.c
+        - match: \)
+          scope: parens.pawn
+          pop: true
+        - include: main
+
+  check_brackets:
+    - match: \)
+      scope: invalid.illegal.stray-bracket-end
+  ########################################################

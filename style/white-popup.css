@@ -1,0 +1,43 @@
+
+html {
+	font-family: Tahoma;
+}
+
+body {
+	margin: 0px;
+	background-color: #fff;
+}
+
+.top {
+	padding: 4px 10px 7px 10px;
+	border-radius: 5;
+	font-family: Verdana;
+	border-bottom: 1px solid #eee;
+}
+
+.content {
+	background-color: #fff;
+	padding: 5px 10px 5px 10px;
+}
+
+.bottom {
+}
+
+.include_link { color: #000; font-weight: bold;}
+.function { color: #000; font-weight: bold;}
+.params { color: #000; font-weight: bold;}
+.return { color: #000; font-weight: bold;}
+
+.inc { color: #000; font-weight: bold;}
+.incPath { color: #ff8040; font-weight: bold;}
+
+.pawnFunc { color: #e00; font-weight: bold; }
+.pawnParams { color: #000080; font-family: Verdana; }
+.pawnString { color: #f00; }
+.pawnKeyword { color: #007700; }
+.pawnConstVar { color: #007700; }
+.pawnNumber { color: #000080; }
+.pawnTag { color: #007700; font-style: italic; }
+
+
+

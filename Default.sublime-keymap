@@ -1,0 +1,11 @@
+[
+	{ "keys": ["f9"], "command": "build", "context":
+		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
+	},
+	{ "keys": ["ctrl+r"], "command": "func_list_amxx_editor", "context":
+		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
+	},
+	{ "keys": ["ctrl+alt+f"], "command": "find_all_amxx_editor", "context":
+		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
+	}
+]

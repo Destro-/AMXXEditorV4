@@ -1,0 +1,172 @@
+{
+	"name": "AMXXEditor: Nodepad++",
+	"author": "Destro",
+	"globals":
+	{
+		"foreground": "#111",
+		"background": "#f0f0f0",
+		"caret": "#111",
+		
+		/* Text Selection */
+		"selection": "#60606055",
+		"selection_border": "#60606055",
+		"invisibles": "#aaa", // TAB / SPACE
+
+		/* Find Highlight */
+		"find_highlight": "#BCE617",
+		"find_highlight_foreground": "#000",
+		
+		/* Highlight active brackets */
+		"brackets_foreground": "#f00",
+		"brackets_options": "foreground",
+		"bracket_contents_foreground": "#000",
+		"bracket_contents_options": "underline",
+		
+		/* Indentation guides */
+		"guide": "#bbb",
+		"stack_guide": "#ddd",
+		"active_guide": "#444",
+		
+		/* Line numbers */
+		"gutter": "#eee", 
+		"gutter_foreground": "#888", 
+		"line_highlight": "#D6D6EF",
+	},
+	
+	"rules":
+	[
+		{
+			"name": "Comment",
+			"scope": "comment",
+			"foreground": "#109464"
+		},
+		{
+			"name": "Number",
+			"scope": "constant.numeric",
+			"foreground": "#FF8000"
+		},
+		{
+			"name": "Number Float",
+			"scope": "constant.numeric.float",
+			"font_style": "italic"
+		},
+		{
+			"name": "Built-in constant / Bool",
+			"scope": "constant.language",
+			"foreground": "#0000FF",
+			"font_style": "bold"
+		},
+		{
+			"name": "Function Definition",
+			"scope": "support.function",
+			"foreground": "#000090"
+		},
+		{
+			"name": "Function Call",
+			"scope": "variable.function",
+			"foreground": "#600000"
+		},
+		{
+			"name": "Pawn Function parens",
+			"scope": "function.parens.pawn",
+			"foreground": "#505090",
+			"font_style": "bold"
+		},
+		
+		{
+			"name": "Pawn Define Constant",
+			"scope": "entity.name.constant.preprocessor.pawn",
+			"foreground": "#804000"
+		},
+		{
+			"name": "Pawn Include path",
+			"scope": "meta.preprocessor.include.path.pawn",
+			"foreground": "#ff0000"
+		},
+		{
+			"name": "Pawn Preprocessor",
+			"scope": "meta.preprocessor",
+			"foreground": "#804000"
+		},
+		{
+			"name": "Pawn Define Group",
+			"scope": "meta.preprocessor.group",
+			"foreground": "#804000"
+		},
+		
+		
+		{
+			"name": "Pawn Control",
+			"scope": "keyword.control",
+			"foreground": "#0000FF"
+		},
+		{
+			"name": "Pawn Operator",
+			"scope": "keyword.operator",
+			"foreground": "#111"
+		},
+		
+		{
+			"name": "Pawn Brackets",
+			"scope": "meta.brackets.pawn",
+			"foreground": "#111",
+			"font_style": "bold"
+		},
+		{
+			"name": "Pawn Parens",
+			"scope": "parens.pawn",
+			"foreground": "#111",
+			"font_style": "bold"
+		},
+		{
+			"name": "Pawn Brace",
+			"scope": "keyword.brace.pawn",
+			"foreground": "#111"
+		},
+		{
+			"name": "Pawn Coma",
+			"scope": "punctuation.separator",
+			"foreground": "#111"
+		},
+		{
+			"name": "Pawn Function Types",
+			"scope": "storage.modifier.function.pawn",
+			"foreground": "#9700CC"
+		},
+		{
+			"name": "Pawn Vars Types",
+			"scope": "storage.type.vars.pawn",
+			"foreground": "#0000FF"
+		},
+		{
+			"name": "Pawn Tag",
+			"scope": "storage.modifier.tag.pawn",
+			"foreground": "#3366CC",
+			"font_style": "italic"
+		},
+		{
+			"name": "Pawn Constant Vars",
+			"scope": "constant.vars.pawn",
+			"foreground": "#000080",
+			"font_style": "italic"
+		},
+		{
+			"name": "Pawn String",
+			"scope": "string",
+			"foreground": "#808080",
+			"font_style": ""
+		},
+		{
+			"name": "Pawn String Escape",
+			"scope": "string constant",
+			"foreground": "#333"
+		},
+		
+		{
+			"name": "Invalid – Illegal",
+			"scope": "invalid.illegal",
+			"foreground": "#000000",
+			"background": "#ff000099"
+		}	
+	]
+}
