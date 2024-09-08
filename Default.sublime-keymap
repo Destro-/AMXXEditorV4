@@ -5,10 +5,10 @@
 	{ "keys": ["ctrl+r"], "command": "amxx_func_list", "context":
 		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
 	},
-	{ "keys": ["ctrl+alt+f"], "command": "amxx_find_replace", "context":
+	{ "keys": ["ctrl+alt+f"], "command": "amxx_search_all", "context":
 		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
 	},
-
+	
 	// Skip past round and square autocomplete brackets
 	{ 
 		"keys": ["tab"], "command": "move", "args": {"by": "characters", "forward": true}, "context":

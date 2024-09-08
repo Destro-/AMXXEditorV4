@@ -3,6 +3,7 @@ import time
 import threading
 import sublime, sublime_plugin
 import jstyleson
+import hashlib
 
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # Global VARs 
@@ -18,7 +19,7 @@ class cfg:
 	settings = None
 	on_change_callback = None
 	silent = False
-	view_debug_mode = False
+	
 	
 	# Support reloading module
 	def init(on_change_callback=None):
@@ -64,6 +65,22 @@ class cfg:
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 class util:
 
+	def hash_sha1(value):
+		hasher = hashlib.sha1()
+
+		if isinstance(value, (list, tuple)):
+			# Itera sobre cada elemento en la lista o tupla
+			for item in value:
+				if not isinstance(item, str):
+					raise TypeError("All elements in the list or tuple must be strings.")
+				hasher.update(item.encode('utf-8'))
+		elif isinstance(value, str):
+			hasher.update(value.encode('utf-8'))
+		else:
+			raise TypeError("simple_hash_sha1 only supports strings, lists, or tuples of strings.")
+    
+		return hasher.hexdigest()
+			
 	def clamp(value, minv, maxv):
 		return max(min(value, maxv), minv)
 	
@@ -72,8 +89,8 @@ class util:
 		s.set(key, value)
 		s.save()
 		
-	def cfg_get_path(settings, key) :
-		path = settings.get(key, None)
+	def cfg_get_path(_dict, key) :
+		path = _dict.get(key, None)
 		
 		if not path or path == "${file_path}" :
 			return path
@@ -82,6 +99,9 @@ class util:
 
 		return os.path.normpath(path)
 	
+	def unix_normpath(path):
+		return os.path.normpath(path).replace('\\', '/')
+		
 	def get_open_view_by_filename(filename, window=None):
 		# From Buffer
 		if filename.startswith("View->"):
@@ -186,7 +206,7 @@ class CustomSettings:
 				self.data = dict()
 		else :
 			self.data = dict()
-			
+
 	def save(self):
 		with open(self.path, 'w', encoding='utf-8') as f:
 			jstyleson.dump(self.data, f, ensure_ascii=False, indent=4)

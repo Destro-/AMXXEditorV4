@@ -5,7 +5,7 @@ file_extensions: [sma, inc, inl]
 scope: source.sma
 contexts:
 
-  # "AMXX-Pawn Syntax v4.3"
+  # "AMXX-Pawn Syntax v4.4"
   main:
     - include: pawn_string
     - include: pawn_character
@@ -18,6 +18,10 @@ contexts:
 
     - include: parens
     - include: check_brackets
+
+    # Constants
+    - match: (true|false|EOS|cellmin|cellmax|cellbits|__DATE__|__TIME__|__LINE__|__BINARY__|__FILE__)
+      scope: constant.language
 
   ########################################################
 
@@ -40,15 +44,6 @@ contexts:
       scope: comment.line.banner.pawn
       captures:
         1: meta.toc-list.banner.line.pawn
-    - match: //
-      scope: punctuation.definition.comment.pawn
-      push:
-        - meta_scope: comment.line.double-slash.pawn
-        - match: '(\\)$\n'
-          captures:
-            1: punctuation.separator.continuation.pawn
-        - match: \n
-          pop: true
     - match: '//'
       scope: punctuation.definition.comment.pawn
       push:
@@ -59,16 +54,14 @@ contexts:
 
   # "Pawn Directives"
   pawn_directives:
-    - match: ^\s*#
-      scope: meta.preprocessor.pawn
+    - match: ^\s*?#
+      scope: meta.preprocessor
       push:
+        - include: directive_others
         - include: directive_include
         - include: directive_define
-        - include: directive_others
-        - include: directive_invalid
-    - match: '%\d' # Colored %1 %2...
-      scope: meta.preprocessor.group.pawn 
-    
+        - include: pawn_coment
+        - include: main
 
   directive_include:
     - match: (include|tryinclude)\s+((["][\t ]*[\w\-\/]*\.(inc|sma|inl)?[\t ]*["])|([<][\t ]*[\w\-\/]*[\t ]*[>])|([^\s]*))
@@ -78,29 +71,33 @@ contexts:
         4: meta.preprocessor.include.path.pawn
         5: meta.preprocessor.include.path.pawn
         6: invalid.illegal.preprocessor.pawn
-      pop: true
 
   directive_define:
-    - match: (define)\s+(([a-zA-Z_][^\s]*)|([^\s]*))
-      captures:
-        1: meta.preprocessor.define.pawn meta.preprocessor.macro.pawn
-        3: entity.name.constant.preprocessor.pawn
-        4: invalid.illegal.preprocessor.pawn
+    - match: define\s+[a-zA-Z_]\w*
+      scope: meta.preprocessor.define.pawn
+      push:
+        #- meta_scope: meta.preprocessor.define.multiline.pawn
+        - include: main
+        - include: define-multiline
+
+
+  define-multiline:
+    - meta_scope: meta.preprocessor.define.pawn
+    - match: \\$\n
+      scope: punctuation.separator.continuation.line.pawn meta.preprocessor.define.pawn
+      set:
+        - meta_scope: meta.preprocessor.define.multiline.pawn
+        - include: main
+        - include: define-multiline
+    - match: $\n
       pop: true
+
 
   directive_others:
     - match: (if|elseif|else|endif|endinput|undef|endscript|error|file|line|tryinclude|emit|pragma|assert)\s+([^/]*)
       captures:
         1: meta.preprocessor.others.pawn
         2: entity.name.constant.preprocessor.pawn
-      pop: true
-
-  directive_invalid:
-    - match: '[^\n]*'
-      scope: invalid.illegal.preprocessor.pawn
-      pop: true
-
-
 
   ########################################################
 
@@ -150,48 +147,48 @@ contexts:
     - match: ^[\s;]*(public|stock|native|forward)\s+([A-Za-z_]\w*:\s*)?([A-Za-z_][\w_]*)[\s]*(\()
       captures:
         1: storage.modifier.function.pawn
-        2: storage.modifier.tag.pawn
+        2: storage.modifier.tag
         3: support.function.pawn
-        4: function.parens.pawn
+        4: punctuation.section.group.begin function.parens.pawn
       push:
         - match: \)
-          scope: function.parens.pawn
+          scope: punctuation.section.group.end function.parens.pawn
           pop: true
         - include: main
-        - include: function_block
-    - match: '^[ ;]*([A-Za-z_]\w*:)?([A-Za-z_][\w_]*)[\s]*(\()'
+        
+    - match: ^(([A-Za-z_]\w*)\s+)?([A-Za-z_]\w*:\s*)?([A-Za-z_][\w_]*)[\s]*(\()
       captures:
-        1: storage.modifier.tag.pawn
-        2: support.function.pawn
-        3: function.parens.pawn
+        2: storage.modifier.function.pawn
+        3: storage.modifier.tag
+        4: support.function.pawn
+        5: punctuation.section.group.begin function.parens.pawn
       push:
         - match: \)
-          scope: function.parens.pawn
+          scope: punctuation.section.group.end function.parens.pawn
           pop: true
         - include: main
-        - include: function_block
 
-  function_block:
-    - match: '\{'
-      scope: punctuation.definition.group.start
+    - match: ^(native|stock)\s+([A-Za-z_]\w*:)?\[\w*\]\s*?([A-Za-z_][\w_]*)[\s]*(\()
+      captures:
+        1: storage.modifier.function.pawn
+        2: storage.modifier.tag
+        3: support.function.pawn
+        4: punctuation.section.group.begin function.parens.pawn
       push:
-        - meta_scope: meta.block.pawn
-        - match: '\}'
-          scope: punctuation.definition.group.end
+        - match: \)
+          scope: punctuation.section.group.end function.parens.pawn
           pop: true
         - include: main
-        - include: function_call
-    - include: main
-
 
   function_call:
     - match: \s*([A-Za-z_][\w_]*)[\s]*(\()
       captures:
         1: variable.function.pawn
-        2: function.parens.pawn
+        2: punctuation.section.group.begin function.parens.pawn
       push:
+        #- meta_content_scope: meta.function.params
         - match: \)
-          scope: function.parens.pawn
+          scope: punctuation.section.group.end function.parens.pawn
           pop: true
         - include: main
 
@@ -217,31 +214,41 @@ contexts:
 
   # "PAWN Keywords"
   pawn_post_keywords:
-    - match: '(?<!\?)\b[A-Za-z_]\w*\:'
-      scope: storage.modifier.tag.pawn
+    - match: '\b[A-Za-z_]\w*\::'
+      scope: constant.numeric.int.pawn
+
+    - match: '\b[A-Za-z_]\w*\:'
+      scope: storage.modifier.tag
 
     - match: \s*\b(public|stock|native|forward)\b
       scope: storage.modifier.function.pawn
 
     - match: (\[|\]|)
-      scope: meta.brackets.pawn
+      scope: meta.brackets
 
   pawn_keywords:
-    - match: (\{[^\}]*\}\:)
-      scope: storage.modifier.tag.pawn
-
-    - match: (?<=enum)\s*\b[A-Za-z_]\w*:?
-      scope: storage.modifier.tag.pawn
-
-    - match: \s*(case (.*):)\s+
+    - match: \s*(case)\s*(\d*)(\.\.)(\d*)\s*(:)\s*
       captures:
         1: keyword.control.pawn
-        2: storage.type.vars.pawn
+        2: constant.numeric.int.pawn
+        3: keyword.operator.ternary.pawn
+        4: constant.numeric.int.pawn
+        5: keyword.operator.ternary.pawn
+    - match: \s*(case)\s*(\d*).*(:)\s*
+      captures:
+        1: keyword.control.pawn
+        2: constant.numeric.int.pawn
+        3: keyword.operator.ternary.pawn
 
-    - match: \s*\b(sizeof|charsmax|assert|break|case|continue|default|do|else|exit|for|goto|if|return|state|switch|while)\b
+    - match: \s*\b(enum)\b\s*([A-Za-z_]\w*)(\s*:\s*([A-Za-z_]\w*))?
+      captures:
+        1: keyword.control.pawn
+        2: storage.modifier.tag
+
+    - match: \s*\b(sizeof|tagof|charsmax|break|case|continue|default|do|else|for|goto|if|return|state|switch|while|assert|sleep)\b
       scope: keyword.control.pawn
 
-    - match: \s*\b(new|enum|char|const|static)\b
+    - match: \s*\b(Float|new|enum|char|const|static)\b
       scope: storage.type.vars.pawn
 
     - match: (any\:\.\.\.)
@@ -271,8 +278,11 @@ contexts:
     - match: (\,|;)
       scope: punctuation.separator.pawn
 
-    - match: ({|})
-      scope: keyword.brace.pawn
+    - match: ({)
+      scope: punctuation.section.block.begin
+    - match: (})
+      scope: punctuation.section.block.begin
+
   ########################################################
 
 

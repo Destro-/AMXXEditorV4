@@ -1,0 +1,119 @@
+
+v4.4 (4400)
+New: Al usar "pegar" dentro de un string, se escapan los caracteres especiales.
+New: Al crear variables, se puede definir el tag 'auto:' o simplemente '::', el cual se reemplazará por el tag correspondiente al iniciar la compilación.
+New: Al escribir @, se muestra el autocompletado de tags o de funciones si se está dentro de un string.
+Fix: La tecla tab no funcionaba correctamente entre corchetes y llaves cuando el autocompletado estaba activo.
+Syntax: Mejorada la compatibilidad con los color-schemes por defecto.
+Syntax: Soporte para define multilínea.
+Syntax: Se mejoró la estructura switch case.
+Syntax: Eliminado el soporte para multilínea '\' en comentarios de una sola línea '//', no existe esa caracteristica en pawn.
+Syntax: Agregado estilo para constantes pre-definidas (true, false, __DATE__, __TIME__, __LINE__, __BINARY__, __FILE__).
+Syntax: Varias optimizaciones y corrección de pequeños errores.
+Analyzer: Nuevo método para tratar con los comentarios y strings al analizar el código.
+Analyzer: Soporte para #define multilínea.
+Analyzer: Solucionado el problema con #if y #else (solo se analiza un bloque y se ignoran los demás).
+Analyzer: Mejorado análisis de tags, incluyendo la creación de una lista de funciones relacionadas para cada tag.
+Analyzer: Mejorado el análisis de constantes/enums. Ahora los comentarios son utilizados como documentación.
+Analyzer: Varias optimizaciones y corrección de pequeños errores.
+Tooltip: Mejorado el inspector de parametros.
+Tooltip: Se agregaron tooltip para constantes y tags.
+Tooltip: Boton WIKI para SVC_ y get_user_msgid Game Events.
+Improved: Cache del autocompletado.
+Improved: Cambios en la configuracion 'debug_flags' y nuevo 'debug_log_flags'.
+Improved: Mejorado el sistema de actualización.
+General: Seguimiento de errores, ahora al ocurrir un error se envía un reporte a Rollbar.
+General: Código disponible en GitHub.
+
+
+v4.0~4.2
+New: Gran parte del código fue reescrito y separado en módulos (principalmente el analizador multihilo y el parser de sintaxis Pawn).
+New: CodeAnalizer separa el código en secciones y solo procesa lo que se está visualizando o modificando (el rendimiento es inigualable en comparación con versiones anteriores).
+New: Eliminado const.sublime-syntax (ahora se utiliza la API add_regions).
+New: Subrayado de funciones inexistentes.
+New: Perfil de compilación (posibilidad de cambiar rápidamente entre configuraciones de compiladores).
+New: Inspector de parámetros en tooltips.
+Fix: Eliminados tags de autocompletado en parámetros.
+
+v3.0
+Fix: Bug menor en el selector de color-schemes.
+Fix: Error en tiempo de ejecución en update_check().
+Fix: Crash al recargar paquetes.
+Fix: Soporte para multi-view/ventanas.
+New: Mostrar popup de tooltips al pasar el ratón.
+New: Nuevo estilo CSS para popups.
+New: Nuevo formato de color-scheme (.sublime-color-scheme).
+New: Posibilidad de elegir estilo para la consola de salida.
+New: Posibilidad de elegir estilo para el popup de tooltips.
+New: Más configuraciones para el autocompletado.
+New: Autocompletado para #include.
+New: Autocompletado para #emit.
+New: Autocompletado para #pragma.
+New: "Buscar/Reemplazar" en todos los includes.
+New: "Lista de funciones" en todos los includes.
+New: "Árbol de includes".
+New: Código de pawnparse reescrito:
+Comprobación básica en vivo de sintaxis inválida.
+Autocompletado de variables locales.
+35% menos uso de CPU.
+
+v2.2
+Fix: Problema en Linux.
+New: Menú para seleccionar color-scheme.
+New: Color-scheme "Mistrick".
+General: Verificación automática de actualizaciones.
+
+v2.1
+Fix: Corrección de bugs.
+
+v2.0
+Fix: Corrección de bugs.
+New: Auto incremento de versión/build al compilar.
+New: Color-scheme "Twilight".
+New: Color-scheme "Atomic".
+New: Color-scheme "Notepad++".
+
+v1.9
+Fix: Corrección de bugs.
+
+v1.8
+Fix: Corrección de bugs.
+New: Sintaxis en la consola del compilador.
+
+v1.7
+Fix: Validación de directorios en la configuración.
+New: Comprobación automática de actualizaciones.
+New: La sintaxis identifica correctamente todas las constantes.
+New: Mensajes para depurar posibles errores (debug_level: 0~3).
+
+v1.6
+New: Validación de directorios en la configuración.
+New: Archivo de sintaxis.
+Fix: Detalles en la posición del popup del tooltip.
+
+v1.5
+Mejorado: Configuración optimizada.
+Mejorado: Analizador optimizado.
+New: Color-scheme "White-pawn".
+
+v1.4
+Fix: Mejorado el analizador de funciones y defines.
+New: Analizador de variables.
+New: Información del include al hacer clic.
+
+v1.3
+Fix: Error en el analizador.
+Fix: Falla en la carga de recursos.
+
+v1.2
+Fix: Error en el analizador.
+New: Información de funciones.
+New: Ir a la definición de una función.
+New: Opción "Nuevo plugin".
+New: Color-scheme "Dark-pawn".
+
+v1.1
+Fix: Sintaxis.
+
+v1.0
+Publicación inicial.

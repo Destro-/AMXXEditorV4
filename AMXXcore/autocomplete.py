@@ -141,9 +141,9 @@ class ac:
 		add("CALL.pri", 		"", 			"[STK]   =  CIP + 1, STK   =  STK")
 		add("JUMP", 			"address", 		"CIP   =  address (jump to the address)")
 		add("JREL", 			"offset", 		"CIP   =  CIP + offset (jump offset bytes from currentposition)")
-		add("JZER", 			"address", 		"if PRI   =   =  0 then CIP   =  [CIP + 1]")
+		add("JZER", 			"address", 		"if PRI   ==  0 then CIP   =  [CIP + 1]")
 		add("JNZ", 				"address", 		"if PRI !  =  0 then CIP   =  [CIP + 1]")
-		add("JEQ", 				"address", 		"if PRI   =   =  ALT then CIP   =  [CIP + 1]")
+		add("JEQ", 				"address", 		"if PRI   ==  ALT then CIP   =  [CIP + 1]")
 		add("JNEQ", 			"address", 		"if PRI !  =  ALT then CIP   =  [CIP + 1]")
 		add("JLESS", 			"address", 		"if PRI < ALT then CIP   =  [CIP + 1] (unsigned)")
 		add("JLEQ", 			"address", 		"if PRI <   =  ALT then CIP   =  [CIP + 1] (unsigned)")
@@ -183,7 +183,7 @@ class ac:
 		add("ZERO.S", 			"offset", 		"[FRM + offset]   =  0")
 		add("SIGN.pri", 		"", 			"sign extent the byte in PRI to a cell")
 		add("SIGN.alt", 		"", 			"sign extent the byte in ALT to a cell")
-		add("EQ", 				"", 			"PRI   =  PRI   =   =  ALT ? 1 : 0")
+		add("EQ", 				"", 			"PRI   =  PRI   ==  ALT ? 1 : 0")
 		add("NEQ", 				"", 			"PRI   =  PRI !  =  ALT ? 1 : 0")
 		add("LESS", 			"", 			"PRI   =  PRI < ALT ? 1 : 0 (unsigned)")
 		add("LEQ", 				"", 			"PRI   =  PRI <   =  ALT ? 1 : 0 (unsigned)")
@@ -193,8 +193,8 @@ class ac:
 		add("SLEQ", 			"", 			"PRI   =  PRI <   =  ALT ? 1 : 0 (signed)")
 		add("SGRTR", 			"", 			"PRI   =  PRI > ALT ? 1 : 0 (signed)")
 		add("SGEQ", 			"", 			"PRI   =  PRI >   =  ALT ? 1 : 0 (signed)")
-		add("EQ.C.pri", 		"value", 		"PRI   =  PRI   =   =  value ? 1 : 0")
-		add("EQ.C.alt", 		"value", 		"PRI   =  ALT   =   =  value ? 1 : 0")
+		add("EQ.C.pri", 		"value", 		"PRI   =  PRI   ==  value ? 1 : 0")
+		add("EQ.C.alt", 		"value", 		"PRI   =  ALT   ==  value ? 1 : 0")
 		add("INC.pri", 			"", 			"PRI   =  PRI + 1")
 		add("INC.alt", 			"", 			"ALT   =  ALT + 1")
 		add("INC", 				"address", 		"[address]   =  [address] + 1")
@@ -265,6 +265,17 @@ class ac:
 			else :
 				items.append(( value + "\t keyword", value ))
 				
+		def add_constans(value):
+			items.append(( value + "\t built-in const", value ))
+
+		add_constans("__DATE__")
+		add_constans("__TIME__")
+		add_constans("__LINE__")
+		add_constans("__BINARY__")
+		add_constans("__FILE__")
+		add_constans("true")
+		add_constans("false")
+		
 		add("if", True)
 		add("else")
 		add("for", True)
@@ -331,7 +342,7 @@ class ac:
 		return ac.sorted_nicely(node.generate_list("autocomplete", list, remove_filename))
 
 		
-	def block_on_varname(text):
+	def is_code_on_varname(text):
 	#{
 	
 		num_bracket		= 0
@@ -393,18 +404,16 @@ class ac:
 		return blockState
 	#}
 	
-	def format_autocomplete(node, name, infotype, value_preview=""):
-
+	def format_autocomplete(node, name, info):
 		def strcut(s, maxlen):
 			return s[:maxlen-1] + "‥" if len(s) >= maxlen else s
 		
-		name			= strcut(name, 30).ljust(30)
-		infotype		= strcut(infotype, 10).title().rjust(10, " ")
-		value_preview	= strcut(value_preview, 16).ljust(16, " ")
-		include 		= strcut(node.file_name, 25).ljust(25, " ")
+		name	= strcut(name, 30).ljust(30)
+		info	= strcut(info, 20).ljust(20, " ")
+		include = strcut(node.file_name, 18).rjust(18, " ")
 		
-		return "%s\t%s  %s %s …" % (name, value_preview, include, infotype)
-
+		return "%s\t%s %s" % (name, info, include)
+		
 	####################################################
 	"""
 	Another code

@@ -1,0 +1,122 @@
+
+v4.4 (4400)
+New: When pasting within a string, special characters are escaped.
+New: When creating variables, you can define the 'auto:' tag or simply '::', which will be replaced by the corresponding tag during the compilation stage.
+New: When typing '@', function autocomplete is displayed if inside a string; otherwise, tag autocomplete is shown.
+Fix: The tab key did not work correctly between brackets and braces when autocomplete was active.
+Syntax: Improved compatibility with default color schemes.
+Syntax: Support for multiline define.
+Syntax: Improved switch case structure.
+Syntax: Removed support for multiline '\' in single-line comments '//', pawn doesn't have that feature.
+Syntax: Added styling for pre-defined constants (true, false, __DATE__, __TIME__, __LINE__, __BINARY__, __FILE__).
+Syntax: Various optimizations and minor bug fixes.
+Analyzer: New method for handling comments and strings during code analysis.
+Analyzer: Support for multiline '#define'.
+Analyzer: Fixed issue with '#if' and '#else' (only one block is analyzed, and the others are ignored).
+Analyzer: Improved tag analysis, including creating a list of related functions for each tag.
+Analyzer: Improved analysis of constants/enums. Comments are now used as documentation.
+Analyzer: Various optimizations and minor bug fixes.
+Tooltip: Improved Param-Inspector.
+Tooltip: Tooltips added for constants and tags.
+Tooltip: WIKI button for 'SVC_' and 'get_user_msgid' Game Events
+Improved: Cache autocomplete items.
+Improved: Update-check system.
+Improved: Added 'debug_log_flags'.
+Improved: Param-Inspector.
+General: Error tracking, now sending reports to Rollbar when an error occurs.
+General: Code available on GitHub.
+
+
+v4.0~4.2
+New: Much of the code was rewritten and separated into modules (mainly the multithreaded analyzer and Pawn code parser).
+New: CodeAnalyzer separates the code into sections and only processes what is being viewed or modified (performance is unmatched by previous versions).
+New: Removed const.sublime-syntax (now using the add_regions API).
+New: Underlined non-existent functions.
+New: Build profile (able to quickly switch between compiler settings).
+New: Parameter inspector in tooltips.
+Fix: Removed tags from autocomplete parameters.
+
+
+v3.0
+Fix: Minor bug in the color-schemes selector.
+Fix: Runtime error in update_check().
+Fix: Support for multi-view/windows.
+Fix: Crash when reloading packages.
+New: Show tooltip popup on mouse hover.
+New: New CSS style for popups.
+New: New color scheme format (.sublime-color-scheme).
+New: Ability to choose style for the output console.
+New: Ability to choose style for the tooltip popup.
+New: More settings for autocomplete.
+New: Autocomplete for '#include'.
+New: Autocomplete for '#emit'.
+New: Autocomplete for '#pragma'.
+New: 'Find/Replace' across all includes.
+New: 'Functions List' across all includes.
+New: 'Includes Tree'.
+New: Rewritten pawnparse code:
+-- Basic live check of invalid syntax.
+-- Autocomplete local variables.
+-- 35% less CPU usage.
+
+v2.2
+Fix: Issue on Linux.
+New: Menu to select color scheme.
+New: 'Mistrick' color scheme.
+Improved: Auto-update check.
+
+
+v2.1
+Fix: Bug fixes.
+
+v2.0
+Fix: Bug fixes.
+New: Auto-increment version/build when compiling.
+New: 'Twilight' color scheme.
+New: 'Atomic' color scheme.
+New: 'Notepad++' color scheme.
+
+v1.9
+Fix: Bug fixes.
+
+v1.8
+Fix: Bug fixes.
+New: Syntax in the compiler console.
+
+v1.7
+Fix: Directory validation in settings.
+New: Automatic update check.
+New: Syntax correctly identifies all constants.
+New: Debug messages for possible errors (debug_level: 0~3).
+
+v1.6
+New: Directory validation in settings.
+New: Syntax file.
+Fix: Details in tooltip popup position.
+
+v1.5
+Improved: Optimized configuration.
+Improved: Optimized analyzer.
+New: 'White-pawn' color scheme.
+
+v1.4
+Fix: Improved function and define analyzer.
+New: Variable analyzer.
+New: Include information on click.
+
+v1.3
+Fix: Issue in the analyzer.
+Fix: Failure in resource loading.
+
+v1.2
+Fix: Issue in the analyzer.
+New: Function information.
+New: Go to function definition.
+New: 'New plugin' option.
+New: 'Dark-pawn' color scheme.
+
+v1.1
+Fix: Fix syntax.
+
+v1.0
+Initial Release.

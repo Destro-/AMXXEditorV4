@@ -2,9 +2,12 @@ import os
 import re
 import sublime, sublime_plugin
 
-from AMXXcore.core import *
+from AMXXcore.core import cfg, globalvar, util
+import AMXXcore.debug as debug
 
-class AmxxFindReplace:
+class SearchAllTool:
+	search_type_msg = [ "Search", "Regex pattern", "Search Exact word", "Search word Ignorecase" ]
+	
 	def __init__(self, window):
 		self.window 		= window
 		self.view 			= None
@@ -12,44 +15,40 @@ class AmxxFindReplace:
 		self.last_error		= ""
 		self.search 		= ""
 		self.search_pattern = ""
-		self.search_type 	= 0
-		self.replace 		= None
+		self.search_type	= 0
 		self.initial_text 	= ""
 		self.original_view 	= [ ]
 		self.result 		= [ ]
 		self.quicklist		= [ ]
 
 
-	def process(self, input, errorcheck=False):
+	def searchAll(self, search_input, only_check_error=False):
 	
 		self.search 		= ""
 		self.search_pattern = ""
 		self.search_type 	= 0
-		self.replace 		= None
 
-		if not input:
+		if not search_input:
 			return None
 		
+		self.search = search_input
 		
 		search_flags = re.MULTILINE
 		
-		r = input.split("::replace::", 1)
-		self.search = r[0]
-		if len(r) == 2 :
-			self.replace = r[1]
-			
-		if self.search.startswith("word::") :
-			self.search = self.search[6:]
-			self.search_type = 2
-			self.search_pattern = r"\b" +re.escape(self.search)+ r"\b"
-				
-		elif self.search.startswith("re::") :
+		if self.search.startswith("R::") :
 			self.search_type = 1
-			self.search_pattern = self.search = self.search[4:]
+			self.search_pattern = self.search = self.search[3:]
+		elif self.search.startswith("E::") or self.search.startswith("I::") :
+			if self.search[0] == 'I' :
+				search_flags |= re.IGNORECASE
+				self.search_type = 3
+			else :
+				self.search_type = 2
+				
+			self.search = self.search[3:]
+			self.search_pattern = r"\b" +re.escape(self.search)+ r"\b"
 		else :
 			self.search_pattern = r"([a-zA-Z_]*)(" +re.escape(self.search)+ r")(\w*)"
-			if not self.replace == None :
-				self.replace = r"\1" +self.replace+ r"\3"
 			search_flags |= re.IGNORECASE
 		
 		if len(self.search) < 2 :
@@ -62,8 +61,8 @@ class AmxxFindReplace:
 		except Exception as e:
 			return "Regex -> " + str(e).title()
 			
-		if errorcheck :
-			return None # high CPU usage if is tested the down code in preview
+		if only_check_error :
+			return None
 
 		self.result 	= [ ]
 		includes 		= self.get_includes(self.view, True)
@@ -78,30 +77,12 @@ class AmxxFindReplace:
 			self.last_error = "Search not found"
 			return self.last_error
 			
-		if self.replace == None :
-			self.quicklist = [ [ "- Total Results:  %d" % len(self.result), "Search: %s" % self.search ] ]
+		self.quicklist = [ sublime.QuickPanelItem( "- Search: %s" % self.search, "", "Total Results: %d" % len(self.result)) ]
 		
-			for result in self.result :
-				self.quicklist += [ [ result[0], os.path.basename(result[3]) ] ]
-			
-		else :
-			self.quicklist = [ [ "Replace All? :  NO" , ""] ]
-			self.quicklist += [ [ "Replace All? :  YES" , "" ] ]
-			self.quicklist += [ [ "- Total Results:  %d" % len(self.result), "Search: %s  -  Replace: %s" % (self.search, r[1]) ] ]
-			
-			if self.search_type == 1 :
-				for result in self.result :
-					try:
-						preview = self.regex.sub(self.replace, result[0])
-					except Exception as e:
-						self.last_error = "RegexReplace -> " + str(e).title()
-						return self.last_error
-						
-					self.quicklist += [ [ "", result[0] + "  ->  " + preview ] ]
-			else :
-				for result in self.result :
-					self.quicklist += [ [ "", result[0] + "  -  " + os.path.basename(result[3]) ] ]
-					
+		for result in self.result :
+			self.quicklist += [ sublime.QuickPanelItem(  result[0], "", os.path.basename(result[3]) ) ]
+		
+		
 		sublime.set_timeout(self.show_delayed_fix, 100) # Fix bug
 		return None
 
@@ -118,33 +99,24 @@ class AmxxFindReplace:
 		
 	def on_select(self, index):
 		self.quickpanel = False
-		
-		if self.replace == None :
-			if index == -1 :
-				self.restore_org(True)
-				return
+
+		if index == -1 :
+			self.restore_org(True)
+			return
 				
-			if index == 0 :
-				self.show_panel(0)
-				return
+		if index == 0 :
+			self.show_panel(0)
+			return
 				
-			index -= 1
+		index -= 1
 				
-			id = util.goto_definition(self.result[index][3], "", (self.result[index][1], self.result[index][2]), False)
+		id = util.goto_definition(self.result[index][3], "", (self.result[index][1], self.result[index][2]), False)
 			
-			if id != self.original_view[0].id() :
-				self.restore_org(False)
-		else :
-			if index == 0 :
-				self.window.status_message(" Cancel Replace All")
-			elif index == 1 :
-				self.window.status_message(" Replace All")
-				self.confirm_replace()
-			elif index > 1 :
-				self.show_panel(index)
-		
+		if id != self.original_view[0].id() :
+			self.restore_org(False)
+	
 	def on_highlight(self, index):
-		if not index or not self.replace == None :
+		if not index :
 			return
 			
 		index -= 1
@@ -166,20 +138,6 @@ class AmxxFindReplace:
 				
 			self.original_view = []
 	
-	def confirm_replace(self):
-	
-		includes = self.get_includes(self.view)
-		
-		for inc in includes :
-			text = self.read_text(inc)
-			try:
-				text = self.regex.sub(self.replace, text)
-				self.write_text(text, inc)
-			except Exception as e:
-				self.last_error = "RegexReplace -> " + str(e).title()
-				self.window.run_command("amxx_find_replace")
-				return
-			
 	def search_all(self, text, file):
 		
 		result = [ ]
@@ -226,9 +184,9 @@ class AmxxFindReplace:
 			try:
 				with open(file_path, encoding="utf-8", errors="replace") as f :
 					f.write(text)
-			except:
-				pass
-		
+			except Exception as e:
+					debug.warning(f"searchAll() -> write_text(<file: {file_path}>) error:", e)
+				
 	def get_includes(self, view, includedir=False):
 		includes 	= [ ]
 		visited 	= [ ]
@@ -244,7 +202,7 @@ class AmxxFindReplace:
 
 		visited += [ node.file_path ]
 
-		if includedir or node.readonly == False :
+		if includedir or cfg.profile_include_dir != os.path.dirname(node.file_path) :
 			includes += [ node.file_path ]
 
 		for child in node.children :

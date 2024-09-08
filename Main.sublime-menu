@@ -1,7 +1,7 @@
 [
 	{
 		"caption": "AMX Mod-X",
-		"id": "amxmodx",
+		"id": "AMXXEditorV4",
 		"children":
 		[
 			{
@@ -12,7 +12,7 @@
 			{
 				"command": "edit_settings", "args":
 				{
-					"base_file": "${packages}/amxmodx/AMXX-Editor.sublime-settings",
+					"base_file": "${packages}/AMXXEditorV4/AMXX-Editor.sublime-settings",
 					"default": "{\n\t$0\n}\n"
 				},
 				"caption": "Edit Settings"
@@ -123,24 +123,6 @@
 					},
 			{ "caption": "-" },
 			{
-				"caption": "HTML Tools",
-				"children":
-				[
-					{ "command": "run_tool_amxx", "args": {"index": 0} },
-					{ "command": "run_tool_amxx", "args": {"index": 1} },
-					{ "command": "run_tool_amxx", "args": {"index": 2} },
-					{ "command": "run_tool_amxx", "args": {"index": 3} },
-					{ "command": "run_tool_amxx", "args": {"index": 4} },
-					{ "command": "run_tool_amxx", "args": {"index": 5} },
-					{ "command": "run_tool_amxx", "args": {"index": 6} },
-					{ "command": "run_tool_amxx", "args": {"index": 7} },
-					{ "command": "run_tool_amxx", "args": {"index": 8} },
-					{ "command": "run_tool_amxx", "args": {"index": 9} },
-					{ "command": "run_tool_amxx", "args": {"index": 10} }
-				]
-			},
-			{ "caption": "-" },
-			{
 				"command": 	"amxx_func_list",
 				"caption": 	"Functions List"
 			},
@@ -149,8 +131,8 @@
 				"caption": 	"Includes Tree"
 			},
 			{
-				"command": 	"amxx_find_replace",
-				"caption": 	"Find/Replace"
+				"command": 	"amxx_search_all",
+				"caption": 	"Search All"
 			},
 			{ "caption": "-" },
 			{

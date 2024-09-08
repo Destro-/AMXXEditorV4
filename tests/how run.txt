@@ -1,0 +1,2 @@
+# To run test.py file, run on the Sublime Text console:
+import imp; import AMXXEditorV4.tests.test as amxxtest; imp.reload(amxxtest); amxxtest.test("test.sma")

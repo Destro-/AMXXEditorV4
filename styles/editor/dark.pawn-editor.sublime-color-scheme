@@ -164,7 +164,7 @@
 		},
 		{
 			"name": "Pawn Tag",
-			"scope": "storage.modifier.tag.pawn",
+			"scope": "storage.modifier.tag",
 			"foreground": "#4EAD13",
 			"font_style": "italic"
 		},

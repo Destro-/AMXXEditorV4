@@ -90,7 +90,7 @@
 		{
 			"name": "Pawn Function parens",
 			"scope": "function.parens",
-			"foreground": "#aaa",
+			"foreground": "#1f1",
 			"font_style": "bold"
 		},
 		

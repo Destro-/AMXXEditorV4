@@ -21,8 +21,6 @@
 	var(--large-size)
 */
 
-
-/* Base elements *****************/
 html {
 	font-family: Tahoma;
 	font-size: var(--normal-size);
@@ -33,7 +31,7 @@ body {
 	margin: 0px;
 }
 
-.header {
+.top {
 	background-color: #444;
 	padding: 4px 10px 7px 10px;
 	font-family: Verdana;
@@ -47,21 +45,22 @@ body {
 /********************************/
 
 
-/* Popup Header */
-.header a { color: #fff; font-weight: bold;}
-.header .separator { 
+/* Popup top */
+.top a { color: #fff; font-weight: bold;}
+.top .separator { 
 	padding: 0px 5px 0px 5px;
 }
 
 
 /* Tooltip function */
-.tooltip-function .inspecTitle { color: #000; font-weight: bold;}
-.tooltip-function .inspecBlock { color: #555; }
+.tooltip-function .inspectorTitle { color: #000; font-weight: bold;}
+.tooltip-function .inspectorBlock { color: #555; }
 
 
 /* Tooltip include */
-.tooltip-include h3.heading {
+.tooltip-include b.info {
 	margin: 0px;
+	font-size: var(--large-size);
 }
 .tooltip-include b.path {
 	color: #D20A0A;
@@ -69,16 +68,35 @@ body {
 
 
 /* Tooltip tags */
-.tooltip-tag .content {
-	padding: 5px 20px 5px 0px;
-}
-
 .tooltip-tag div.itemrow {
 	margin: 2px;
 }
 
 .tooltip-tag a.funcname {
 	padding-left: 4px;
+}
+
+
+/* Doct Block */
+.code {
+	font-family: monospace;
+	background-color: #f5f5f5;
+	padding: 4px;
+	border-radius: 2px;
+	margin: 5px;
+}
+
+.code b {
+	color: #666;
+}
+
+.doct2 { 
+	color: #111;
+}
+
+.doct1 { 
+	color: #444;
+	font-style: italic;
 }
 
 
@@ -91,23 +109,22 @@ body {
 	padding-left: 3px;
 }
 
-.btn.copy {
-	background-color: #fba225;
+.btn.go {
+	background-color: #4fd154;
 	color: #fff;
 }
 
-.btn.insert {
-	background-color: #3dad15;
+.btn.copy {
+	background-color: #4fd154;
 	color: #fff;
 }
 
 
 /* Syntax style ****************************************/
 .pawnDefaultColor { color: #111; font-family: Verdana; }
-.pawnFunction { color: #875A8F; font-weight: bold; padding-left: 1px;}
+.pawnFunction { color: #875A8F; font-weight: bold; }
 .pawnString { color: #808080; }
 .pawnKeyword { color: #111; }
 .pawnConstant { color: #0000ff; font-weight: normal; }
 .pawnNumber { color: #ff8000; font-style: italic; }
-.pawnTag { color: #3366CC; font-style: italic; text-decoration: none; }
-
+.pawnTag { color: #3366CC; font-style: italic; text-decoration: none; font-family: Verdana; }

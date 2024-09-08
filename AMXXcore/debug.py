@@ -1,6 +1,7 @@
 import time
 import os
-from AMXXcore.core import cfg
+
+from AMXXcore.core import cfg, globalvar
 
 
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -66,65 +67,71 @@ class performance:
 		return "%s() -> %s" % (func.__name__, performance.result("_run_test"))
 		
 
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# DEBUG/PRINT
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# DEBUG PRINT/LOG
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-# Enable editor debug messages:
-# ""   - Disabled debugging.
+
+# Debug message/log flags:
+# ""   - Set default: "a".
 # "a"  - Errors messages.
 # "b"  - Warnings messages.
-# "c"  - Info messages.
-# "d"  - Dev messages.
-# "e"  - Dev PawnParser.
-# "f"  - Sublime EventListener.
-# "g"  - Show scope on hover (tool for syntax dev).
-# "z"  - Enable ViewDebugMode, show sections region (the code in view is parsed into small sections).
-# "*"  - All debugging levels at the same time.
-	
-# 'CHAR in STRING' is most faster that bitwise (and most easy)
+# "c"  - Info messages (e.g., timings, start & end analysis).
+# "d"  - Dev messages (verbose info).
+# "e"  - Error Analyzer parser.
+# "f"  - Info Analyzer.
+# "s"  - Sublime EventListener (dev).
+# "z"  - Enable ViewDebugMode (colorize code sections).
+# "*"  - All debugging flags at the same time.
 FLAG_ERROR		= "a"
 FLAG_WARNING	= "b"
 FLAG_INFO		= "c"
-FLAG_INFO_DEV	= "d"
-FLAG_INFO_PARSE	= "e"
-FLAG_ST3_EVENT	= "f"
-FLAG_SHOW_SCOPE	= "g"
+FLAG_DEV		= "d"
+FLAG_PARSE_ERROR= "e"
+FLAG_PARSE_INFO	= "f"
+FLAG_ST3_EVENT	= "s"
 FLAG_ALL		= "*"
+
+# Set default cfg values:
+cfg.debug_flags = "ab"
+cfg.debug_log_flags = "abcd"
 
 
 def check_flags(flags):
+	if not flags :
+		return "a"
 	if FLAG_ALL in flags :
-		from string import ascii_lowercase
-		return ascii_lowercase
+		return "abcdef"
 	return flags
 
-	
 def console(*args):
 	print(__get_time(), *args)
 	
 def debug(flag_level, *args):
-	if not flag_level or flag_level in cfg.debug_flags :
+	if flag_level in cfg.debug_flags:
 		console(*args)
+	if flag_level in cfg.debug_log_flags:
 		log(*args)
 
 def error(*args):
 	debug(FLAG_ERROR, "ERROR:", *args)
-	
+
 def warning(*args):
 	debug(FLAG_WARNING, "WARNING:", *args)
-	
+
 def info(*args):
 	debug(FLAG_INFO, "INFO:", *args)
 
 def dev(*args):
-	debug(FLAG_INFO_DEV, "DEV:", *args)
-
+	debug(FLAG_DEV, "DEV:", *args)
 
 #:: Simple LOG
 log_file = None
 
 def log(*args):
+	if not log_file :
+		return
+		
 	log_file.write(__get_time() + " " + " ".join(map(str, args)) + "\n")
 	log_file.flush()
 	
@@ -136,4 +143,4 @@ def log_close():
 	log_file.close()
 	
 def __get_time():
-	return "[AMXX-Editor - %s]" % time.strftime("%H:%M:%S")
+	return "[AMXX: %s]" % time.strftime("%H:%M:%S")

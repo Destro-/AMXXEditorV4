@@ -112,9 +112,15 @@
 			"foreground": "#804000"
 		},
 		{
+			"name": "Pawn Define Multiline Block",
+			"scope": "meta.preprocessor.define.multiline.pawn",
+			"foreground": "var(main-foreground)",
+			"background": "color(var(main-background) blend(var(main-foreground) 97%))"
+		},
+		{
 			"name": "Pawn Define Group",
 			"scope": "meta.preprocessor.group",
-			"foreground": "#804000"
+			"foreground": "#ff4000"
 		},
 		
 		
@@ -178,11 +184,11 @@
 			"scope": "string constant",
 			"foreground": "#333"
 		},
-	
+
 		{
 			"name": "Pawn Constant Vars",
 			"scope": "constant.vars",
-			"foreground": "#000080",
+			"foreground": "#0000A0",
 			"font_style": "italic",
 			
 			// Fix bug, reverse foreground/background

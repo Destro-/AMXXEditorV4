@@ -1,7 +1,7 @@
 %YAML 1.2
 ---
-name: Console Output
-scope: source.sma
+name: Pawn Console Result
+scope: console.amxx
 contexts:
   main:
     # Start comment

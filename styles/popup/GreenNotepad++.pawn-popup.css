@@ -1,5 +1,6 @@
 html {
 	font-family: Tahoma;
+	color: #111;
 }
 
 body {
@@ -50,3 +51,23 @@ body {
 .inspectorTitle { color: #000; font-weight: bold;}
 .inspectorBlock { color: #555; }
 
+.code {
+	font-family: monospace;
+	background-color: #f5f5f5;
+	padding: 4px;
+	border-radius: 2px;
+	margin: 5px;
+}
+
+.code b {
+	color: #a5cd60;
+}
+
+.doct2 { 
+	color: #111;
+}
+
+.doct1 { 
+	color: #444;
+	font-style: italic;
+}
