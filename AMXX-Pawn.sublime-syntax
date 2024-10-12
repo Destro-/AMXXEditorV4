@@ -7,10 +7,15 @@ contexts:
 
   # "AMXX-Pawn Syntax v4.4"
   main:
+    - include: pawn_directives
+    - include: main2
+
+
+  main2:
     - include: pawn_string
     - include: pawn_character
     - include: pawn_coment
-    - include: pawn_directives
+
     - include: pawn_numbers
     - include: pawn_keywords
     - include: pawn_function
@@ -55,30 +60,31 @@ contexts:
   # "Pawn Directives"
   pawn_directives:
     - match: ^\s*?#
-      scope: meta.preprocessor
+      scope: keyword.control.import meta.preprocessor
       push:
-        - include: directive_others
         - include: directive_include
         - include: directive_define
-        - include: pawn_coment
-        - include: main
+        - include: directive_others
+        - include: directive_invalid
 
   directive_include:
     - match: (include|tryinclude)\s+((["][\t ]*[\w\-\/]*\.(inc|sma|inl)?[\t ]*["])|([<][\t ]*[\w\-\/]*[\t ]*[>])|([^\s]*))
       captures:
-        1: meta.preprocessor.include.pawn
-        3: meta.preprocessor.include.path.pawn
-        4: meta.preprocessor.include.path.pawn
-        5: meta.preprocessor.include.path.pawn
+        1: keyword.control.import meta.preprocessor.include.pawn
+        3: keyword.control.import meta.preprocessor.include.path.pawn
+        4: keyword.control.import meta.preprocessor.include.path.pawn
+        5: keyword.control.import meta.preprocessor.include.path.pawn
         6: invalid.illegal.preprocessor.pawn
 
   directive_define:
-    - match: define\s+[a-zA-Z_]\w*
-      scope: meta.preprocessor.define.pawn
+    - match: define
+      scope: keyword.control.import meta.preprocessor.define.pawn
+    - match: \s+[a-zA-Z_][^\s]*
+      scope: keyword.control.import meta.preprocessor.define.pawn
       push:
-        #- meta_scope: meta.preprocessor.define.multiline.pawn
-        - include: main
+        - include: main2
         - include: define-multiline
+      pop: true
 
 
   define-multiline:
@@ -87,7 +93,7 @@ contexts:
       scope: punctuation.separator.continuation.line.pawn meta.preprocessor.define.pawn
       set:
         - meta_scope: meta.preprocessor.define.multiline.pawn
-        - include: main
+        - include: main2
         - include: define-multiline
     - match: $\n
       pop: true
@@ -99,17 +105,22 @@ contexts:
         1: meta.preprocessor.others.pawn
         2: entity.name.constant.preprocessor.pawn
 
+  directive_invalid:
+    - match: '[^\n]*'
+      scope: invalid.illegal.preprocessor.pawn
+      pop: true
+
   ########################################################
 
    # "PAWN String"
   pawn_string:
     - match: '"'
-      scope: punctuation.definition.string.begin.pawn
+      scope: string.quoted.double.begin
       push:
       - meta_scope: string.quoted.double.pawn
       - match: '(")|(?<=^|[^\\])\s*(\n)'
         captures:
-          1: punctuation.definition.string.end.pawn
+          1: string.quoted.double.end
           2: invalid.illegal.unexpected-end-of-line.pawn
         pop: true
       - include: string_escaped_char
@@ -149,48 +160,48 @@ contexts:
         1: storage.modifier.function.pawn
         2: storage.modifier.tag
         3: support.function.pawn
-        4: punctuation.section.group.begin function.parens.pawn
+        4: punctuation.section.group.begin
       push:
         - match: \)
-          scope: punctuation.section.group.end function.parens.pawn
+          scope: punctuation.section.group.end
           pop: true
-        - include: main
+        - include: main2
         
     - match: ^(([A-Za-z_]\w*)\s+)?([A-Za-z_]\w*:\s*)?([A-Za-z_][\w_]*)[\s]*(\()
       captures:
         2: storage.modifier.function.pawn
         3: storage.modifier.tag
         4: support.function.pawn
-        5: punctuation.section.group.begin function.parens.pawn
+        5: punctuation.section.group.begin
       push:
         - match: \)
-          scope: punctuation.section.group.end function.parens.pawn
+          scope: punctuation.section.group.end
           pop: true
-        - include: main
+        - include: main2
 
     - match: ^(native|stock)\s+([A-Za-z_]\w*:)?\[\w*\]\s*?([A-Za-z_][\w_]*)[\s]*(\()
       captures:
         1: storage.modifier.function.pawn
         2: storage.modifier.tag
         3: support.function.pawn
-        4: punctuation.section.group.begin function.parens.pawn
+        4: punctuation.section.group.begin
       push:
         - match: \)
-          scope: punctuation.section.group.end function.parens.pawn
+          scope: punctuation.section.group.end
           pop: true
-        - include: main
+        - include: main2
 
   function_call:
     - match: \s*([A-Za-z_][\w_]*)[\s]*(\()
       captures:
         1: variable.function.pawn
-        2: punctuation.section.group.begin function.parens.pawn
+        2: punctuation.section.group.begin
       push:
         #- meta_content_scope: meta.function.params
         - match: \)
-          scope: punctuation.section.group.end function.parens.pawn
+          scope: punctuation.section.group.end
           pop: true
-        - include: main
+        - include: main2
 
   ########################################################
 
@@ -224,7 +235,7 @@ contexts:
       scope: storage.modifier.function.pawn
 
     - match: (\[|\]|)
-      scope: meta.brackets
+      scope: meta.brackets punctuation.section.brackets
 
   pawn_keywords:
     - match: \s*(case)\s*(\d*)(\.\.)(\d*)\s*(:)\s*
@@ -245,10 +256,13 @@ contexts:
         1: keyword.control.pawn
         2: storage.modifier.tag
 
+    - match: (%\d) # define positional group
+      scope: storage.modifier meta.preprocessor.group
+
     - match: \s*\b(sizeof|tagof|charsmax|break|case|continue|default|do|else|for|goto|if|return|state|switch|while|assert|sleep)\b
       scope: keyword.control.pawn
 
-    - match: \s*\b(Float|new|enum|char|const|static)\b
+    - match: \s*\b(new|enum|char|const|static)\b
       scope: storage.type.vars.pawn
 
     - match: (any\:\.\.\.)
@@ -275,13 +289,13 @@ contexts:
     - match: (~|&|\||\^|<<|>>)
       scope: keyword.operator.bitwise.pawn
 
-    - match: (\,|;)
+    - match: (\,|;|\.)
       scope: punctuation.separator.pawn
 
     - match: ({)
       scope: punctuation.section.block.begin
     - match: (})
-      scope: punctuation.section.block.begin
+      scope: punctuation.section.block.end
 
   ########################################################
 
@@ -289,12 +303,12 @@ contexts:
   # "Check Brackets Closed"
   parens:
     - match: \(
-      scope: parens.pawn
+      scope: punctuation.section.group.begin
       push:
         - match: \)
-          scope: parens.pawn
+          scope: punctuation.section.group.end
           pop: true
-        - include: main
+        - include: main2
 
   check_brackets:
     - match: \)

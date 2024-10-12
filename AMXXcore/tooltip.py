@@ -133,7 +133,7 @@ def func_to_html(func, skipType=False) :
 	content = ""
 	
 	if func.type and not skipType:
-		content += f'<span class="pawnKeyword"><b>{globalvar.FUNC_TYPES[func.type]}</b></span>&nbsp;&nbsp;'
+		content += f'<span class="pawnType"><b>{globalvar.FUNC_TYPES[func.type]}</b></span>&nbsp;&nbsp;'
 	if func.return_tag :
 		content += f'<a class="pawnTag" href="showtag:{func.return_tag}">{func.return_tag}:</a>'
 	if func.return_array :
@@ -141,7 +141,7 @@ def func_to_html(func, skipType=False) :
 		
 	content += f'<span class="pawnFunction">{func.name}</span>' + pawn_highlight(f'({func.parameters})')
 	
-	return content
+	return f'<span class="pawnDefaultColor">{content}</span>'
 
 
 def pawn_highlight(code):
@@ -159,13 +159,13 @@ def pawn_highlight(code):
 	code = re.sub(r',(\w)', r', \1', code)
 	code = re.sub(r'([A-Za-z_][\w_]*)\(', r'<span class="pawnFunction">\1</span>(', code)
 	code = re.sub(r'([a-zA-Z_]\w*):', r'<a class="pawnTag" href="showtag:\1">\1:</a>', code)
-	code = re.sub(r'([\(\)\[\]&]|\.\.\.)', r'<span class="pawnKeyword">\1</span>', code)
+	code = re.sub(r'([\(\)\[\]\{\}&]|\.\.\.)', r'<span class="pawnOperator">\1</span>', code)
 	code = re.sub(r'\b(\d+(.\d+)?)\b', r'<span class="pawnNumber">\1</span>', code)
 
-	code = code.replace('const ', '<span class="pawnConstant">const </span>')
-	code = code.replace('sizeof ', '<span class="pawnConstant">sizeof </span>')
-	code = code.replace('charsmax', '<span class="pawnConstant">charsmax</span>')
-	code = code.replace('<EQUAL>', '<span class="pawnKeyword">=</span>')
+	code = code.replace('const ', '<span class="pawnType">const </span>')
+	code = code.replace('sizeof ', '<span class="pawnType">sizeof </span>')
+	code = code.replace('charsmax', '<span class="pawnType">charsmax</span>')
+	code = code.replace('<EQUAL>', '<span class="pawnOperator">=</span>')
 	
 	for s in slist :
 		code = code.replace('<STR>', f'<span class="pawnString">{s}</span>', 1)
@@ -183,7 +183,7 @@ def pawn_highlight(code):
 	
 	code = code.replace('&', '&amp;')
 	
-	return f'<span class="pawnDefaultColor">{code}</span>'
+	return code
 
 	
 	

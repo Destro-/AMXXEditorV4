@@ -10,12 +10,7 @@
 	"amxxeditor":
 	{
 		"default_popup": "AMXXStudio",
-		"default_console": "AMXXStudio",
-		"syntax_settings":
-		{
-			// Custom settings...
-			//"font_face": ""
-		}
+		"default_console": "AMXXStudio"
 	},
 	"variables":
     {
@@ -77,15 +72,21 @@
 		},
 		{
 			"name": "Pawn Define Constant - Pawn Include Path - Pawn Define/Include",
-			"scope": "entity.name.constant.preprocessor, meta.preprocessor.include.path, meta.preprocessor",
+			"scope": "meta.preprocessor",
 			"foreground": "#FF8040"
 		},
 		
 		
 		{
 			"name": "Pawn control - Pawn operator - Pawn coma - Function parens - Parens",
-			"scope": "keyword, parens, punctuation.separator",
+			"scope": "keyword, punctuation.section.group, punctuation.separator",
 			"foreground": "#007700"
+		},
+		
+		{
+			"name": "Pawn Define Constant2 - Pawn Include Path - Pawn Define/Include",
+			"scope": "meta.preprocessor",
+			"foreground": "#FF8040"
 		},
 		
 		{

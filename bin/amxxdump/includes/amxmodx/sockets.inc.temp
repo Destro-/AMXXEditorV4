@@ -1,0 +1,25 @@
+#if defined _socket_included
+#endinput
+#endif
+#define _socket_included
+#pragma reqlib sockets
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma loadlib sockets
+#endif
+#define SOCKET_TCP 1
+#define SOCKET_UDP 2
+#define SOCK_NON_BLOCKING (1 << 0)                                      
+#define SOCK_LIBC_ERRORS  (1 << 1)                                     
+#define SOCK_ERROR_OK               0               
+#define SOCK_ERROR_CREATE_SOCKET    1                               
+#define SOCK_ERROR_SERVER_UNKNOWN   2                     
+#define SOCK_ERROR_WHILE_CONNECTING 3                             
+native socket_open(const _hostname[], _port, _protocol = SOCKET_TCP, &_error, _flags = 0);
+native socket_close(_socket);
+native socket_recv(_socket, _data[], _length);
+native socket_send(_socket, const _data[], _length);
+native socket_send2(_socket, const _data[], _length);
+#pragma deprecated Use socket_is_readable() instead
+native socket_change(_socket, _timeout = 100000);
+native socket_is_readable(_socket, _timeout = 100000);
+native socket_is_writable(_socket, _timeout = 100000);

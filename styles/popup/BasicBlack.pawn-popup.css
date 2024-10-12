@@ -1,13 +1,37 @@
+/* Sublime Text MiniHTML docs -> http://www.sublimetext.com/docs/minihtml.html */
+
+/*
+	Sublime Text Vars:
+    var(--background)
+    var(--foreground)
+    var(--accent)
+    var(--redish)
+    var(--orangish)
+    var(--yellowish)
+    var(--greenish)
+    var(--cyanish)
+    var(--bluish)
+    var(--purplish)
+    var(--pinkish)
+	
+	AMXX-Editor:
+	var(--micro-size)
+	var(--small-size)
+	var(--normal-size)
+	var(--large-size)
+*/
+
 html {
 	font-family: Tahoma;
-	color: #ccc;
+	font-size: var(--normal-size);
+	color: #fff;
 }
-
 
 body {
 	margin: 0px;
 	background-color: #000;
 }
+
 
 .top {
 	padding: 4px 10px 7px 10px;
@@ -24,39 +48,84 @@ body {
 	
 }
 
-.separator { color: #000; padding: 0px 5px 0px 5px }
-.customLink { color: #fff; font-weight: bold;}
 
-.incInfo { color: #fff; font-weight: bold;}
-.incPath { color: #ff8040; font-weight: bold;}
+/********************************/
 
-.pawnDefaultColor { color: #999; font-family: Verdana; }
-.pawnFunction { color: #e00; }
-.pawnString { color: #a69a28; }
-.pawnKeyword { color: #00cc00; }
-.pawnConstant { color: #00cc00; }
-.pawnNumber { color: #0764ba; }
-.pawnTag { color: #00cc00; font-style: italic; }
-.pawnTag a { color: #00cc00; text-decoration: none; }
+/* Popup top */
+.top a { color: #fff; font-weight: bold;}
+.top .separator { 
+	padding: 0px 5px 0px 5px;
+}
 
-.inspectorTitle { color: #fff; font-weight: bold;}
-.inspectorBlock { color: #eee; }
 
+/* Tooltip function */
+.tooltip-function .inspectorTitle { color: #fff; font-weight: bold; margin-top: 8px; }
+.tooltip-function .inspectorBlock { color: #ccc; }
+
+
+/* Tooltip include */
+.tooltip-include .info {
+	margin: 0px;
+	font-weight: bold;
+}
+.tooltip-include .path {
+	color: #D20A0A;
+}
+
+
+/* Tooltip tags */
+.tooltip-tag div.itemrow {
+	margin: 2px;
+}
+
+.tooltip-tag a.funcname {
+	padding-left: 4px;
+}
+
+
+/* Document comments Block */
 .code {
 	font-family: monospace;
-	background-color: #444;
+	background-color: #333;
 	padding: 4px;
 	border-radius: 2px;
 	margin: 5px;
 }
 
 .code b {
-	color: #eee;
+
 }
 
-.doct2 { 
+.doc2 { 
+	color: #1f1;
 }
 
-.doct1 { 
+.doc1 { 
+	color: #44f;
 	font-style: italic;
 }
+
+
+/* Buttons */
+.btn {
+	font-size: var(--small-size);
+	text-decoration: none;
+	border-radius: 4px;
+	padding-right: 3px;
+	padding-left: 3px;
+}
+
+.btn.go {
+	background-color: #4fd154;
+	color: #fff;
+}
+
+.btn.copy {
+	background-color: #4fd154;
+	color: #fff;
+}
+
+
+/* Syntax style ( setting 'tooltip_style_mode' = 0  */
+.pawnDefaultColor { color: #f00; font-family: Verdana; }
+

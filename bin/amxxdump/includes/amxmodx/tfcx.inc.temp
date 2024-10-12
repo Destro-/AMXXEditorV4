@@ -1,0 +1,54 @@
+#if defined _tfcx_included
+#endinput
+#endif
+#define _tfcx_included
+#include <tfcconst>
+#include <tfcstats>
+#pragma reqclass xstats
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma defclasslib xstats tfcx
+#endif
+enum {
+XMF_DAMAGE = 0,
+XMF_DEATH,
+};
+native register_statsfwd( ftype );
+forward client_damage(attacker,victim,damage,wpnindex,hitplace,TA);
+forward client_death(killer,victim,wpnindex,hitplace,TK);
+native custom_weapon_add( const wpnname[],melee = 0,const logname[]="" ); 
+native custom_weapon_dmg( weapon, att, vic, damage, hitplace=0 ); 
+native custom_weapon_shot( weapon,index ); native xmod_is_melee_wpn(wpnindex);
+native xmod_get_wpnname(wpnindex,name[],len);
+native xmod_get_wpnlogname(wpnindex,name[],len);
+native xmod_get_maxweapons();
+native xmod_get_stats_size();
+native xmod_is_custom_wpn(wpnindex);
+stock tfc_isgrenade( weapon ){
+switch( weapon )
+{
+case TFC_WPN_CALTROP,
+TFC_WPN_CONCUSSIONGRENADE,
+TFC_WPN_NORMALGRENADE,
+TFC_WPN_NAILGRENADE,
+TFC_WPN_MIRVGRENADE,
+TFC_WPN_NAPALMGRENADE,
+TFC_WPN_GASGRENADE,
+TFC_WPN_EMPGRENADE:
+return 1;
+default: return 0;
+}
+return 0;
+}
+native tfc_userkill( index );
+native tfc_setpddata(timer,sentrygun,shells,bullets,cells,rockets,nade1,nade2);
+native 	tfc_setmodel(index, const Model[], const Skin[]);
+native 	tfc_clearmodel(index);
+native 	tfc_getbammo(index, ammo);
+native 	tfc_setbammo(index, ammo, value);
+native tfc_getweaponbammo(index, weapon);
+native tfc_setweaponbammo(index, weapon, value);
+native tfc_getweaponammo(index);
+native tfc_setweaponammo(index, value);
+native tfc_get_user_goalitem(index, &team);
+native tfc_is_user_feigning(index);
+native tfc_is_team_ally(TeamA,TeamB);

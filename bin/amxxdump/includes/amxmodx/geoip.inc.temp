@@ -1,0 +1,37 @@
+#if defined geoip_included
+#endinput
+#endif
+#define _geoip_included
+#pragma reqlib geoip
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma loadlib geoip
+#endif
+native bool:geoip_code2_ex(const ip[], result[3]);
+native bool:geoip_code3_ex(const ip[], result[4]);
+#pragma deprecated Use geoip_code2_ex() instead.
+native geoip_code2(const ip[], ccode[3]);
+#pragma deprecated Use geoip_code3_ex() instead.
+native geoip_code3(const ip[], result[4]);
+#pragma deprecated Use geoip_country_ex() instead.
+native geoip_country(const ip[], result[], len = 45);
+native geoip_country_ex(const ip[], result[], len, id = -1);
+native geoip_city(const ip[], result[], len, id = -1);
+native geoip_region_code(const ip[], result[], len);
+native geoip_region_name(const ip[], result[], len, id = -1);
+native geoip_timezone(const ip[], result[], len);
+native Float:geoip_latitude(const ip[]);
+native Float:geoip_longitude(const ip[]);
+#define SYSTEM_METRIC   0 #define SYSTEM_IMPERIAL 1 native Float:geoip_distance(Float:lat1, Float:lon1, Float:lat2, Float:lon2, system = SYSTEM_METRIC);
+enum Continent
+{
+CONTINENT_UNKNOWN = 0,
+CONTINENT_AFRICA,
+CONTINENT_ANTARCTICA,
+CONTINENT_ASIA,
+CONTINENT_EUROPE,
+CONTINENT_NORTH_AMERICA,
+CONTINENT_OCEANIA,
+CONTINENT_SOUTH_AMERICA,
+};
+native Continent:geoip_continent_code(const ip[], result[3]);
+native geoip_continent_name(const ip[], result[], len, id = -1);

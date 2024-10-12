@@ -34,12 +34,12 @@ class ParseData:
 		return cls.counter
 
 class ConstDataStruct:
-	def __init__(self, _type, file_path, offset_line, doct1="", doct2=""):
+	def __init__(self, _type, file_path, offset_line, doc1="", doc2=""):
 		self.type			= _type
 		self.file_path		= file_path
 		self.offset_line	= offset_line
-		self.doct1			= doct1
-		self.doct2			= doct2
+		self.doc1			= doc1
+		self.doc2			= doc2
 		
 		self.update_line(0)
 		
@@ -60,8 +60,8 @@ class TagDataStruct:
 		self.isenum				= False
 		self.funclist			= set()
 		
-		self.doct1			= None
-		self.doct2			= None
+		self.doc1			= None
+		self.doc2			= None
 		
 		self.update_line(0)
 		
@@ -165,8 +165,8 @@ class pawnParse:
 		
 		self.raw_parse_code		= ""
 		self.backup_string 		= ""
-		self.comment_doct1		= ""
-		self.comment_doct2		= ""
+		self.comment_doc1		= ""
+		self.comment_doc2		= ""
 
 
 		self.start_parse()
@@ -286,7 +286,7 @@ class pawnParse:
 
 		if not recursive :
 			self.backup_string = ""
-			self.comment_doct1 = ""
+			self.comment_doc1 = ""
 			
 		cleanbuff = ""
 		start_valid = 0
@@ -319,12 +319,12 @@ class pawnParse:
 				
 				if pos == -1:
 					start_skip = 0 if start_skip == -1 else start_skip + 2
-					self.comment_doct1 += (buffer[start_skip:] + "\n")
+					self.comment_doc1 += (buffer[start_skip:] + "\n")
 					break
 
 				start_skip = 0 if start_skip == -1 else start_skip + 2
 				
-				self.comment_doct1 += buffer[max(start_skip, 0):pos]
+				self.comment_doc1 += buffer[max(start_skip, 0):pos]
 
 				start_skip = start_valid = pos + 2
 				
@@ -338,7 +338,7 @@ class pawnParse:
 				if string == -1 or ( -1 < comment < string ) :
 					start_skip = comment
 					self.found_comment = True
-					self.comment_doct1 = ""
+					self.comment_doc1 = ""
 					cleanbuff += buffer[start_valid:start_skip]
 				elif comment == -1 or ( -1 < string < comment ) :
 					start_skip = string
@@ -352,10 +352,10 @@ class pawnParse:
 		if cleanbuff :
 			pos = cleanbuff.find("//")
 			if pos != -1 :
-				self.comment_doct2 = cleanbuff[pos + 2:].strip()
+				self.comment_doc2 = cleanbuff[pos + 2:].strip()
 				cleanbuff = cleanbuff[0:pos]
 			else :
-				self.comment_doct2 = ""
+				self.comment_doc2 = ""
 			
 			cleanbuff = cleanbuff.replace('\t', ' ')
 			cleanbuff = ' '.join(cleanbuff.split())
@@ -474,15 +474,15 @@ class pawnParse:
 		if fixname :
 			name = fixname.group(2)
 			
-			doct1 = self.comment_doct1
-			doct2 = self.comment_doct2
+			doc1 = self.comment_doc1
+			doc2 = self.comment_doc2
 			
-			if doct1 :
-				doct1 = self.clear_doct(doct1)
-			if doct2 :
-				doct2 =  self.clear_doct(doct2)
+			if doc1 :
+				doc1 = self.clear_doct(doc1)
+			if doc2 :
+				doc2 =  self.clear_doct(doc2)
 				
-			self.data.constants[name] = ConstDataStruct(_type, self.node.file_path, self.start_position - self.offset_line, doct1, doct2)
+			self.data.constants[name] = ConstDataStruct(_type, self.node.file_path, self.start_position - self.offset_line, doc1, doc2)
 	#}
 	
 	def add_enumtag(self, tagname):
@@ -510,10 +510,10 @@ class pawnParse:
 			tag.file_path = self.node.file_path
 			tag.isenum = True
 			
-			if self.comment_doct1 :
-				tag.doct1 = self.clear_doct(self.comment_doct1)
-			if self.comment_doct2 :
-				tag.doct2 =  self.clear_doct(self.comment_doct2)
+			if self.comment_doc1 :
+				tag.doc1 = self.clear_doct(self.comment_doc1)
+			if self.comment_doc2 :
+				tag.doc2 =  self.clear_doct(self.comment_doc2)
 
 	def add_enum(self, buffer, line):
 	#{
@@ -936,10 +936,10 @@ class pawnParse:
 		ignore = True
 		enums = 0
 		
-		doct1 = self.comment_doct1
-		doct2 = [ ]
+		doc1 = self.comment_doc1
+		doc2 = [ ]
 		
-		self.comment_doct1 = ""
+		self.comment_doc1 = ""
 		
 		while buffer :
 		#{
@@ -958,7 +958,7 @@ class pawnParse:
 				content = "%s\n%s" % (content, buffer)
 				buffer = self.read_clean_line()
 				if len(buffer) > 1 :
-					doct2 += [ self.comment_doct2 if self.comment_doct2 else self.comment_doct1  ]
+					doc2 += [ self.comment_doc2 if self.comment_doc2 else self.comment_doc1  ]
 			else :
 				content = "%s\n%s" % (content, buffer[0:pos])
 				self.restore_buffer = buffer[pos+1:].strip("; ")
@@ -970,11 +970,11 @@ class pawnParse:
 		content = content[pos + 1:]
 		
 		# Cut head comment
-		pos = doct1.find("\n", 64)
+		pos = doc1.find("\n", 64)
 		if pos != -1 : 
-			doct1 = doct1[:pos] + "..."	
+			doc1 = doc1[:pos] + "..."	
 			
-		self.comment_doct1 = doct1
+		self.comment_doc1 = doc1
 		
 		for c in content :
 		#{
@@ -987,7 +987,7 @@ class pawnParse:
 				enum = ""
 				continue
 			elif c == ',' :
-				self.comment_doct2 = doct2[enums] if enums < len(doct2) else ""
+				self.comment_doc2 = doc2[enums] if enums < len(doc2) else ""
 				enums += 1
 				
 				self.add_enum(enum, line)
@@ -1001,7 +1001,7 @@ class pawnParse:
 				enum += c
 		#}
 
-		self.comment_doct2 = doct2[enums] if enums < len(doct2) else ""
+		self.comment_doc2 = doc2[enums] if enums < len(doc2) else ""
 		self.add_enum(enum, line-1)
 		
 		debug.performance.pause("enum")

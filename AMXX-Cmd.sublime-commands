@@ -3,6 +3,7 @@
 	{ "caption": "AMXX: Functions List", 	"command": "amxx_func_list" },
 	{ "caption": "AMXX: Includes Tree", 	"command": "amxx_tree" },
 	{ "caption": "AMXX: Search All", 		"command": "amxx_search_all" },
-	{ "caption": "AMXX: New Header-Inc", 	"command": "amxx_new_include" },
+	{ "caption": "AMXX: New Include", 		"command": "amxx_new_include" },
 	{ "caption": "AMXX: New Plug-In", 		"command": "amxx_new_plugin" },
+	{ "caption": "AMXX: Uncompress", 		"command": "amxx_uncompress" },
 ]

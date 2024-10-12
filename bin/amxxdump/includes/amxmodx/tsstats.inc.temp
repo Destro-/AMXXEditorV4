@@ -1,0 +1,14 @@
+#if defined _tsstats_included
+#endinput
+#endif
+#define _tsstats_included
+native get_user_wstats(index,wpnindex,stats[STATSX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_wrstats(index,wpnindex,stats[STATSX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_wlstats(index,wpnindex,stats[STATSX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_stats(index,stats[STATSX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_rstats(index,stats[STATSX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_vstats(index,victim,stats[STATSX_MAX_STATS],bodyhits[MAX_BODYHITS],wpnname[]="",len=0);
+native get_user_astats(index,wpnindex,stats[STATSX_MAX_STATS],bodyhits[MAX_BODYHITS],wpnname[]="",len=0);
+native reset_user_wstats(index);
+native get_stats(index,stats[STATSX_MAX_STATS],bodyhits[MAX_BODYHITS],name[],len);
+native get_statsnum();

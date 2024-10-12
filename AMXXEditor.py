@@ -1,4 +1,4 @@
-# Sublime AMXXPawn-Editor 4.4 by Destro
+# Sublime AMXX-Editor v4.4 by Destro
 
 import os
 import re
@@ -10,6 +10,7 @@ import urllib.request
 import threading
 import platform
 import subprocess
+import zipfile
 
 BASE_PATH = os.path.dirname(__file__)
 
@@ -38,7 +39,8 @@ import AMXXcore.debug 		as debug
 # Global VARs & Initialize
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 globalvar.EDITOR_VERSION 		= "4.4"
-globalvar.EDITOR_BUILD 			= "4401"
+globalvar.EDITOR_BUILD 			= "4410"
+globalvar.EDITOR_DATE 			= "11 Oct 2024"
 globalvar.PACKAGE_NAME			= "AMXXEditorV4"
 
 globalvar.ROLLBAR_API_TOKEN		= "abe32dcc89f647398b096cd63aa964a9"
@@ -54,21 +56,18 @@ globalvar.KIND_FUCTION = [
 	( 12, "N", "" )
 ]
 
-globalvar.nodes 				= dict()
-globalvar.include_dirs			= list()
-globalvar.profiles_list 		= list()
-globalvar.rollbar				= None
+globalvar.nodes 			= dict()
+globalvar.profiles_list 	= list()
+globalvar.rollbar			= None
 
-
-globalvar.style_popup 		= { "list": [ ], "path": { }, "active": "" }
-globalvar.style_editor 		= { "list": [ ], "path": { }, "active": "" }
-globalvar.style_console 	= { "list": [ ], "path": { }, "active": "" }
-
-globalvar.invalid_settings	= False
-globalvar.edit_settings 	= False
 globalvar.search_fix_view	= False
+globalvar.checking_update	= False
 
-
+globalvar.style_popup 		= Style("style_popup", ".pawn-popup.css")
+globalvar.style_editor 		= Style("style_editor", ".pawn-editor.sublime-color-scheme")
+globalvar.style_console 	= Style("style_console", ".pawn-console.sublime-color-scheme")
+	
+	
 # Default configuration values
 cfg.rollbar_report = True
 cfg.lang = "en"
@@ -102,7 +101,7 @@ def global_exception_handler(exctype, value, tb):
 	def is_package_related_exception(tb) :
 		while tb is not None :
 			filename = tb.tb_frame.f_code.co_filename
-
+			
 			if globalvar.PACKAGE_NAME in filename :
 				return True
 
@@ -122,7 +121,7 @@ def global_exception_handler(exctype, value, tb):
 		e.__traceback__ = tb
 		
 		# Report the exception using Rollbar
-		#globalvar.rollbar.report_exception(e)
+		globalvar.rollbar.report_exception(e)
 
 # Hook exception handler
 sys.excepthook = global_exception_handler
@@ -161,6 +160,10 @@ def plugin_loaded() :
 	)
 	####################################################################################################
 	
+	# Extract bin tools
+	if is_installed_package() :
+		extract_package_directory(globalvar.PACKAGE_NAME, "bin")
+	
 	
 	# MultiThreads start
 	globalvar.analyzerQueue			= AnalyzerQueueThread()
@@ -183,13 +186,10 @@ def plugin_loaded() :
 	try:
 		import locale
 		lang = locale.getdefaultlocale()[0].split("_")[0]
-		if lang == "es" or lang == "en" :
-			cfg.lang = lang
+		if lang == "es" :
+			cfg.lang = "es"
 	except:
 		pass
-		
-	print("LANG:", cfg.lang)
-
 
 def plugin_unloaded() :
 
@@ -203,44 +203,88 @@ def plugin_unloaded() :
 	
 	# RollbarAPI
 	globalvar.rollbar.close()
+
+def is_installed_package():
+	return __file__.startswith( sublime.installed_packages_path() )
+
+def extract_package_directory(package_name, target_directory):
+
+	installed_package_path = os.path.join(sublime.installed_packages_path(), f"{package_name}.sublime-package")
+	extracted_path = os.path.join(sublime.packages_path(), package_name)
 	
+	if os.path.exists( os.path.join(extracted_path, target_directory) ):
+		return False
+		
+	if not os.path.isfile(installed_package_path):
+		debug.error(f"El paquete {package_name} no existe en installed_packages")
+		return False
+
+	try:
+		os.makedirs(extracted_path, exist_ok=True)
+
+		with zipfile.ZipFile(installed_package_path, 'r') as zip_ref:
+			for file in zip_ref.namelist():
+				if file.startswith(target_directory):
+					zip_ref.extract(file, extracted_path)
+
+		return True
+	except Exception as e:
+		debug.error(f"Error al extraer el paquete: {e}")
+		return False
+
+
 def on_config_change() :
 
 	# Debug
 	cfg.debug_flags 		= debug.check_flags(cfg.get("debug_flags", "a"))
 	cfg.debug_log_flags 	= debug.check_flags(cfg.get("debug_log_flags", "abcd"))
 	
-	# Profiles
-	cfg.active_profile		= cfg.get("active_profile", "")
-	cfg.profiles 			= cfg.get("build_profiles", None)
-	if not cfg.profiles :
-		validate_profile("", None)
-		debug.error("on_config_change() -> `cfg.profiles` is not defined")
-		return
+	# Default Profile
+	default_profile = "default (AMXX 1.9)"
+	default_compiler = os.path.join(sublime.packages_path(), globalvar.PACKAGE_NAME, "bin", "compiler")
+	cfg.profiles = {
+		default_profile: {
+			"amxxpc_debug": 2,
+			"amxxpc_path": os.path.join(default_compiler, "amxxpc.exe" if os.name == 'nt' else "amxxpc"),
+			"include_dir": os.path.join(default_compiler, "include"),
+			"output_dir": "${file_path}"
+		}
+	}
+
+	def profile_normpath(_dict, key) :
+		path = _dict.get(key, "")
+		if not path or path == "${file_path}" :
+			return path
+		path = path.replace("${packages}", sublime.packages_path())
+		return os.path.normpath(path)
+		
+	# List Profiles and Validate
+	profiles = cfg.get("build_profiles", None)
+	if isinstance(profiles, dict) :
+		for profile_name, profile in profiles.items() :
+		
+			if not profile or not isinstance(profile, dict) :
+				continue
+		
+			# Fix values
+			profile['output_dir'] 		= profile_normpath(profile, 'output_dir')
+			profile['include_dir'] 		= profile_normpath(profile, 'include_dir')
+			profile['amxxpc_path'] 		= profile_normpath(profile, 'amxxpc_path')
+			
+			if 'amxxpc_debug' in profile and isinstance(profile['amxxpc_debug'], int) :
+				profile['amxxpc_debug'] = util.clamp(profile['amxxpc_debug'], 0, 2)
+			else :
+				profile['amxxpc_debug'] = 2
+				
+			if validate_profile(profile_name, profile) :
+				cfg.profiles.setdefault(profile_name, profile)
 		
 	globalvar.profiles_list = list(cfg.profiles.keys())
-	globalvar.include_dirs.clear()
 	
-	for profile_name in globalvar.profiles_list :
-		profile = cfg.profiles[profile_name]
-		
-		# Fix values
-		profile['output_dir'] 		= util.cfg_get_path(profile, 'output_dir')
-		profile['include_dir'] 		= util.cfg_get_path(profile, 'include_dir')
-		profile['amxxpc_path'] 		= util.cfg_get_path(profile, 'amxxpc_path')
-		
-		if not validate_profile(profile_name, profile) :
-			return
-		
-		if 'amxxpc_debug' in profile :
-			profile['amxxpc_debug'] = util.clamp(int(profile['amxxpc_debug']), 0, 2)
-		else :
-			profile['amxxpc_debug'] = 2
-			
-		globalvar.include_dirs.append(profile['include_dir'])
-
+	cfg.active_profile = cfg.get("active_profile", default_profile)
 	if not cfg.active_profile in globalvar.profiles_list :
-		cfg.active_profile = globalvar.profiles_list[0]
+		cfg.active_profile = default_profile
+		
 		
 
 	# Cache settings
@@ -266,34 +310,15 @@ def on_config_change() :
 	# Update Live reflesh delay.
 	globalvar.analyzerQueue.delay	= util.clamp(float(cfg.get('live_refresh_delay', 1.5)), 0.5, 5.0)
 	
-	
 	# Generate list of styles
-	globalvar.style_popup['list'].clear()
-	globalvar.style_editor['list'].clear()
-	globalvar.style_console['list'].clear()
-	
-	globalvar.style_editor['list'].append("default")
-	globalvar.style_console['list'].append("default")
-	
-	list_styles(globalvar.style_popup,		".pawn-popup.css")
-	list_styles(globalvar.style_editor,		".pawn-editor.sublime-color-scheme")
-	list_styles(globalvar.style_console,	".pawn-console.sublime-color-scheme")
-	
-	validate_active_style(globalvar.style_popup, "style_popup")
-	validate_active_style(globalvar.style_editor, "style_editor")
-	validate_active_style(globalvar.style_console, "style_console")
+	globalvar.style_popup.initialize()
+	globalvar.style_editor.initialize()
+	globalvar.style_console.initialize()
 
 	# Update style
 	update_editor_style()
 	update_console_style()
 	update_popup_style()
-	
-	
-	if cfg.tooltip_style_mode == 1:
-		globalvar.cacheSyntaxCSS = self.generate_highlightCSS(view)
-	else :
-		globalvar.cacheSyntaxCSS = ""
-	
 	
 	globalvar.watchDog.unschedule_all()
 
@@ -329,36 +354,34 @@ def list_includes(profile):
 	return True
 
 def update_editor_style():
-	if "default" == globalvar.style_editor['active'] :
-		newValue = None
-	else :
-		newValue = globalvar.style_editor['path'][globalvar.style_editor['active']]
+
+	color_scheme = None
+	if "default" != globalvar.style_editor.get_active() :
+		color_scheme = globalvar.style_editor.get_path()
 		
 	s = CustomSettings("AMXX-Pawn.sublime-settings")
-	s.set("color_scheme", newValue)
+	s.set("color_scheme", color_scheme)
 	s.set("show_errors_inline", False)
 	s.set("word_separators", "./\\()\"'-:,.;<>~!$%^&*|+=[]{}`~?")
 	s.set("extensions", [ "sma", "inc" ])
+	s.save()
 	
-	if newValue :
-		data = util.safe_json_load(newValue).get("amxxeditor")
-		if data :
-			extra_settings = data.get('syntax_settings')
-			for key in extra_settings :
-				s.set(key, extra_settings[key])
+	# AMXX Uncompress
+	s = CustomSettings("AMXX-ASM.sublime-settings")
+	s.set("color_scheme", color_scheme)
 	s.save()
 	
 def update_console_style():
-	if "default" == globalvar.style_console['active'] :
-		newValue = None
-	else :
-		newValue = globalvar.style_console['path'][globalvar.style_console['active']]
+
+	color_scheme = None
+	if "default" != globalvar.style_console.get_active() :
+		color_scheme = globalvar.style_console.get_path()
 		
 	s = CustomSettings("AMXX-Console.sublime-settings", True)
-	s.set('color_scheme', newValue)
+	s.set('color_scheme', color_scheme)
 	
-	if newValue :
-		data = util.safe_json_load(newValue).get("amxxeditor")
+	if color_scheme :
+		data = util.safe_json_load(color_scheme).get("amxxeditor")
 		if data :
 			extra_settings = data.get('syntax_settings')
 			for key in extra_settings :
@@ -366,7 +389,9 @@ def update_console_style():
 	s.save()
 	
 def update_popup_style():
-	globalvar.cachePopupCSS = sublime.load_resource(globalvar.style_popup['path'][globalvar.style_popup['active']])
+	globalvar.cacheSyntaxCSS = ""
+	
+	globalvar.cachePopupCSS = sublime.load_resource(globalvar.style_popup.get_path())
 	globalvar.cachePopupCSS = globalvar.cachePopupCSS.replace('\r', '') # Fix
 	
 	# Remove comments
@@ -374,47 +399,38 @@ def update_popup_style():
 	globalvar.cachePopupCSS = globalvar.cachePopupCSS.replace('\n\n', '\n')
 
 
-def list_styles(style, endext):
-	for file in sublime.find_resources("*" + endext) :
-		name = os.path.basename(file).replace(endext, "")
-	
-		if not name in style['list'] :
-			style['list'].append(name)
-			
-		style['path'][name] = file
-		
-def validate_active_style(style, key):
-	style['active']	= cfg.get(key)
-	if not style['active'] in style['list'] :
-		style['active'] = style['list'][0]
-
 def validate_profile(profile_name, profile) :
 
-	error = "Invalid profile configuration :  %s\n\n" % profile_name
+	error = f"Invalid profile configuration \"{profile_name}\"\n\n"
 
-	if not profile or not isinstance(profile, dict) or profile.get('amxxpc_path') == None or profile.get('include_dir') == None or profile.get('output_dir') == None :
-		error += "Empty Value\n"
-	elif not os.path.isfile(util.cfg_get_path(profile, 'amxxpc_path')) :
-		error += "amxxpc_directory :  File does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'amxxpc_path')
-	elif not os.path.isdir(util.cfg_get_path(profile, 'include_dir')) :
-		error += "include_directory :  Directory does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'include_dir')
-	elif profile.get('output_dir') != "${file_path}" and not os.path.isdir(util.cfg_get_path(profile, 'output_dir')) :
-		error += "output_dir :  Directory does not exist.\n\"%s\"" % util.cfg_get_path(profile, 'output_dir')
-	else :
+	# Check required fields
+	if not profile['amxxpc_path'] or not profile['include_dir'] or not profile['output_dir'] :
+		error += "Missing required fields. All of these must be set:\n"
+		error += "- 'amxxpc_path'\n"
+		error += "- 'include_dir'\n"
+		error += "- 'output_dir'"
+
+	# Validate amxxpc path
+	elif not os.path.isfile(profile['amxxpc_path']) :
+		error += f"amxxpc_path: File does not exist\n- amxxpc_path :  \"{profile['amxxpc_path']}\""
+    
+	# Validate include directory
+	elif not os.path.isdir(profile['include_dir']) :
+		error += f"Directory does not exist\n- include_dir :  \"{profile['include_dir']}\""
+    
+	# Validate output directory
+	elif profile['output_dir'] != "${file_path}" and not os.path.isdir(profile['output_dir']) :
+		error += f"Directory does not exist:\n- output_dir :  \"{profile['output_dir']}\""
+    
+	# All Ok!
+	else:
 		return True
 	
-	
-	globalvar.invalid_settings = True
-		
-	sublime.message_dialog("AMXX-Editor:\n\n" + error)
-
-	if globalvar.edit_settings :
+	if not sublime.ok_cancel_dialog(error, "Edit Settings", "ERROR: AMXX-Editor")  :
 		return False
 
-	globalvar.edit_settings = True
-		
+
 	file_path = f"{sublime.packages_path()}/User/AMXX-Editor.sublime-settings"
-		
 	if not os.path.isfile(file_path):
 		default = sublime.load_resource(f"Packages/{globalvar.PACKAGE_NAME}/AMXX-Editor.sublime-settings")
 		default = default.replace("Example:", "User Settings:")
@@ -426,8 +442,10 @@ def validate_profile(profile_name, profile) :
 	return False
 	
 def run_edit_settings() :
-	sublime.active_window().run_command("edit_settings", {"base_file": f"${{packages}}/{globalvar.PACKAGE_NAME}/AMXX-Editor.sublime-settings", "default": "{\n\t$0\n}\n"})
-
+	sublime.active_window().run_command("edit_settings", {
+		"base_file": f"${{packages}}/{globalvar.PACKAGE_NAME}/AMXX-Editor.sublime-settings",
+		"default": "{\n\t$0\n}\n"
+	})
 
 class AmxxProfileCommand(sublime_plugin.ApplicationCommand):
 
@@ -454,87 +472,83 @@ class AmxxProfileCommand(sublime_plugin.ApplicationCommand):
 class AmxxEditorStyleCommand(sublime_plugin.ApplicationCommand):
 
 	def run(self, index) :
-		if index >= len(globalvar.style_editor['list']) :
+		if index >= globalvar.style_editor.count() :
 			return
 		
-		globalvar.style_editor['active'] = globalvar.style_editor['list'][index]
-		
-		cfg.set("style_editor", globalvar.style_editor['active'])
+		globalvar.style_editor.set_active(index)
+
+		cfg.set("style_editor", globalvar.style_editor.get_active())
 		
 		if not index :
 			cfg.save(False)
 			return
 			
-		path = globalvar.style_editor['path'][globalvar.style_editor['active']]
-		
+		path = globalvar.style_editor.get_path()
 		data = util.safe_json_load(path).get("amxxeditor")
 		if data :
-
-			if data.get('default_popup', 'default') in globalvar.style_popup['list'] :
-				cfg.set("style_popup", data['default_popup'])
-			if data.get('default_console', 'default') in globalvar.style_console['list'] :
-				cfg.set("style_console", data['default_console'])
+			cfg.set("style_popup", data.get('default_popup', 'default'))
+			cfg.set("style_console", data.get('default_console', 'default'))
 			
 		cfg.save(False)
 
 	def is_visible(self, index) :
-		return (index < len(globalvar.style_editor['list']))
+		return index < globalvar.style_editor.count()
 		
 	def is_checked(self, index) :
-		return (index < len(globalvar.style_editor['list']) and globalvar.style_editor['list'][index] == globalvar.style_editor['active'])
+		return globalvar.style_editor.is_active(index)
 
 	def description(self, index) :
-		if index < len(globalvar.style_editor['list']) :
-			return globalvar.style_editor['list'][index]
+		if index < globalvar.style_editor.count() :
+			return globalvar.style_editor.list[index]
 		return ""
 
-class AmxxEditorStyleConsoleCommand(sublime_plugin.ApplicationCommand):
+class AmxxConsoleStyleCommand(sublime_plugin.ApplicationCommand):
 
 	def run(self, index) :
-		if index >= len(globalvar.style_console['list']) :
+		if index >= globalvar.style_console.count() :
 			return
 
-		globalvar.style_console['active'] = globalvar.style_console['list'][index]
-		
-		cfg.set("style_console", globalvar.style_console['active'])
+		globalvar.style_console.set_active(index)
+
+		cfg.set("style_console", globalvar.style_console.get_active())
 		cfg.save()
 		
 		update_console_style()
 
 	def is_visible(self, index) :
-		return (index < len(globalvar.style_console['list']))
+		return index < globalvar.style_console.count()
 		
 	def is_checked(self, index) :
-		return (index < len(globalvar.style_console['list']) and globalvar.style_console['list'][index] == globalvar.style_console['active'])
+		return globalvar.style_console.is_active(index)
 
 	def description(self, index) :
-		if index < len(globalvar.style_console['list']) :
-			return globalvar.style_console['list'][index]
+		if index < globalvar.style_console.count() :
+			return globalvar.style_console.list[index]
 		return ""
 
-class AmxxEditorStylePopupCommand(sublime_plugin.ApplicationCommand):
+class AmxxPopupStyleCommand(sublime_plugin.ApplicationCommand):
 
 	def run(self, index) :
-		if index >= len(globalvar.style_popup['list']) :
+		if index >= globalvar.style_popup.count() :
 			return
 
-		globalvar.style_popup['active'] = globalvar.style_popup['list'][index]
+		globalvar.style_popup.set_active(index)
 		
-		cfg.set("style_popup", globalvar.style_popup['active'])
+		cfg.set("style_popup", globalvar.style_popup.get_active())
 		cfg.save()
 		
 		update_popup_style()
 	#}
 
 	def is_visible(self, index) :
-		return (index < len(globalvar.style_popup['list']))
+		return index < globalvar.style_popup.count()
 		
 	def is_checked(self, index) :
-		return (index < len(globalvar.style_popup['list']) and globalvar.style_popup['list'][index] == globalvar.style_popup['active'])
+		return globalvar.style_popup.is_active(index)
 
 	def description(self, index) :
-		if index < len(globalvar.style_popup['list']) :
-			return globalvar.style_popup['list'][index]
+		if index < globalvar.style_popup.count() :
+			return globalvar.style_popup.list[index]
 		return ""
 
 class AmxxNewIncludeCommand(sublime_plugin.WindowCommand):
@@ -551,32 +565,37 @@ def new_file(extension):
 	view.set_syntax_file("AMXX-Pawn.sublime-syntax")
 	view.set_name(f"untitled.{extension}")
 	
-	plugin_template = sublime.load_resource(f"Packages/{globalvar.PACKAGE_NAME}/default.{extension}")
-	plugin_template = plugin_template.replace("\r", "")
-	
+	plugin_template = sublime.load_resource(f"Packages/{globalvar.PACKAGE_NAME}/default.{extension}").replace("\r", "")
+
 	view.run_command("insert_snippet", {"contents": plugin_template})
 	
 
-def check_update(bycommand=0) :
+
+def check_update(bycommand=False) :
 #{
+	globalvar.checking_update = True
+	
+	sublime.active_window().status_message("AMXX-Editor: Checking update...")
+	
 	data = None
 	try:
-		with urllib.request.urlopen("https://amxmodx-es.com/st.php") as response:
+		with urllib.request.urlopen("https://raw.githubusercontent.com/Destro-/AMXXEditorV4/main/check_version.txt") as response:
 			data = response.read()
 	except Exception as e:
 		if bycommand :
 			sublime.error_message(f"ERROR: urlopen()' in check_update() -> {e}")
 	
 		debug.warning(f"'urlopen()' in check_update() -> {e}")
-		sublime.active_window().status_message("AMXX-Editor: Check update failed!")
+		sublime.active_window().status_message("AMXX-Editor: Check update failed")
 
 	if not data :
+		globalvar.checking_update = False
 		return
 		
 	data = data.decode("utf-8", "replace")
 	if data :
 	#{
-		sublime.active_window().status_message("AMXX-Editor: Check update successful!")
+		sublime.active_window().status_message("AMXX-Editor: Check update successful")
 		
 		version, news = data.split("\n", 1)
 		version, build = version.split("-")
@@ -584,9 +603,10 @@ def check_update(bycommand=0) :
 		build = int(build)
 		current_build = int(globalvar.EDITOR_BUILD)
 
+		title =  f"AMXX-Editor: v{globalvar.EDITOR_VERSION} (build: {globalvar.EDITOR_BUILD})"
 
-		if current_build == build and bycommand:
-			sublime.ok_cancel_dialog(f"AMXX-Editor: You are already using the latest version: v{globalvar.EDITOR_VERSION} (build: {globalvar.EDITOR_BUILD})", "OK")
+		if current_build >= build and bycommand:
+			sublime.ok_cancel_dialog(f"You are already using the latest version!", "OK", title)
 			
 		if current_build < build :
 			
@@ -594,14 +614,21 @@ def check_update(bycommand=0) :
 			
 			msg = f"A new {updateType} is available: v{version} (build: {build})\n\n{news}"
 
-			ok = sublime.ok_cancel_dialog(msg, "Download Update", f"AMXX-Editor: v{globalvar.EDITOR_VERSION} (build: {globalvar.EDITOR_BUILD})")
+			ok = sublime.ok_cancel_dialog(msg, "Download Update", title)
 			
 			if ok :
-				webbrowser.open_new_tab("https://amxmodx-es.com/showthread.php?tid=12316")
+				webbrowser.open_new_tab("https://github.com/Destro-/AMXXEditorV4/")
 	#}
+	
+	globalvar.checking_update = False
 #}
 
 
+class AmxxCheckUpdateCommand(sublime_plugin.WindowCommand):
+	def run(self):
+		if not globalvar.checking_update :
+			globalvar.checking_update = True
+			sublime.set_timeout_async(lambda: check_update(True), 50)
 
 
 class SearchAllInputHandler(sublime_plugin.TextInputHandler):
@@ -906,41 +933,72 @@ class AmxxBuildVerCommand(sublime_plugin.TextCommand):
 		
 		self.view.replace(edit, region, result.group(1) + str(build) + beta + '\"')
 	
-class AboutInputHandler(sublime_plugin.ListInputHandler):
+class AboutInputHandler(sublime_plugin.TextInputHandler):
 	def preview(self, text):
+	
+		body = f'<span class="title">Sublime AMXX-Editor v{globalvar.EDITOR_VERSION}</span>'
+		body += '<span class="author"> By <a href="https://forums.alliedmods.net/member.php?u=81617">Destro</a></span>'
+		body += '<div class="info">'
+		body += f'Build: {globalvar.EDITOR_BUILD}<br>'
+		body += f'Release Date: {globalvar.EDITOR_DATE}'
+		body += '<br><br><a href="https://github.com/Destro-/AMXXEditorV4/">AMXXEditorV4 on GitHub</a>'
+		body += '</div>'
+		
+		body += "<br><br>"
+		
+		body += '<a class="btn" href="subl:amxx_check_update">Check Update</a> '
+		body += '<a class="btn" href=\'subl:show_amxx_changelog {"file":"Packages/AMXXEditorV4/changelog%s.txt"}\'>Changelog</a> ' % ( "_es" if cfg.lang == "es" else "" )
+		body += '<a class="btn" href="https://destro-.github.io/donar.htm">Donate</a>'
+		
 		content = """
 <html>
 <style>
 html {
-	background-color: #fff2;
+	background-color: #000;
+	padding: 8px;
 }
 
 body {
-	color: #000;
+	color: var(--yellowish);
 	margin-top: 0px;
 }
 
-h1 { 
+.title {
 	font-size: 20px;
-	color: #000;
+	font-weight: bold;
 }
 
-b {
-	font-size: 11px;
+.author a {
+	color: var(--yellowish);
 }
 
-i {
-	font-size: 9px;
+.info {
+	padding-left: 8px;
 }
 
-img {
-	height: 80px;
-	width: 200px;
+.info a {
+	color: var(--cyanish);
 }
+
+.btn {
+	font-size: 14;
+	text-decoration: none;
+	border-radius: 5px;
+	padding: 0.4em 0.8em;
+	
+	background-color: #0078D7;
+	color: #fff;
+}
+
 </style>
 <body>
+%s
+</body>
+</html>
+""" % body
 
-<h1>Sublime AMXX-Editor v""" + globalvar.EDITOR_VERSION + """ by Destro</h1>
+		"""
+		<h1>Sublime AMXX-Editor v Destro</h1>
 <b>CREDITs:</b><br>
 ppalex7 <i>(SourcePawn Completions)</i><br>
 <br>
@@ -950,29 +1008,12 @@ addons_zz <i>(npp color scheme)</i><br>
 KliPPy <i>(build version)</i><br>
 Mistrick <i>(mistrick color scheme)</i><br>
 
-</div>
-
-
-</body>
-</html>
-"""
+		
+		"""
 
 		return sublime.Html(content)
 
-	def list_items(self):
-		return [ ( "Exit", 0 ), ( "Donate", 1 ), ( "Visit Web", 2 ), ( "Check Updates", 3 ) ]
 
-	def confirm(self, value):
-		if not value :
-			return
-		
-		if value == 1 :
-			webbrowser.open_new_tab("https://amxmodx-es.com/donaciones.php")
-		elif value == 2 :
-			webbrowser.open_new_tab("https://amxmodx-es.com/showthread.php?tid=12316")
-		else :
-			sublime.set_timeout_async( lambda:check_update(True), 10)
-	
 	
 class AmxxAboutCommand(sublime_plugin.WindowCommand):
 	def run(self, about):
@@ -989,7 +1030,7 @@ class AmxxExecCommand(ExecCommand):
 		super().run(*args, **kwargs)
 		
 		view = self.output_view
-		view.erase_phantoms("mytest2")
+		view.erase_phantoms("button")
 		
 		self.outfile = ""
 		for s in kwargs['cmd'] :
@@ -1062,15 +1103,13 @@ a.btn {
 """
 		
 		
-		view.erase_phantoms("mytest2")
-		view.add_phantom("mytest2", sublime.Region(view.size(), view.size()), contents, sublime.LAYOUT_BLOCK, on_navigate=self.on_navigate)
+		view.erase_phantoms("button")
+		view.add_phantom("button", sublime.Region(view.size(), view.size()), contents, sublime.LAYOUT_BLOCK, on_navigate=self.on_navigate)
 			
 	def on_navigate(self, src):
 		
 		view = self.output_view
 		
-		#self.write("on_navigate: %s" % src)
-
 		if src == "#open" :
 			subprocess.Popen(f'explorer /select,"{os.path.normpath(self.outfile)}"')
 		elif src == "#copy" :
@@ -1089,9 +1128,6 @@ a.btn {
 		elif src == "#upload" :
 			pass
 			
-		#view.window().status_message("Copy to Clipboard!")
-
-		
 		
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #:: END Cmd / START Sublime EventListener ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1125,13 +1161,15 @@ class SublimeEvents(sublime_plugin.EventListener):
 				css += " font-weight: bold;"
 			if style['italic'] :
 				css += " font-style: italic;"
+				
+			css += " text-decoration: none;"
 			return css + " }\n"
 
 		highlightCSS  = scope_to_css("", "pawnDefaultColor")
 		highlightCSS += scope_to_css("variable.function", "pawnFunction")
 		highlightCSS += scope_to_css("string", "pawnString")
-		highlightCSS += scope_to_css("keyword", "pawnKeyword")
-		highlightCSS += scope_to_css("storage.type.vars", "pawnConstant")
+		highlightCSS += scope_to_css("keyword.operator", "pawnOperator")
+		highlightCSS += scope_to_css("storage.type.vars", "pawnType")
 		highlightCSS += scope_to_css("constant.numeric", "pawnNumber")
 		highlightCSS += scope_to_css("storage.modifier.tag", "pawnTag")
 
@@ -1157,7 +1195,7 @@ class SublimeEvents(sublime_plugin.EventListener):
 		
 		if not is_amxmodx_view(view):
 			return
-	
+
 		node = get_view_node(view)
 		if node :
 			node.organize_and_cache()
@@ -1245,6 +1283,10 @@ class SublimeEvents(sublime_plugin.EventListener):
 		if cmd != "build" :
 			return
 			
+		view = window.active_view()
+		if not is_amxmodx_view(view) :
+			return
+			
 		profile = cfg.profiles[cfg.active_profile]
 		
 		build = SublimeSettings("AMXX-Compiler.sublime-build")
@@ -1265,11 +1307,6 @@ class SublimeEvents(sublime_plugin.EventListener):
 		build.set("target", "amxx_exec") # Hook default build command "exec"
 		build.save()
 		
-	
-		view = window.active_view()
-		if not is_amxmodx_view(view) :
-			return
-			
 		if not view.file_name() :
 			view.run_command("save")
 		
@@ -1340,6 +1377,9 @@ class SublimeEvents(sublime_plugin.EventListener):
 		if not is_amxmodx_view(view) or not cfg.enable_tooltip or hover_zone != sublime.HOVER_TEXT:
 			return
 			
+		if cfg.tooltip_style_mode == 1 and not globalvar.cacheSyntaxCSS :
+			globalvar.cacheSyntaxCSS = self.generate_highlightCSS(view)
+
 		if "meta.preprocessor.include.path" in scope :
 			self.tooltip_include(view, point)
 		elif "storage.modifier.tag" in scope :
@@ -1375,8 +1415,8 @@ class SublimeEvents(sublime_plugin.EventListener):
 			top += f'<a href="webapi:{webapi_data}">WebAPI</a><span class="separator">|</span>'
 		top += f'<a href="goto:{location_data}">{include}</a>'
 	
-		content =  '<b class="info">Location:</b><br>'
-		content += f'<b class="path">{file_path}</b>'
+		content =  '<span class="info">Location:</span><br>'
+		content += f'<span class="path">{file_path}</span>'
 
 		self.tooltip_show_popup(view, point + 1, "tooltip-include", top, content)
 
@@ -1402,10 +1442,10 @@ class SublimeEvents(sublime_plugin.EventListener):
 			location_data = enumtag.file_path + '#' + search_tag + '#' + str(enumtag.line)
 			top += f'<span class="separator">|</span><a href="goto:{location_data}">Go to Enum</a>'
 			
-			if enumtag.doct2 :
-				content += tooltip.format_doct(enumtag.doct2, "doct2")
-			if enumtag.doct1 :
-				content += tooltip.format_doct(enumtag.doct1, "doct1")
+			if enumtag.doc2 :
+				content += tooltip.format_doct(enumtag.doc2, "doc2")
+			if enumtag.doc1 :
+				content += tooltip.format_doct(enumtag.doc1, "doc1")
 	
 		includes = sorted(references)
 		for inc in includes :
@@ -1453,10 +1493,10 @@ class SublimeEvents(sublime_plugin.EventListener):
 		else :
 			content = f'<b>{search}</b>:'
 
-		if const.doct2 :
-			content += tooltip.format_doct(const.doct2, "doct2")
-		if const.doct1 :
-			content += tooltip.format_doct(const.doct1, "doct1")
+		if const.doc2 :
+			content += tooltip.format_doct(const.doc2, "doc2")
+		if const.doc1 :
+			content += tooltip.format_doct(const.doc1, "doc1")
 
 		self.tooltip_show_popup(view, point + 1, "tooltip-constant", top, content)
 
@@ -1494,9 +1534,8 @@ class SublimeEvents(sublime_plugin.EventListener):
 			top += f'<span class="separator">|</span><a href="webapi:{webapi_data}">WebAPI</a>'
 		top += f'<span class="separator">|</span><a href="goto:{location_data}">{filename}</a>'
 		
-		content = tooltip.func_to_html(found)
-		content += '<br>'
-	
+		content = f"<div>{tooltip.func_to_html(found)}</div>"
+
 		if funcCall and found.param_list :
 	
 			region = view.find(r'\((?:[^()]+|(?R))*\)', point)
@@ -1511,9 +1550,8 @@ class SublimeEvents(sublime_plugin.EventListener):
 			is_get_user_msgid = found.name == "get_user_msgid" # Add wiki button
 			
 			if len(arguments) >= 1 :
-				content += '<br>'
-				content += '<span class="inspectorTitle">Params-Inspector:</span>'
-				content += '<br><code class="inspectorBlock">'
+				content += '<div class="inspectorTitle">Params-Inspector:</div>'
+				content += '<code class="inspectorBlock">'
 			
 				i = 0
 				for value in arguments :
@@ -1743,8 +1781,6 @@ html.dark {
 		if not is_amxmodx_view(view) or not cfg.ac_enable or len(locations) > 1:
 			return None
 		
-		print("prefix: [%s]" % prefix)
-		
 		in_string = view.match_selector(locations[0], 'source.sma string')
 		word_location = view.word(locations[0])
 		word = view.substr(word_location).strip()
@@ -1752,8 +1788,6 @@ html.dark {
 		if not word :
 			return None
 			
-		print("word: [%s]" % word)
-		
 		if in_string and word[0] != '@' :
 			return ([ ], sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 		
@@ -1842,7 +1876,7 @@ class PopupFileEventHandler(watchdog.events.FileSystemEventHandler):
 		watchdog.events.FileSystemEventHandler.__init__(self)
 
 	def on_modified(self, event):
-		if os.path.basename(event.src_path) == os.path.basename(globalvar.style_popup['path'][globalvar.style_popup['active']]) :
+		if os.path.basename(event.src_path) == os.path.basename(globalvar.style_popup.get_path()) :
 			update_popup_style()
 
 
@@ -2122,8 +2156,8 @@ class  CodeAnalyzer:
 					tagA.line_offset 	= tagB.line_offset
 					tagA.line			= tagB.line
 					
-					tagA.doct1			= tagB.doct1
-					tagA.doct2			= tagB.doct2
+					tagA.doc1			= tagB.doc1
+					tagA.doc2			= tagB.doc2
 			
 			
 			# Mark error lines
@@ -2269,15 +2303,15 @@ class  CodeAnalyzer:
 		exists = False
 
 		if self.Regex_LOCAL_INCLUDE.search(include) :
-			file_path	= os.path.join(os.path.dirname(parent_file_path), include)
-			exists		= os.path.exists(file_path)
+			file_path = os.path.join(os.path.dirname(parent_file_path), include)
+			exists = os.path.exists(file_path)
 		
 		if not exists :
 			if '.' in include :
-				file_path	= os.path.join(cfg.profile_include_dir, include)
+				file_path = os.path.join(cfg.profile_include_dir, include)
 			else :
-				file_path	= os.path.join(cfg.profile_include_dir, include + ".inc")
-			exists		= os.path.exists(file_path)
+				file_path = os.path.join(cfg.profile_include_dir, include + ".inc")
+			exists = os.path.exists(file_path)
 
 		return (file_path, exists)
 		
@@ -2453,18 +2487,9 @@ class NodeBase:
 
 	@staticmethod
 	def get_or_add(file_path):
-	
 		node = globalvar.nodes.get(file_path)
-		
 		if node is None :
-		
-			readonly = False
-			for d in globalvar.include_dirs :
-				if d in file_path :
-					readonly = True
-					break
-			
-			node = NodeBase(file_path, readonly)
+			node = NodeBase(file_path)
 			globalvar.nodes[file_path] = node
 			return (node, True)
 
@@ -2552,7 +2577,7 @@ def invalid_functions_highlight(view, clear=True):
 	generate_highlight(view, "invalidfunc", r"\b[A-Za-z_][\w_]*\b", "invalid.illegal", sublime.DRAW_NO_OUTLINE|sublime.DRAW_NO_FILL|sublime.DRAW_SQUIGGLY_UNDERLINE, check_scope, clear)	
 
 def is_amxmodx_view(view) :
-	return view.match_selector(0, 'source.sma') and not globalvar.invalid_settings
+	return view.match_selector(0, 'source.sma')
 
 def marking_error_lines(view, regions):
 	view.add_regions("pawnerror", regions, "invalid.illegal", "dot", sublime.DRAW_NO_OUTLINE|sublime.DRAW_NO_FILL|sublime.DRAW_SQUIGGLY_UNDERLINE)

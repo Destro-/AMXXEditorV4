@@ -2,6 +2,9 @@
 	{ "keys": ["f9"], "command": "build", "context":
 		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
 	},
+	{ "keys": ["f9"], "command": "build", "context":
+		[ { "key": "selector", "operator": "equal", "operand": "source.amxx", "match_all": true } ]
+	},
 	{ "keys": ["ctrl+r"], "command": "amxx_func_list", "context":
 		[ { "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true } ]
 	},

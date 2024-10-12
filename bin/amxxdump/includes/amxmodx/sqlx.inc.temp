@@ -1,0 +1,122 @@
+#if defined _sqlx_included
+#endinput
+#endif
+#define _sqlx_included
+#define SQL_NumRows SQL_NumResults
+#pragma reqclass sqlx
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma defclasslib sqlx mysql
+#endif
+enum Handle
+{
+Empty_Handle
+};
+native Handle:SQL_MakeDbTuple(const host[], const user[], const pass[], const db[], timeout=0);
+native SQL_FreeHandle(Handle:h);
+native Handle:SQL_Connect(Handle:cn_tuple, &errcode, error[], maxlength);
+native bool:SQL_SetCharset(Handle:h, const charset[]);
+native Handle:SQL_PrepareQuery(Handle:db, const fmt[], any:...);
+native SQL_QuoteString(Handle:db, buffer[], buflen, const string[]);
+native SQL_QuoteStringFmt(Handle:db, buffer[], buflen, const fmt[], any:...);
+#define TQUERY_CONNECT_FAILED	-2
+#define TQUERY_QUERY_FAILED	-1
+#define TQUERY_SUCCESS		0
+native SQL_ThreadQuery(Handle:db_tuple, const handler[], const query[], const data[]="", dataSize=0);
+native SQL_Execute(Handle:query);
+native SQL_QueryError(Handle:query, error[], maxlength);
+native SQL_MoreResults(Handle:query);
+native SQL_IsNull(Handle:query, column);
+native SQL_ReadResult(Handle:query, column, any:...);
+native SQL_NextRow(Handle:query);
+native SQL_AffectedRows(Handle:query);
+native SQL_NumResults(Handle:query);
+native SQL_NumColumns(Handle:query);
+native SQL_FieldNumToName(Handle:query, num, name[], maxlength);
+native SQL_FieldNameToNum(Handle:query, const name[]);
+native SQL_Rewind(Handle:query);
+native SQL_GetInsertId(Handle:query);
+native SQL_GetAffinity(driver[], maxlen);
+native SQL_SetAffinity(const driver[]);
+native SQL_GetQueryString(Handle:query, buffer[], maxlength);
+native bool:SQL_NextResultSet(Handle:query);
+stock bool:sqlite_TableExists(Handle:db, const table[])
+{
+new Handle:query = SQL_PrepareQuery(
+db,
+"SELECT name FROM sqlite_master WHERE type='table' AND name='%s' LIMIT 1;", 
+table);
+if (!SQL_Execute(query) || !SQL_NumResults(query))
+{
+SQL_FreeHandle(query);
+return false;
+}
+SQL_FreeHandle(query);
+return true;
+}
+stock SQL_SimpleQuery(Handle:db, const query[], error[]="", maxlength=0, &rows=0)
+{
+new Handle:hQuery = SQL_PrepareQuery(db, "%s", query);
+if (!SQL_Execute(hQuery))
+{
+SQL_QueryError(hQuery, error, maxlength);
+SQL_FreeHandle(hQuery);
+return 0;
+}
+rows = SQL_NumResults(hQuery);
+SQL_FreeHandle(hQuery);
+return 1;
+}
+stock SQL_SimpleQueryFmt(Handle:db, error[]="", maxlength=0, &rows=0, const fmt[], any:...)
+{
+static query_buf[2048];
+vformat(query_buf, 2047, fmt, 6);
+new Handle:hQuery = SQL_PrepareQuery(db, "%s", query_buf);
+if (!SQL_Execute(hQuery))
+{
+SQL_QueryError(hQuery, error, maxlength);
+SQL_FreeHandle(hQuery);
+return 0;
+}
+rows = SQL_NumResults(hQuery);
+SQL_FreeHandle(hQuery);
+return 1;
+}
+stock SQL_QueryAndIgnore(Handle:db, const queryfmt[], any:...)
+{
+static query[4096];
+new Handle:hQuery;
+new ret;
+vformat(query, sizeof(query)-1, queryfmt, 3);
+hQuery = SQL_PrepareQuery(db, "%s", query);
+if (SQL_Execute(hQuery))
+{
+ret = SQL_AffectedRows(hQuery);
+} else {
+ret = -1;
+}
+SQL_FreeHandle(hQuery);
+return ret;
+}
+stock Handle:SQL_MakeStdTuple(timeout = 0)
+{
+static host[64], user[32], pass[32], db[128];
+static get_type[12], set_type[12];
+get_cvar_string("amx_sql_host", host, 63);
+get_cvar_string("amx_sql_user", user, 31);
+get_cvar_string("amx_sql_pass", pass, 31);
+get_cvar_string("amx_sql_type", set_type, 11);
+get_cvar_string("amx_sql_db", db, 127);
+if (timeout <= 0)
+{
+timeout = get_cvar_num("amx_sql_timeout");
+}
+SQL_GetAffinity(get_type, 12);
+if (!equali(get_type, set_type))
+{
+if (!SQL_SetAffinity(set_type))
+{
+log_amx("Failed to set affinity from %s to %s.", get_type, set_type);
+}
+}
+return SQL_MakeDbTuple(host, user, pass, db, timeout);
+}

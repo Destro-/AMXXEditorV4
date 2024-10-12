@@ -83,22 +83,7 @@ class util:
 			
 	def clamp(value, minv, maxv):
 		return max(min(value, maxv), minv)
-	
-	def cfg_set_key(filename, key, value):
-		s = SublimeSettings(filename)
-		s.set(key, value)
-		s.save()
 		
-	def cfg_get_path(_dict, key) :
-		path = _dict.get(key, None)
-		
-		if not path or path == "${file_path}" :
-			return path
-
-		path = path.replace("${packages}", sublime.packages_path())
-
-		return os.path.normpath(path)
-	
 	def unix_normpath(path):
 		return os.path.normpath(path).replace('\\', '/')
 		
@@ -281,3 +266,57 @@ class DelayedTimer(threading.Thread):
 			self.event.clear()
 			self.function(*self.args, **self.kwargs)
 	
+
+# Style
+class Style:
+	def __init__(self, setting, endext):
+		self.setting = setting
+		self.endext = endext
+		self.list = []
+		self.paths = {}
+		self.active = "default"
+
+	def initialize(self):
+		self.clear()
+		self.search_styles()
+		self.set_active( cfg.get(self.setting) )
+		
+	def search_styles(self):
+		for file in sublime.find_resources("*" + self.endext) :
+			name = os.path.basename(file).replace(self.endext, "")
+			if not name in self.list :
+				self.list.append(name)
+			self.paths[name] = file
+		
+	def clear(self):
+		self.list.clear()
+		self.paths.clear()
+		self.list.append("default")
+		
+	def count(self):
+		return len(self.list)
+		
+	def get_path(self):
+		return self.paths.get(self.active)
+
+	def get_active(self):
+		return self.active
+		
+	def is_active(self, index):
+		if index >= self.count() :
+			return False
+
+		return self.list[index] == self.active
+		
+	def set_active(self, style):
+		if isinstance(style, str):
+			if style in self.list:
+				self.active = style
+				return True
+		elif isinstance(style, int):
+			if 0 <= style < self.count():
+				self.active = self.list[style]
+				return True
+		
+		self.active = "default"
+		return False

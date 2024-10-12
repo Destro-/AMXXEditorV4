@@ -1,0 +1,62 @@
+#if defined _dodfun_included
+#endinput
+#endif
+#define _dodfun_included
+#include <dodconst>
+#pragma reqlib dodfun
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma loadlib dodfun
+#endif
+forward grenade_throw(index,greindex,wId);
+forward rocket_shoot(index,rocketindex,wId);
+native dod_set_stamina(index,set=STAMINA_SET,minvalue=0,maxvalue=100);
+native dod_set_fuse(index,set=FUSE_SET,Float:newFuse=5.0, Type=FT_NEW);
+native dod_set_user_class(index,classId);
+native dod_set_user_team(index,teamId,refresh=1);
+native dod_get_next_class(index);
+native dod_is_randomclass(index);
+native dod_get_pl_deaths(index);
+native dod_set_pl_deaths(index,value,refresh=1);
+native dod_get_user_kills(index);
+native dod_set_user_kills(index,value,refresh=1);
+native dod_set_user_score(index,value,refresh=1);
+native dod_set_pl_teamname(index,const szName[]);
+native dod_get_pl_teamname(index,szName[],len);
+native dod_is_deployed(index);
+native dod_set_user_ammo(index,wid,value);
+native dod_get_user_ammo(index,wid);
+forward controlpoints_init();
+enum CP_VALUE {
+CP_edict = 1,		CP_area,			CP_index,			CP_owner,
+CP_default_owner,
+CP_visible,			CP_icon_neutral,		CP_icon_allies,		CP_icon_axis,		CP_origin_x,		CP_origin_y,		CP_can_touch,
+CP_pointvalue,
+CP_points_for_cap,
+CP_team_points,
+CP_model_body_neutral,
+CP_model_body_allies,
+CP_model_body_axis,
+CP_name,
+CP_reset_capsound,
+CP_allies_capsound,
+CP_axis_capsound,
+CP_targetname,
+CP_model_neutral,
+CP_model_allies,
+CP_model_axis,
+};
+native objectives_get_num();
+native objectives_reinit( player=0 );
+native objective_get_data( index, CP_VALUE:key, szValue[]="", len=0 );
+native objective_set_data( index, CP_VALUE:key , iValue=-1, const szValue[]="" );
+enum CA_VALUE {
+CA_edict = 1,
+CA_allies_numcap,
+CA_axis_numcap,
+CA_timetocap,
+CA_can_cap,
+CA_target,
+CA_sprite,
+};
+native area_get_data( index, CA_VALUE:key, szValue[]="", len=0 );
+native area_set_data( index, CA_VALUE:key , iValue=-1, const szValue[]="" );

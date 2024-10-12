@@ -1,0 +1,121 @@
+%YAML 1.2
+---
+name: AMXX-ASM
+file_extensions: [ amxxdump, amxxmemory ]
+scope: source.amxx
+contexts:
+
+
+  main:
+    - include: amxxmemory
+    - include: amxxdump
+
+
+    - include: pawn_string
+    - include: pawn_coment
+    - include: pawn_numbers
+    - include: pawn_function
+
+    # Constants
+    - match: \b(public|native|stock|local|global)\b
+      scope: storage.modifier.function
+
+    - match: \b(new|val|ref)\b
+      scope: keyword.control
+
+    # Tag
+    - match: '\b[A-Za-z_]\w*\:'
+      scope: storage.modifier.tag
+
+  amxxdump:
+    - match: '0x.*?PROC.*?; .*'
+      scope: keyword.control.memory
+
+  amxxmemory:
+    - match: '^\b(data|code)\b:((0x[0-9A-Fa-f]{8})=?|(.*))'
+      captures:
+        1: keyword.control.memory
+        3: constant.numeric.hex.memory
+        4: invalid.illegal
+      push:
+      - match: '\[(([[0-9A-Fa-f]{8}\s]+)|(.*))\](.*)'
+        captures:
+          2: constant.numeric.hex.memory
+          3: invalid.illegal
+          4: invalid.illegal
+        pop: true
+      - include: pawn_string
+      - match: '(f)?(.*)'
+        captures:
+            1: keyword.control.memory
+            2: invalid.illegal
+        pop: true
+
+  # String
+  pawn_string:
+    - match: '"'
+      scope: punctuation.definition.string.begin.pawn
+      push:
+      - meta_scope: string.quoted.double.pawn
+      - match: '(")|(?<=^|[^\\])\s*(\n)'
+        captures:
+          1: punctuation.definition.string.end.pawn
+          2: invalid.illegal.unexpected-end-of-line.pawn
+        pop: true
+      - include: string_escaped_char
+      - include: string_placeholder
+
+  string_escaped_char:
+    - match: \^(\^|[abefnprtv\'"?]|[0-3]\d{,2}|[4-7]\d?|x[a-fA-F0-9]{,2}|u[a-fA-F0-9]{,4}|U[a-fA-F0-9]{,8})
+      scope: constant.character.escape.pawn
+    - match: '\\[drywR]'
+      scope: constant.character.escape.pawn
+    - match: \^.
+      scope: invalid.illegal.unknown-escape.pawn
+
+  string_placeholder:
+    - match: |-
+        (?x)%
+            ((-?\d+)|\*(-?\d+\$)?)?         # minimum field width
+            (\.((-?\d+)|\*(-?\d+\$)?)?)?    # precision
+            [cbdiufXxasLNn%]                # conversion type
+      scope: constant.other.placeholder.pawn
+
+  # Comment
+  pawn_coment:
+    - match: ';'
+      scope: punctuation.definition.comment
+      push:
+        - meta_scope: comment.line
+        - match: $
+          pop: true
+
+  # Function
+  pawn_function:
+    - match: \s*([A-Za-z_][\w_]*)[\s\<\>\+\-\=]*(\()
+      captures:
+        1: variable.function
+        2: punctuation.section.group.begin function.parens
+      push:
+        #- meta_content_scope: meta.function.params
+        - match: \)
+          scope: punctuation.section.group.end function.parens
+          pop: true
+        - include: main
+
+  # Number
+  pawn_numbers:
+    - match: '(\d+)(\.{2})(\d+)'
+      captures:
+        1: constant.numeric.int
+        2: keyword.operator.switch-range
+        3: constant.numeric.int
+
+    - match: ([-]?0x[\da-fA-F]{1,8})
+      scope: constant.numeric.hex
+
+    - match: \b(\d+\.\d+)\b
+      scope: constant.numeric.float
+
+    - match: \b(\d+)\b
+      scope: constant.numeric.int

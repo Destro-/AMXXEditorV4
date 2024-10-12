@@ -1,0 +1,44 @@
+#if defined _coremsg_included
+#endinput
+#endif
+#define _coremsg_included
+#include <message_const>
+native message_begin(dest, msg_type, const origin[3] = {0,0,0}, player = 0);
+native message_begin_f(dest, msg_type, const Float:origin[3] = {0.0,0.0,0.0}, player = 0);
+native message_end();
+native write_byte(x);
+native write_char(x);
+native write_short(x);
+native write_long(x);
+native write_entity(x);
+native write_angle(x);
+native write_angle_f(Float:x);
+native write_coord(x);
+native write_coord_f(Float:x);
+native write_string(const x[]);
+native emessage_begin(dest, msg_type, const origin[3] = {0,0,0}, player = 0);
+native emessage_begin_f(dest, msg_type, const Float:origin[3] = {0.0,0.0,0.0}, player = 0);
+native emessage_end();
+native ewrite_byte(x);
+native ewrite_char(x);
+native ewrite_short(x);
+native ewrite_long(x);
+native ewrite_entity(x);
+native ewrite_angle(x);
+native ewrite_angle_f(Float:x);
+native ewrite_coord(x);
+native ewrite_coord_f(Float:x);
+native ewrite_string(const x[]);
+native set_msg_block(iMessage, iMessageFlags);
+native get_msg_block(iMessage);
+native register_message(iMsgId, const szFunction[]);
+native unregister_message(iMsgId, registeredmsg);
+native get_msg_args();
+native get_msg_argtype(argn);
+native get_msg_arg_int(argn);
+native Float:get_msg_arg_float(argn);
+native get_msg_arg_string(argn, szReturn[], iLength);
+native set_msg_arg_int(argn, argtype, iValue);
+native set_msg_arg_float(argn, argtype, Float:fValue);
+native set_msg_arg_string(argn, const szString[]);
+native get_msg_origin(const Float:_Origin[3]);

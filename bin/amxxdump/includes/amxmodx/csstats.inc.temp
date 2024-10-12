@@ -1,0 +1,16 @@
+#if defined _csstats_included
+#endinput
+#endif
+#define _csstats_included
+#include <csstats_const>
+native get_user_wstats(index, wpnindex, stats[STATSX_MAX_STATS], bodyhits[MAX_BODYHITS]);
+native get_user_wrstats(index, wpnindex, stats[STATSX_MAX_STATS], bodyhits[MAX_BODYHITS]);
+native get_user_stats(index, stats[STATSX_MAX_STATS], bodyhits[MAX_BODYHITS]);
+native get_user_rstats(index, stats[STATSX_MAX_STATS], bodyhits[MAX_BODYHITS]);
+native get_user_vstats(index, victim, stats[STATSX_MAX_STATS], bodyhits[MAX_BODYHITS], wpnname[] = "", len = 0);
+native get_user_astats(index, wpnindex, stats[STATSX_MAX_STATS], bodyhits[MAX_BODYHITS], wpnname[] = "", len = 0);
+native reset_user_wstats(index);
+native get_stats(index, stats[STATSX_MAX_STATS], bodyhits[MAX_BODYHITS], name[], len, authid[] = "", authidlen = 0);
+native get_statsnum();
+native get_user_stats2(index, stats[STATSX_MAX_OBJECTIVE]);
+native get_stats2(index, stats[STATSX_MAX_OBJECTIVE], authid[] = "", authidlen = 0);

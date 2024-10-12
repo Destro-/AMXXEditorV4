@@ -1,0 +1,50 @@
+#if defined _dbi_included
+#endinput
+#endif
+#define _dbi_included
+#assert !defined _sqlx_included
+#pragma reqclass dbi
+enum Sql
+{
+SQL_FAILED=0,
+SQL_OK
+};
+enum Result
+{
+RESULT_FAILED=-1,
+RESULT_NONE,
+RESULT_OK
+};
+native Sql:dbi_connect(_host[], _user[], _pass[], _dbname[], _error[]="", _maxlength=0);
+native Result:dbi_query(Sql:_sql, _query[], any:...);
+native Result:dbi_query2(Sql:_sql, &rows, _query[], any:...);
+native dbi_nextrow(Result:_result);
+native dbi_field(Result:_result, _fieldnum, any:... );
+native dbi_result(Result:_result, _field[], any:... );
+native dbi_num_rows(Result:_result);
+native dbi_free_result(&Result:result);
+native dbi_close(&Sql:_sql);
+native dbi_error(Sql:_sql, _error[], _len);
+native dbi_type(_type[], _len);
+native dbi_num_fields(Result:result);
+native dbi_field_name(Result:result, field, name[], maxLength);
+stock bool:sqlite_table_exists(Sql:sql, table[]) 
+{
+new bool:exists;
+new query[128];
+format(query, 127, "SELECT name FROM sqlite_master WHERE type='table' AND name='%s' LIMIT 1;", table);
+new Result:result = dbi_query(sql, query);
+if (dbi_nextrow(result))
+{
+exists = true;
+}
+else
+{
+exists = false;
+}
+if (result > RESULT_NONE)
+{
+dbi_free_result(result);
+}
+return exists;
+}

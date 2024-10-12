@@ -1,0 +1,52 @@
+#if defined _dodx_included
+#endinput
+#endif
+#define _dodx_included
+#include <dodconst>
+#include <dodstats>
+#pragma reqclass xstats
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma defclasslib xstats dodx
+#endif
+enum {
+XMF_DAMAGE = 0,
+XMF_DEATH,
+XMF_SCORE,
+};
+native register_statsfwd(ftype);
+forward client_damage(attacker, victim, damage, wpnindex, hitplace, TA);
+forward client_death(killer, victim, wpnindex, hitplace, TK);
+forward client_score(id, score, total);
+forward dod_client_changeteam(id, team, oldteam);
+forward dod_client_changeclass(id, class, oldclass);
+forward dod_client_spawn(id);
+forward dod_client_scope(id, value);
+forward dod_client_weaponpickup(id, weapon, value);
+forward dod_client_prone(id, value);
+forward dod_client_weaponswitch(id, wpnew, wpnold);
+forward dod_grenade_explosion(id, Float:pos[3], wpnid);
+forward dod_rocket_explosion(id, Float:pos[3], wpnid);
+forward dod_client_objectpickup(id, objid, Float:pos[3], value);
+forward dod_client_stamina(id, stamina);
+native dod_weapon_type(id, type);
+native dod_set_weaponlist(id, wpnID, slot, dropslot, totalrds);
+native dod_set_model(id, const model[]);
+native dod_set_body_number(id, bodynumber);
+native dod_clear_model(id);
+native custom_weapon_add( const wpnname[], melee = 0, const logname[]="" ); 
+native custom_weapon_dmg( weapon, att, vic, damage, hitplace=0 ); 
+native custom_weapon_shot( weapon, index ); native xmod_is_melee_wpn(wpnindex);
+native xmod_get_wpnname(wpnindex, name[], len);
+native xmod_get_wpnlogname(wpnindex, name[], len);
+native xmod_get_maxweapons();
+native xmod_get_stats_size();
+native xmod_is_custom_wpn(wpnindex);
+native dod_wpnlog_to_name(const logname[],name[],len);
+native dod_wpnlog_to_id(const logname[]);
+native dod_get_map_info( info );
+native dod_get_user_weapon(index,&clip=0,&ammo=0);
+native dod_get_team_score(teamId);
+native dod_get_user_class(index);
+native dod_get_user_score(index);
+native dod_get_pronestate(index);
+native dod_user_kill(index);

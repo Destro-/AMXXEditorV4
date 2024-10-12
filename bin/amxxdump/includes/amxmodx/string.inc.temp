@@ -1,0 +1,56 @@
+#if defined _string_included
+#endinput
+#endif
+#define _string_included
+#include <string_const>
+native strlen(const string[]);
+native contain(const source[], const string[]);
+native containi(const source[], const string[]);
+native replace(text[], len, const what[], const with[]);
+native replace_string(text[], maxlength, const search[], const replace[], bool:caseSensitive = true);
+native replace_stringex(text[], maxlength, const search[], const replace[], searchLen = -1, replaceLen = -1, bool:caseSensitive = true);
+native add(dest[],len,const src[],max=0);
+native format(output[], len, const format[], any:...);
+native formatex(output[], len, const format[], any:...);
+native [MAX_FMT_LENGTH]fmt(const format[], any:...);
+native vformat(buffer[], len, const fmt[], vararg);
+native vdformat(buffer[], len, fmt_arg, vararg, ...);
+native format_args(output[], len, pos = 0);
+native num_to_str(num,string[],len);
+native str_to_num(const string[]);
+native strtol(const string[], &endPos = 0, base = 0);
+native Float:strtof(const string[], &endPos = 0);
+native float_to_str(Float:fl, string[], len);
+native Float:str_to_float(const string[]);
+native equal(const a[],const b[],c=0);
+native equali(const a[], const b[], c = 0);
+native copy(dest[],len,const src[]);
+native copyc(dest[],len,const src[],ch);
+native setc(src[],len,ch);
+native parse(const text[], ... );
+native strtok(const text[], Left[], leftLen, Right[], rightLen, token=' ', trimSpaces=0);
+native strtok2(const text[], left[], const llen, right[], const rlen, const token = ' ', const trim = 0);
+native trim(text[]);
+native strtolower(string[]);
+native mb_strtolower(string[], maxlength = 0);
+native strtoupper(string[]);
+native mb_strtoupper(string[], maxlength = 0);
+native ucfirst(string[]);
+native mb_ucfirst(string[], maxlength = 0);
+native mb_strtotitle(string[], maxlength = 0);
+native bool:is_string_category(const input[], input_size, flags, &output_size = 0);
+native isdigit(ch);
+native isalpha(ch);
+native isspace(ch);
+native isalnum(ch);
+native is_char_mb(ch);
+native bool:is_char_upper(ch);
+native bool:is_char_lower(ch);
+native get_char_bytes(const source[]);
+native strcat(dest[], const source[], maxlength);
+native strfind(const string[], const sub[], bool:ignorecase = false, pos = 0);
+native strcmp(const string1[], const string2[], bool:ignorecase = false);
+native strncmp(const string1[], const string2[], num, bool:ignorecase = false);
+native argparse(const text[], pos, argbuffer[], maxlen);
+native split_string(const source[], const split[], part[], partLen);
+#include <string_stocks>

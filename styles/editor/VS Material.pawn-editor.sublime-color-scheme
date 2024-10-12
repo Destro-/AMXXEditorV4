@@ -1,0 +1,175 @@
+{
+    "name": "AMXXEditor: VS Material",
+	"author": "Destro (Modified with Material Theme vscode)",
+    "amxxeditor":
+    {
+        "default_popup": "defaut",
+        "default_console": "defaut"
+    },
+    "variables":
+    {
+        // Material Theme color palette
+        "main-foreground": "#EEFFFF",      // Material foreground
+        "main-background": "#263238",      // Material background
+        "selection-bg": "#80CBC420",
+        "comment-color": "#546E7A",
+        "cyan": "#89DDFF",
+        "blue": "#82AAFF",
+        "purple": "#C792EA",
+        "green": "#C3E88D",
+        "coral": "#F78C6C",
+        "red": "#FF5370",
+        "yellow": "#FFCB6B",
+        "orange": "#F78C6C",
+        "invalid-red": "#FF5370"
+    },
+    "globals":
+    {
+        "foreground": "var(main-foreground)",
+        "background": "var(main-background)",
+        "caret": "var(cyan)",
+        
+        "selection": "var(selection-bg)",
+        "selection_border": "var(selection-bg)",
+        "invisibles": "var(comment-color)",
+        
+        "highlight": "var(cyan)",
+        "find_highlight": "var(selection-bg)",
+        "find_highlight_foreground": "var(main-foreground)",
+        
+		/* Highlight active brackets */
+        "brackets_foreground": "#c00",
+        "brackets_options": "foreground",
+        "bracket_contents_foreground": "var(cyan)",
+        "bracket_contents_options": "underline",
+        
+        "guide": "color(var(comment-color) a(40%))",
+        "stack_guide": "color(var(comment-color) a(65%))",
+        "active_guide": "var(comment-color)",
+        
+        "gutter": "var(main-background)",
+        "gutter_foreground": "color(var(comment-color) a(50%))",
+        "line_highlight": "#00000050"
+    },
+    "rules":
+    [
+        {
+            "name": "Comment",
+            "scope": "comment",
+            "foreground": "var(comment-color)",
+            "font_style": "italic"
+        },
+        {
+            "name": "Number",
+            "scope": "constant.numeric",
+            "foreground": "var(coral)"
+        },
+        {
+            "name": "Number Float",
+            "scope": "constant.numeric.float",
+            "foreground": "var(coral)",
+            "font_style": "italic"
+        },
+        {
+            "name": "Built-in constant / Bool",
+            "scope": "constant.language",
+            "foreground": "var(coral)",
+            "font_style": "bold"
+        },
+        {
+            "name": "Function Definition",
+            "scope": "support.function",
+            "foreground": "var(blue)"
+        },
+        {
+            "name": "Function Call",
+            "scope": "variable.function",
+            "foreground": "var(blue)"
+        },
+        {
+            "name": "Define Constant",
+            "scope": "entity.name.constant.preprocessor",
+            "foreground": "var(orange)"
+        },
+        {
+            "name": "Include path",
+            "scope": "meta.preprocessor.include.path",
+            "foreground": "var(red)"
+        },
+        {
+            "name": "Preprocessor",
+            "scope": "meta.preprocessor",
+            "foreground": "var(orange)"
+        },
+        {
+            "name": "Define Multiline Block",
+            "scope": "meta.preprocessor.define.multiline",
+            "foreground": "var(main-foreground)",
+            "background": "color(var(selection-bg) a(30%))"
+        },
+        {
+            "name": "Define Group",
+            "scope": "meta.preprocessor.group",
+            "foreground": "var(red)"
+        },
+        {
+            "name": "Control",
+            "scope": "keyword.control",
+            "foreground": "var(purple)"
+        },
+        {
+            "name": "Operator",
+            "scope": "keyword.operator",
+            "foreground": "var(cyan)"
+        },
+		{
+			"name": "Punctuations '().,;[]{}'",
+			"scope": "punctuation.section, punctuation.separator",
+			"foreground": "var(cyan)",
+		},
+        {
+            "name": "Function Types",
+            "scope": "storage.modifier.function",
+            "foreground": "var(purple)"
+        },
+        {
+            "name": "Vars Types",
+            "scope": "storage.type.vars",
+            "foreground": "var(purple)"
+        },
+        {
+            "name": "Tag",
+            "scope": "storage.modifier.tag",
+            "foreground": "var(yellow)",
+            "font_style": "italic"
+        },
+        {
+            "name": "String",
+            "scope": "string",
+            "foreground": "var(green)"
+        },
+        {
+            "name": "String Escape",
+            "scope": "string constant",
+            "foreground": "#709900"
+        },
+        {
+            "name": "Constant Vars",
+            "scope": "constant.vars",
+            //"foreground": "var(main-foreground)",
+			"foreground": "color(var(cyan) a(75%))",
+            "background": "#00000001"
+        },
+        {
+            "name": "Fix Constant on selection",
+            "scope": "fixselection",
+            "background": "#00000001"
+        },
+        {
+            "name": "Invalid – Illegal",
+            "scope": "invalid.illegal",
+            "foreground": "var(main-foreground)",
+            "background": "var(invalid-red)"
+        }    
+    ]
+}

@@ -1,0 +1,8 @@
+#if defined _vault_included
+#endinput
+#endif
+#define _vault_included
+native get_vaultdata(const key[], data[] = "", len = 0);
+native set_vaultdata(const key[], const data[] = "");
+native remove_vaultdata(const key[]);
+native vaultdata_exists(const key[]);

@@ -1,0 +1,84 @@
+#if defined _file_included
+#endinput
+#endif
+#define _file_included
+#define PLATFORM_MAX_PATH  256
+enum FileType
+{
+FileType_Unknown,                                              
+FileType_Directory,                              
+FileType_File,                              
+};
+enum FileTimeType
+{
+FileTime_LastAccess,                                            
+FileTime_Created,                                            
+FileTime_LastChange,                           
+};
+#define SEEK_SET 0                               
+#define SEEK_CUR 1                                          
+#define SEEK_END 2                                      
+#define FSOPT_BYTES_COUNT  0                                                
+#define FSOPT_LINES_COUNT  1                                                     
+#define FSOPT_END_WITH_LF  2                                             
+#define BLOCK_INT   4
+#define BLOCK_SHORT 2
+#define BLOCK_CHAR  1
+#define BLOCK_BYTE  1
+#define FPERM_U_READ       0x0100                          
+#define FPERM_U_WRITE      0x0080                          
+#define FPERM_U_EXEC       0x0040                          
+#define FPERM_U_RWX        FPERM_U_READ | FPERM_U_WRITE | FPERM_U_EXEC
+#define FPERM_G_READ       0x0020                          
+#define FPERM_G_WRITE      0x0010                          
+#define FPERM_G_EXEC       0x0008                          
+#define FPERM_G_RWX        FPERM_G_READ | FPERM_G_WRITE | FPERM_G_EXEC
+#define FPERM_O_READ       0x0004                          
+#define FPERM_O_WRITE      0x0002                          
+#define FPERM_O_EXEC       0x0001                          
+#define FPERM_O_RWX        FPERM_O_READ | FPERM_O_WRITE | FPERM_O_EXEC
+#define FPERM_DIR_DEFAULT  FPERM_U_RWX | FPERM_G_RWX | FPERM_O_RWX                         
+native read_dir(const dirname[], pos, output[], len, &outlen = 0);
+native read_file(const file[], line, text[], len, &txtlen = 0);
+native write_file(const file[], const text[], line = -1);
+native delete_file(const file[], bool:use_valve_fs = false, const valve_path_id[] = "GAMECONFIG");
+native file_exists(const file[], bool:use_valve_fs = false);
+native rename_file(const oldname[], const newname[], relative = 0);
+native dir_exists(const dir[], bool:use_valve_fs = false);
+native file_size(const file[], flag = FSOPT_BYTES_COUNT, bool:use_valve_fs = false, const valve_path_id[] = "GAME");
+native fopen(const filename[], const mode[], bool:use_valve_fs = false, const valve_path_id[] = "GAME");
+native fclose(file);
+native fread(file, &any:data, mode);
+native fread_blocks(file, any:data[], blocks, mode);
+native fread_raw(file, any:stream[], blocksize, blocks);
+native fwrite(file, any:data, mode);
+native fwrite_blocks(file, const any:data[], blocks, mode);
+native fwrite_raw(file, const any:stream[], blocks, mode);
+native feof(file);
+native fgets(file, buffer[], maxlength);
+native fputs(file, const text[], bool:null_term = false);
+native fprintf(file, const fmt[], any:...);
+native fseek(file, position, start);
+native ftell(file);
+native fgetc(file);
+native fputc(file, data);
+native fungetc(file, data);
+native fflush(file);
+native filesize(const filename[], any:...);
+native rmdir(const path[]);
+native mkdir(const dirname[], mode = FPERM_DIR_DEFAULT, bool:use_valve_fs = false, const valve_path_id[] = "GAMECONFIG");
+native unlink(const filename[], bool:use_valve_fs = false, const valve_path_id[] = "GAMECONFIG");
+native open_dir(dir[], firstfile[], length, &FileType:type = FileType_Unknown, bool:use_valve_fs = false, const valve_path_id[] = "GAME");
+native next_file(dirh, buffer[], length, &FileType:type = FileType_Unknown);
+native close_dir(dirh);
+native LoadFileForMe(const file[], buffer[], maxlength, &length = 0);
+native GetFileTime(const file[], FileTimeType:tmode);
+native bool:SetFilePermissions(const path[], mode);
+native bool:FileReadInt8(file, &any:data);
+native bool:FileReadUint8(file, &any:data);
+native bool:FileReadInt16(file, &any:data);
+native bool:FileReadUint16(file, &any:data);
+native bool:FileReadInt32(file, &any:data);
+native bool:FileWriteInt8(file, any:data);
+native bool:FileWriteInt16(file, any:data);
+native bool:FileWriteInt32(file, any:data);

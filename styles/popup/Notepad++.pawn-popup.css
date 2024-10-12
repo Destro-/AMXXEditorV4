@@ -1,7 +1,7 @@
 /* Sublime Text MiniHTML docs -> http://www.sublimetext.com/docs/minihtml.html */
 
 /*
-	Predefine Vars:
+	Sublime Text Vars:
     var(--background)
     var(--foreground)
     var(--accent)
@@ -53,16 +53,16 @@ body {
 
 
 /* Tooltip function */
-.tooltip-function .inspectorTitle { color: #000; font-weight: bold;}
+.tooltip-function .inspectorTitle { color: #000; font-weight: bold; margin-top: 5px; }
 .tooltip-function .inspectorBlock { color: #555; }
 
 
 /* Tooltip include */
-.tooltip-include b.info {
+.tooltip-include .info {
 	margin: 0px;
-	font-size: var(--large-size);
+	font-weight: bold;
 }
-.tooltip-include b.path {
+.tooltip-include .path {
 	color: #D20A0A;
 }
 
@@ -77,7 +77,7 @@ body {
 }
 
 
-/* Doct Block */
+/* Document comments Block */
 .code {
 	font-family: monospace;
 	background-color: #f5f5f5;
@@ -90,11 +90,11 @@ body {
 	color: #666;
 }
 
-.doct2 { 
+.doc2 { 
 	color: #111;
 }
 
-.doct1 { 
+.doc1 { 
 	color: #444;
 	font-style: italic;
 }
@@ -120,11 +120,11 @@ body {
 }
 
 
-/* Syntax style ****************************************/
+/* Syntax style ( setting 'tooltip_style_mode' = 0  */
 .pawnDefaultColor { color: #111; font-family: Verdana; }
 .pawnFunction { color: #875A8F; font-weight: bold; }
 .pawnString { color: #808080; }
-.pawnKeyword { color: #111; }
-.pawnConstant { color: #0000ff; font-weight: normal; }
+.pawnOperator { color: #111; }
+.pawnType { color: #0000ff; font-weight: normal; }
 .pawnNumber { color: #ff8000; font-style: italic; }
 .pawnTag { color: #3366CC; font-style: italic; text-decoration: none; font-family: Verdana; }

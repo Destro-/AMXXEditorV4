@@ -1,0 +1,33 @@
+#if defined _csx_included
+#endinput
+#endif
+#define _csx_included
+#include <csstats>
+#pragma reqclass xstats
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma defclasslib xstats csx
+#endif
+enum MapObjective
+{
+MapObjective_Bomb    = (1<<0),
+MapObjective_Hostage = (1<<1),
+MapObjective_Vip     = (1<<2),
+MapObjective_Escape  = (1<<3),
+};
+forward client_damage(attacker, victim, damage, wpnindex, hitplace, TA);
+forward client_death(killer, victim, wpnindex, hitplace, TK);
+forward grenade_throw(index, greindex, wId);
+forward bomb_planting(planter);
+forward bomb_planted(planter);
+forward bomb_explode(planter, defuser);
+forward bomb_defusing(defuser);
+forward bomb_defused(defuser);
+native custom_weapon_add(const wpnname[], melee = 0, const logname[] = "");
+native custom_weapon_dmg(weapon, att, vic, damage, hitplace = 0);
+native custom_weapon_shot(weapon, index);
+native xmod_is_melee_wpn(wpnindex);
+native xmod_get_wpnname(wpnindex, name[], len);
+native xmod_get_wpnlogname(wpnindex, name[], len);
+native xmod_get_maxweapons();
+native xmod_get_stats_size();
+native MapObjective:get_map_objectives();

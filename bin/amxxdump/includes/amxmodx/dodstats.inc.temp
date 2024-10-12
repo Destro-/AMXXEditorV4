@@ -1,0 +1,15 @@
+#if defined _dodstats_included
+#endinput
+#endif
+#define _dodstats_included
+native get_user_wstats(index,wpnindex,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_wrstats(index,wpnindex,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_wlstats(index,wpnindex,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_stats(index,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_rstats(index,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_lstats(index,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS]);
+native get_user_vstats(index,victim,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS],wpnname[]="",len=0);
+native get_user_astats(index,wpnindex,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS],wpnname[]="",len=0);
+native reset_user_wstats(index);
+native get_stats(index,stats[DODX_MAX_STATS],bodyhits[MAX_BODYHITS],name[],len);
+native get_statsnum();

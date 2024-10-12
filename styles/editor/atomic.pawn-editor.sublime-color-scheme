@@ -8,16 +8,11 @@
 	"amxxeditor":
 	{
 		"default_popup": "BasicBlack",
-		"default_console": "SmallFonts-Terminal",
-		"syntax_settings":
-		{
-			// Custom settings...
-			//"font_face": ""
-		}
+		"default_console": "SmallFonts-Terminal"
 	},
 	"variables":
     {
-        "main-foreground": 		"#999",
+        "main-foreground": 		"#bbb",
         "main-background": 		"#111111",
     },
 	"globals":
@@ -29,7 +24,7 @@
 		/* Text Selection */
 		"selection": "#DDF0FF33",
 		"selection_border": "#DDF0FF33",
-		"invisibles": "#444", // TAB / SPACE
+		"invisibles": "#555", // TAB / SPACE
 		
 		
 		/* Find Highlight */
@@ -44,9 +39,9 @@
 		"bracket_contents_options": "underline",
 		
 		/* Indentation guides */
-		"guide": "#bbb",
-		"stack_guide": "#ddd",
-		"active_guide": "#666",
+		"guide": "#666",
+		"stack_guide": "#666",
+		"active_guide": "#444",
 
 		/* Line numbers */
 		"gutter": "#222", 
@@ -59,7 +54,7 @@
 		{
 			"name": "Comment",
 			"scope": "comment",
-			"foreground": "#2e3b66"
+			"foreground": "#4c5987"
 		},
 		{
 			"name": "Number",
@@ -88,13 +83,6 @@
 			"foreground": "#C97616"
 		},
 		{
-			"name": "Pawn Function parens",
-			"scope": "function.parens",
-			"foreground": "#1f1",
-			"font_style": "bold"
-		},
-		
-		{
 			"name": "Pawn Define Constant",
 			"scope": "entity.name.constant.preprocessor",
 			"foreground": "#CF8506"
@@ -110,6 +98,12 @@
 			"foreground": "#FFA60D"
 		},
 		{
+			"name": "Define Multiline Block",
+			"scope": "meta.preprocessor.define.multiline",
+			"foreground": "var(main-foreground)",
+			"background": "color(var(main-background) l(+ 5%))"
+		},
+		{
 			"name": "Pawn Define Group",
 			"scope": "meta.preprocessor.group",
 			"foreground": "#B4DE0D"
@@ -119,40 +113,24 @@
 		{
 			"name": "Pawn Control",
 			"scope": "keyword.control",
-			"foreground": "#12a200"
+			"foreground": "#5da713"
 		},
 		{
 			"name": "Pawn Operator",
 			"scope": "keyword.operator",
-			"foreground": "#8b469b"
+			"foreground": "#9acd68"
 		},
 		
 		{
-			"name": "Pawn Brackets",
-			"scope": "meta.brackets",
-			"foreground": "#A6B5C5",
-			"font_style": "bold"
+			"name": "Pawn Brackets, Parens, Brace, Coma",
+			"scope": "meta.brackets, punctuation.section, punctuation.separator",
+			"foreground": "#fff",
 		},
-		{
-			"name": "Pawn Parens",
-			"scope": "parens",
-			"foreground": "#A6B5C5",
-			"font_style": "bold"
-		},
-		{
-			"name": "Pawn Brace",
-			"scope": "keyword.brace",
-			"foreground": "#A6B5C5"
-		},
-		{
-			"name": "Pawn Coma",
-			"scope": "punctuation.separator",
-			"foreground": "#A6B5C5"
-		},
+	
 		{
 			"name": "Pawn Function Types",
 			"scope": "storage.modifier.function",
-			"foreground": "#3790E7",
+			"foreground": "#A35AED",
 			"font_style": "bold"
 		},
 		{
@@ -181,7 +159,7 @@
 		{
 			"name": "Pawn Constant Vars",
 			"scope": "constant.vars",
-			"foreground": "#366d85",
+			"foreground": "#eee",
 			"font_style": "italic",
 			
 			// Fix bug, reverse foreground/background

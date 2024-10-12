@@ -1,0 +1,93 @@
+#if defined _regex_included
+#endinput
+#endif
+#define _regex_included
+#pragma reqlib regex
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma loadlib regex
+#endif
+enum Regex
+{
+REGEX_MATCH_FAIL   = -2,
+REGEX_PATTERN_FAIL = -1,
+REGEX_NO_MATCH     =  0,
+REGEX_OK           =  1
+};
+#define PCRE_CASELESS           0x00000001                   
+#define PCRE_MULTILINE          0x00000002                                                                                                                                 
+#define PCRE_DOTALL             0x00000004                                                                                           
+#define PCRE_EXTENDED           0x00000008                                                             
+#define PCRE_ANCHORED           0x00000010                                
+#define PCRE_DOLLAR_ENDONLY     0x00000020                                      
+#define PCRE_UNGREEDY           0x00000200                                        
+#define PCRE_NOTEMPTY           0x00000400                                             
+#define PCRE_UTF8               0x00000800                       
+#define PCRE_NO_UTF8_CHECK      0x00002000                                                                                       
+#define PCRE_NEVER_UTF          0x00010000                                                       
+#define PCRE_FIRSTLINE          0x00040000                                           
+#define PCRE_DUPNAMES           0x00080000                                            
+#define PCRE_NEWLINE_CR         0x00100000                                                                                                           
+#define PCRE_NEWLINE_CRLF       0x00300000                                                                                                           
+#define PCRE_NEWLINE_ANY        0x00400000                                                                                                           
+#define PCRE_NEWLINE_ANYCRLF    0x00500000                                                                                                           
+#define PCRE_UCP                0x20000000                                                                                                   
+enum               
+{
+REGEX_ERROR_NONE           =  0,                  
+REGEX_ERROR_NOMATCH        = -1,                            
+REGEX_ERROR_NULL           = -2,
+REGEX_ERROR_BADOPTION      = -3,
+REGEX_ERROR_BADMAGIC       = -4,
+REGEX_ERROR_UNKNOWN_OPCODE = -5,
+REGEX_ERROR_NOMEMORY       = -6,
+REGEX_ERROR_NOSUBSTRING    = -7,
+REGEX_ERROR_MATCHLIMIT     = -8,
+REGEX_ERROR_CALLOUT        = -9,                                   
+REGEX_ERROR_BADUTF8        = -10,
+REGEX_ERROR_BADUTF8_OFFSET = -11,
+REGEX_ERROR_PARTIAL        = -12,
+REGEX_ERROR_BADPARTIAL     = -13,
+REGEX_ERROR_INTERNAL       = -14,
+REGEX_ERROR_BADCOUNT       = -15,
+REGEX_ERROR_DFA_UITEM      = -16,
+REGEX_ERROR_DFA_UCOND      = -17,
+REGEX_ERROR_DFA_UMLIMIT    = -18,
+REGEX_ERROR_DFA_WSSIZE     = -19,
+REGEX_ERROR_DFA_RECURSE    = -20,
+REGEX_ERROR_RECURSIONLIMIT = -21,
+REGEX_ERROR_NULLWSLIMIT    = -22,                                
+REGEX_ERROR_BADNEWLINE     = -23,
+REGEX_ERROR_BADOFFSET      = -24,
+REGEX_ERROR_SHORTUTF8      = -25,
+REGEX_ERROR_RECURSELOOP    = -26,
+REGEX_ERROR_JIT_STACKLIMIT = -27,
+REGEX_ERROR_BADMODE        = -28,
+REGEX_ERROR_BADENDIANNESS  = -29,
+REGEX_ERROR_DFA_BADRESTART = -30,
+REGEX_ERROR_JIT_BADOPTION  = -31,
+REGEX_ERROR_BADLENGTH      = -32,
+REGEX_ERROR_UNSET          = -33
+};
+native Regex:regex_compile(const pattern[], &ret = 0, error[] = "", maxLen = 0, const flags[]="");
+native regex_match_c(const string[], Regex:pattern, &ret = 0);
+native Regex:regex_match(const string[], const pattern[], &ret = 0, error[] = "", maxLen = 0, const flags[] = "");
+native regex_substr(Regex:id, str_id, buffer[], maxLen);
+native regex_free(&Regex:id);
+native Regex:regex_compile_ex(const pattern[], flags = 0, error[]= "", maxLen = 0, &errcode = 0);
+native regex_match_all_c(const string[], Regex:pattern, &ret = 0);
+native Regex:regex_match_all(const string[], const pattern[], flags = 0, error[]= "", maxLen = 0, &errcode = 0);
+stock regex_match_simple(const str[], const pattern[], flags = 0, error[]= "", maxLen = 0, &errcode = 0)
+{
+new Regex:regex = regex_compile_ex(pattern, flags, error, maxLen, errcode);
+if (regex < REGEX_OK)
+{
+return -1;
+}
+new substrings = regex_match_c(str, regex);
+regex_free(regex);
+return substrings;
+}
+#define REGEX_FORMAT_DEFAULT   0                                                                  
+#define REGEX_FORMAT_NOCOPY    (1<<0)                                                                                                    
+#define REGEX_FORMAT_FIRSTONLY (1<<1)                                                                      
+native regex_replace(Regex:pattern, string[], maxLen, const replace[], flags = REGEX_FORMAT_DEFAULT, &errcode = 0);

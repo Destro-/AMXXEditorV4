@@ -1,0 +1,17 @@
+#if defined _nvault_included
+#endinput
+#endif
+#define _nvault_included
+#pragma reqlib nvault
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma loadlib nvault
+#endif
+native nvault_open(const name[]);
+native nvault_get(vault, const key[], any:...);
+native nvault_lookup(vault, const key[], value[], maxlen, &timestamp);
+native nvault_set(vault, const key[], const value[]);
+native nvault_pset(vault, const key[], const value[]);
+native nvault_prune(vault, start, end);
+native nvault_close(vault);
+native nvault_remove(vault, const key[]);
+native nvault_touch(vault, const key[], timestamp=-1);

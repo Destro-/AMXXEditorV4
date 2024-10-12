@@ -1,65 +1,54 @@
-/************************************************************
-*  Guide:
-*    https://www.sublimetext.com/docs/3/color_schemes.html
-*************************************************************/
 {
-	"name": "AMXXEditor: Twlight",
+	"name": "AMXXEditor: Twilight",
 	"author": "Destro",
-	"amxxeditor":
-	{
+	"amxxeditor": {
 		"default_popup": "BasicBlack",
-		"default_console": "SmallFonts-Terminal",
-		"syntax_settings":
-		{
-			// Custom settings...
-			//"font_face": ""
-		}
+		"default_console": "SmallFonts-Terminal"
 	},
-	"variables":
-    {
-        "main-foreground": 		"#8797B0",
-        "main-background": 		"#151515",
-    },
-	"globals":
-	{
+	"variables": {
+		"main-foreground": "#8797B0",
+		"main-background": "#151515",
+		"selection-color": "#DDF0FF",
+		"highlight-color": "#BCE617",
+		"comment-color": "#555",
+	},
+	"globals": {
 		"foreground": "var(main-foreground)",
 		"background": "var(main-background)",
-		"caret": "#10B2E8",
+		"caret": "#b5af0b",
 
 		/* Text Selection */
-		"selection": "#DDF0FF33",
-		"selection_border": "#DDF0FF33",
-		"invisibles": "#CAE2FB3D", // TAB / SPACE
-		
+		"selection": "color(var(selection-color) a(20%))",
+		"selection_border": "color(var(selection-color) a(20%))",
+		"invisibles": "color(var(main-foreground) a(25%))", // TAB / SPACE
 		
 		/* Find Highlight */
 		"highlight": "#000",
-		"find_highlight": "#BCE617",
+		"find_highlight": "var(highlight-color)",
 		"find_highlight_foreground": "#000",
 		
 		/* Highlight active brackets */
 		"brackets_foreground": "#a00",
 		"brackets_options": "foreground",
-		"bracket_contents_foreground": "#fff",
+		"bracket_contents_foreground": "#FFF",
 		"bracket_contents_options": "underline",
 		
 		/* Indentation guides */
-		"guide": "#bbb",
-		"stack_guide": "#ddd",
-		"active_guide": "#666",
+		"guide": "color(var(comment-color) a(35%))",
+		"stack_guide": "color(var(comment-color) a(70%))",
+		"active_guide": "var(comment-color)",
 		
 		/* Line numbers */
-		"gutter": "#222", 
-		"gutter_foreground": "#aaa", 
-		"line_highlight": "#333",
+		"gutter": "var(main-background)", 
+		"gutter_foreground": "color(var(main-foreground) a(50%))", 
+		"line_highlight": "color(var(main-background) a(50%))"
 	},
 	
-	"rules":
-	[
+	"rules": [
 		{
 			"name": "Comment",
 			"scope": "comment",
-			"foreground": "#555",
+			"foreground": "var(comment-color)",
 			"font_style": "italic"
 		},
 		{
@@ -90,112 +79,102 @@
 			"foreground": "#3B7BB3"
 		},
 		{
-			"name": "Pawn Function parens",
-			"scope": "function.parens",
-			"foreground": "#aaa",
-			"font_style": "bold"
-		},
-		
-		{
-			"name": "Pawn Define Constant",
+			"name": "Define Constant",
 			"scope": "entity.name.constant.preprocessor",
 			"foreground": "#CF8506"
 		},
 		{
-			"name": "Pawn Include path",
+			"name": "Include path",
 			"scope": "meta.preprocessor.include.path",
 			"foreground": "#B4DE0D"
 		},
 		{
-			"name": "Pawn Preprocessor",
+			"name": "Preprocessor",
 			"scope": "meta.preprocessor",
 			"foreground": "#FFA60D"
 		},
 		{
-			"name": "Pawn Define Group",
+			"name": "Define Multiline Block",
+			"scope": "meta.preprocessor.define.multiline",
+			"foreground": "var(main-foreground)",
+			"background": "color(var(main-background) l(+ 5%))"
+		},
+		{
+			"name": "Define Group",
 			"scope": "meta.preprocessor.group",
 			"foreground": "#B4DE0D"
 		},
-		
-		
 		{
-			"name": "Pawn Control",
+			"name": "Control",
 			"scope": "keyword.control",
 			"foreground": "#C9A34F"
 		},
 		{
-			"name": "Pawn Operator",
+			"name": "Operator",
 			"scope": "keyword.operator",
 			"foreground": "#E0BD5C"
 		},
-		
 		{
-			"name": "Pawn Brackets",
+			"name": "Brackets",
 			"scope": "meta.brackets",
 			"foreground": "#aaa",
 			"font_style": "bold"
 		},
 		{
-			"name": "Pawn Parens",
-			"scope": "parens",
+			"name": "Parens",
+			"scope": "punctuation.section.group",
 			"foreground": "#aaa",
 			"font_style": "bold"
 		},
 		{
-			"name": "Pawn Brace",
-			"scope": "keyword.brace",
+			"name": "Brace",
+			"scope": "punctuation.section.block",
 			"foreground": "#aaa"
 		},
 		{
-			"name": "Pawn Coma",
+			"name": "Coma",
 			"scope": "punctuation.separator",
 			"foreground": "#aaa"
 		},
 		{
-			"name": "Pawn Function Types",
+			"name": "Function Types",
 			"scope": "storage.modifier.function",
 			"foreground": "#EAED91",
 			"font_style": "bold"
 		},
 		{
-			"name": "Pawn Vars Types",
+			"name": "Vars Types",
 			"scope": "storage.type.vars",
 			"foreground": "#D3D66F"
 		},
 		{
-			"name": "Pawn Tag",
+			"name": "Tag",
 			"scope": "storage.modifier.tag",
 			"foreground": "#B5B861",
 			"font_style": "italic"
 		},
 		{
-			"name": "Pawn String",
+			"name": "String",
 			"scope": "string",
-			"foreground": "#84A364",
-			"font_style": ""
+			"foreground": "#84A364"
 		},
 		{
-			"name": "Pawn String Escape",
+			"name": "String Escape",
 			"scope": "string constant",
 			"foreground": "#9FC748"
 		},
-		
 		{
-			"name": "Pawn Constant Vars",
+			"name": "Constant Vars",
 			"scope": "constant.vars",
 			"foreground": "#8B6AAD",
 			"font_style": "italic",
-			
-			// Fix bug, reverse foreground/background
 			"background": "#00000001"
 		},
 		{
-			/* Fix selection highlight bug*/
 			"name": "Fix Constant on selection",
 			"scope": "fixselection",
-			"background": "#00000001",
+			"background": "#00000001"
 		},
-		
 		{
 			"name": "Invalid – Illegal",
 			"scope": "invalid.illegal",

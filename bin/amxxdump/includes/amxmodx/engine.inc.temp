@@ -1,0 +1,93 @@
+#if defined _engine_included
+#endinput
+#endif
+#define _engine_included
+#include <engine_const>
+#pragma reqlib engine
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma loadlib engine
+#endif
+native traceresult(type, any:...);
+native register_impulse(impulse, const function[]);
+native register_touch(const Touched[], const Toucher[], const function[]);
+native register_think(const Classname[], const function[]);
+native unregister_impulse(registerid);
+native unregister_touch(registerid);
+native unregister_think(registerid);
+native set_speak(iIndex, iSpeakFlags);
+native get_speak(iIndex);
+native drop_to_floor(entity);
+native get_info_keybuffer(id, buffer[], length);
+native force_use(entUsed, entUser);
+native Float:get_global_float(variable);
+native get_global_int(variable);
+native get_global_string(variable, string[], maxlen);
+native get_global_vector(variable, Float:vector[3]);
+native get_global_edict(variable);
+native get_global_edict2(variable);
+native entity_set_size(index, const Float:mins[3], const Float:maxs[3]);
+native get_decal_index(const szDecalName[]);
+native Float:entity_range(ida, idb);
+native bool:entity_intersects(entity, other);
+native entity_get_int(iIndex, iKey);
+native entity_set_int(iIndex, iKey, iVal);
+native Float:entity_get_float(iIndex, iKey);
+native entity_set_float(iIndex, iKey, Float:iVal);
+native entity_get_vector(iIndex, iKey, Float:vRetVector[3]);
+native entity_set_vector(iIndex, iKey, const Float:vNewVector[3]);
+native entity_get_edict(iIndex, iKey);
+native entity_get_edict2(iIndex, iKey);
+native entity_set_edict(iIndex, iKey, iNewIndex);
+native entity_get_string(iIndex, iKey, szReturn[], iRetLen);
+native entity_set_string(iIndex, iKey, const szNewVal[]);
+native entity_get_byte(iIndex, iKey);
+native entity_set_byte(iIndex, iKey, iVal);
+native create_entity(const szClassname[]);
+native remove_entity(iIndex);
+native entity_count();
+native is_valid_ent(iIndex);
+native find_ent_by_class(iIndex, const szClass[]);
+native find_ent_by_owner(iIndex, const szClass[], iOwner, iJghgType = 0);
+native find_ent_by_target(iIndex, const szClass[]);
+native find_ent_by_tname(iIndex, const szClass[]);
+native find_ent_by_model(iIndex, const szClass[], const szModel[]);
+native find_ent_in_sphere(start_from_ent, const Float:origin[3], Float:radius);
+native find_sphere_class(aroundent, const _lookforclassname[], Float:radius, entlist[], maxents, const Float:origin[3] = {0.0, 0.0, 0.0});
+native entity_set_origin(iIndex, const Float:fNewOrigin[3]);
+native entity_set_model(iIndex, const szModel[]);
+native set_ent_rendering(index, fx = kRenderFxNone, r = 0, g = 0, b = 0, render = kRenderNormal, amount = 0);
+native call_think(entity);
+native fake_touch(entTouched, entToucher);
+native DispatchSpawn(iIndex);
+native DispatchKeyValue(...);
+native get_keyvalue(entity, const szKey[], value[], maxLength);
+native copy_keyvalue(szClassName[], sizea, szKeyName[], sizeb, szValue[], sizec);
+native radius_damage(const Float:fExplodeAt[3], iDamageMultiplier, iRadiusMultiplier);
+native point_contents(const Float:fCheckAt[3]);
+native is_in_viewcone(entity, const Float:origin[3], use3d = 0);
+native is_visible(entity, target);
+native trace_line(iIgnoreEnt, const Float:fStart[3], const Float:fEnd[3], Float:vReturn[3]);
+native trace_normal(iIgnoreEnt, const Float:fStart[3], const Float:fEnd[3], Float:vReturn[3]);
+native trace_hull(const Float:origin[3], hull, ignoredent = 0, ignoremonsters = 0, const Float:end[3] = NULL_VECTOR);
+native trace_forward(const Float:start[3], const Float:angle[3], Float:give, ignoreEnt, &Float:hitX, &Float:hitY, &Float:shortestDistance, &Float:shortestDistLow, &Float:shortestDistHigh);
+native get_grenade_id(id, model[], len, grenadeid = 0);
+native Float:halflife_time();
+native set_lights(const Lighting[]);
+native attach_view(iIndex, iTargetIndex);
+native set_view(iIndex, ViewType);
+native playback_event(flags, invoker, eventindex, Float:delay, const Float:origin[3], const Float:angles[3], Float:fparam1, Float:fparam2, iparam1, iparam2, bparam1, bparam2);
+native get_usercmd(type, any:...);
+native set_usercmd(type, any:...);
+native eng_get_string(_string, _returnString[], _len);
+forward pfn_touch(ptr, ptd);
+forward server_frame();
+forward client_kill(id);
+forward client_PreThink(id);
+forward client_PostThink(id);
+forward client_impulse(id, impulse);
+forward client_cmdStart(id);
+forward pfn_think(entid);
+forward pfn_playbackevent(flags, entid, eventid, Float:delay, Float:Origin[3], Float:Angles[3], Float:fparam1, Float:fparam2, iparam1, iparam2, bparam1, bparam2);
+forward pfn_keyvalue(entid);
+forward pfn_spawn(entid);
+#include <engine_stocks>

@@ -1,0 +1,22 @@
+#if defined _sorting_included
+#endinput
+#endif
+#define _sorting_included
+enum SortMethod
+{
+Sort_Ascending = 0,
+Sort_Descending,
+Sort_Random,
+};
+enum SortType
+{
+Sort_Integer = 0,
+Sort_Float,
+Sort_String,
+};
+native SortIntegers(array[], array_size, SortMethod:order = Sort_Ascending);
+native SortFloats(Float:array[], array_size, SortMethod:order = Sort_Ascending);
+native SortStrings(array[][], num_strings, SortMethod:order = Sort_Ascending);
+native SortCustom1D(array[], array_size, const comparefunc[], data[]="", data_size=0);
+native SortCustom2D(array[][], array_size, const comparefunc[], data[]="", data_size=0);
+native SortADTArray(Array:array, SortMethod:order, SortType:type);

@@ -1,0 +1,169 @@
+{
+    "name": "AMXXEditor: One Dark",
+    "author": "Destro (Modified with One Dark colors)",
+    "amxxeditor":
+    {
+        "default_popup": "default",
+        "default_console": "default"
+    },
+    "variables":
+    {
+        "main-foreground":      "#abb2bf",
+        "main-background":      "#2B303B",
+    },
+    "globals":
+    {
+        "foreground": "var(main-foreground)",
+        "background": "var(main-background)",
+        "caret": "#528bff",
+        
+        /* Text Selection */
+        "selection": "#bbccf51b",
+        "selection_border": "#bbccf51b",
+        "invisibles": "#747369",
+        
+
+        /* Find Highlight */
+        "highlight": "#528bff80",
+        "find_highlight": "#314365",
+        "find_highlight_foreground": "#528bff",
+        
+        /* Highlight active brackets */
+        "brackets_foreground": "#528bff",
+        "brackets_options": "foreground",
+        "bracket_contents_foreground": "#528bff",
+        "bracket_contents_options": "underline",
+        
+        /* Indentation guides */
+        "guide": "#464c55",
+        "stack_guide": "#464c55",
+        "active_guide": "#464c55",
+        
+        /* Line numbers */
+        "gutter": "#2B303B", 
+        "gutter_foreground": "#636d8388", 
+        "line_highlight": "#8cc2fc0b",
+    },
+    
+    "rules":
+    [
+        {
+            "name": "Comment",
+            "scope": "comment",
+            "foreground": "#5f697a",
+            "font_style": "italic"
+        },
+        {
+            "name": "Number",
+            "scope": "constant.numeric",
+            "foreground": "#db9d63"
+        },
+        {
+            "name": "Number Float",
+            "scope": "constant.numeric.float",
+            "foreground": "#db9d63",
+            "font_style": "italic"
+        },
+        {
+            "name": "Built-in constant / Bool",
+            "scope": "constant.language",
+            "foreground": "#cd74e8",
+            "font_style": "bold"
+        },
+        {
+            "name": "Function Definition",
+            "scope": "support.function",
+            "foreground": "#5cb3fa"
+        },
+        {
+            "name": "Function Call",
+            "scope": "variable.function",
+            "foreground": "#5cb3fa"
+        },
+        {
+            "name": "Pawn Define Constant",
+            "scope": "entity.name.constant.preprocessor",
+            "foreground": "#db9d63"
+        },
+        {
+            "name": "Pawn Include path",
+            "scope": "meta.preprocessor.include.path",
+            "foreground": "#eb6772"
+        },
+        {
+            "name": "Pawn Preprocessor",
+            "scope": "meta.preprocessor",
+            "foreground": "#db9d63"
+        },
+        {
+            "name": "Pawn Define Multiline Block",
+            "scope": "meta.preprocessor.define.multiline",
+            "foreground": "var(main-foreground)",
+            "background": "color(var(main-background) blend(var(main-foreground) 97%))"
+        },
+        {
+            "name": "Pawn Define Group",
+            "scope": "meta.preprocessor.group",
+            "foreground": "#eb6772"
+        },
+        
+        {
+            "name": "Pawn Control",
+            "scope": "keyword.control",
+            "foreground": "#cd74e8"
+        },
+        {
+            "name": "Pawn Operator",
+            "scope": "keyword.operator",
+            "foreground": "#56b6c2"
+        },
+        {
+            "name": "Pawn Function Types",
+            "scope": "storage.modifier.function",
+            "foreground": "#cd74e8"
+        },
+        {
+            "name": "Pawn Vars Types",
+            "scope": "storage.type.vars",
+            "foreground": "#cd74e8"
+        },
+        {
+            "name": "Pawn Tag",
+            "scope": "storage.modifier.tag",
+            "foreground": "#f0c678",
+            "font_style": "italic"
+        },
+        {
+            "name": "Pawn String",
+            "scope": "string",
+            "foreground": "#9acc76"
+        },
+        {
+            "name": "Pawn String Escape",
+            "scope": "string constant",
+            "foreground": "#eb6772"
+        },
+        {
+            "name": "Pawn Constant Vars",
+            "scope": "constant.vars",
+            "foreground": "#fff",
+
+            // Fix bug, reverse foreground/background
+            "background": "#00000001"
+			
+        },
+        {
+            /* Fix selection highlight */
+            "name": "Fix Constant on selection",
+            "scope": "fixselection",
+            "background": "#00000001",
+        },
+        
+        {
+            "name": "Invalid – Illegal",
+            "scope": "invalid.illegal",
+            "foreground": "#ffffff",
+            "background": "#e05252"
+        }    
+    ]
+}

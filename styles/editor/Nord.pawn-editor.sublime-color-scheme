@@ -1,0 +1,180 @@
+{
+    "name": "AMXXEditor: Nord",
+    "author": "Destro (Modified with Nord colors)",
+    "amxxeditor":
+    {
+        "default_popup": "default",
+        "default_console": "default"
+    },
+    "variables":
+    {
+        // Nord color palette
+        "main-foreground": "#D8DEE9",      // Nord foreground
+        "main-background": "#2E3440",      // Nord background
+        "selection-bg": "#434C5E",
+        "comment-color": "#616E88",
+        "cyan": "#88C0D0",
+        "blue": "#81A1C1",
+        "purple": "#B48EAD",
+        "green": "#A3BE8C",
+        "coral": "#D08770",
+        "red": "#BF616A",
+        "yellow": "#EBCB8B",
+        "orange": "#D08770",
+        "invalid-red": "#BF616A",
+        
+        // Additional Nord colors
+        "light-blue": "#5E81AC",
+        "frost1": "#8FBCBB",
+        "nord1": "#3B4252",
+        "nord2": "#434C5E",
+        "nord3": "#4C566A"
+    },
+    "globals":
+    {
+        "foreground": "var(main-foreground)",
+        "background": "var(main-background)",
+        "caret": "var(cyan)",
+        
+        "selection": "var(selection-bg)",
+        "selection_border": "var(selection-bg)",
+        "invisibles": "var(comment-color)",
+        
+        "highlight": "var(cyan)",
+        "find_highlight": "var(selection-bg)",
+        "find_highlight_foreground": "var(main-foreground)",
+        
+        "brackets_foreground": "var(cyan)",
+        "brackets_options": "underline",
+        "bracket_contents_foreground": "var(cyan)",
+        "bracket_contents_options": "underline",
+        
+        "guide": "var(nord1)",
+        "stack_guide": "var(nord2)",
+        "active_guide": "var(nord3)",
+        
+        "gutter": "var(main-background)",
+        "gutter_foreground": "var(comment-color)",
+        "line_highlight": "var(nord1)"
+    },
+    "rules":
+    [
+        {
+            "name": "Comment",
+            "scope": "comment",
+            "foreground": "var(comment-color)",
+            "font_style": "italic"
+        },
+        {
+            "name": "Number",
+            "scope": "constant.numeric",
+            "foreground": "var(purple)"
+        },
+        {
+            "name": "Number Float",
+            "scope": "constant.numeric.float",
+            "foreground": "var(purple)",
+            "font_style": "italic"
+        },
+        {
+            "name": "Built-in constant / Bool",
+            "scope": "constant.language",
+            "foreground": "var(coral)",
+            "font_style": "bold"
+        },
+        {
+            "name": "Function Definition",
+            "scope": "support.function",
+            "foreground": "var(blue)"
+        },
+        {
+            "name": "Function Call",
+            "scope": "variable.function",
+            "foreground": "var(blue)"
+        },
+        {
+            "name": "Define Constant",
+            "scope": "entity.name.constant.preprocessor",
+            "foreground": "var(purple)"
+        },
+        {
+            "name": "Include path",
+            "scope": "meta.preprocessor.include.path",
+            "foreground": "var(green)"
+        },
+        {
+            "name": "Preprocessor",
+            "scope": "meta.preprocessor",
+            "foreground": "var(purple)"
+        },
+        {
+            "name": "Define Multiline Block",
+            "scope": "meta.preprocessor.define.multiline",
+            "foreground": "var(main-foreground)",
+            "background": "var(nord1)"
+        },
+        {
+            "name": "Define Group",
+            "scope": "meta.preprocessor.group",
+            "foreground": "var(red)"
+        },
+        {
+            "name": "Control",
+            "scope": "keyword.control",
+            "foreground": "var(cyan)"
+        },
+        {
+            "name": "Operator",
+            "scope": "keyword.operator",
+            "foreground": "var(cyan)"
+        },
+        {
+            "name": "Punctuations '().,;[]{}'",
+            "scope": "punctuation.section, punctuation.separator",
+            "foreground": "var(frost1)"
+        },
+        {
+            "name": "Function Types",
+            "scope": "storage.modifier.function",
+            "foreground": "var(cyan)"
+        },
+        {
+            "name": "Vars Types",
+            "scope": "storage.type.vars",
+            "foreground": "var(cyan)"
+        },
+        {
+            "name": "Tag",
+            "scope": "storage.modifier.tag",
+            "foreground": "var(yellow)",
+            "font_style": "italic"
+        },
+        {
+            "name": "String",
+            "scope": "string",
+            "foreground": "var(green)"
+        },
+        {
+            "name": "String Escape",
+            "scope": "string constant",
+            "foreground": "var(orange)"
+        },
+        {
+            "name": "Constant Vars",
+            "scope": "constant.vars",
+            "foreground": "var(frost1)",
+            "background": "#00000001"
+        },
+        {
+            "name": "Fix Constant on selection",
+            "scope": "fixselection",
+            "background": "#00000001"
+        },
+        {
+            "name": "Invalid – Illegal",
+            "scope": "invalid.illegal",
+            "foreground": "var(main-foreground)",
+            "background": "var(invalid-red)"
+        }    
+    ]
+}

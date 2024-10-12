@@ -1,5 +1,7 @@
-4.4-4403
+4.4-4410
 
 News:
-- New: asd
-- Fix: asd
+- New: AMXX-Uncompress; Rewritten in Python and improved.
+- New: Default Profile, now includes a compiler to allow having a default profile.
+- New: New color-scheme and popup css.
+...

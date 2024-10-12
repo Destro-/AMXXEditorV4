@@ -1,5 +1,29 @@
+/* Sublime Text MiniHTML docs -> http://www.sublimetext.com/docs/minihtml.html */
+
+/*
+	Sublime Text Vars:
+    var(--background)
+    var(--foreground)
+    var(--accent)
+    var(--redish)
+    var(--orangish)
+    var(--yellowish)
+    var(--greenish)
+    var(--cyanish)
+    var(--bluish)
+    var(--purplish)
+    var(--pinkish)
+	
+	AMXX-Editor:
+	var(--micro-size)
+	var(--small-size)
+	var(--normal-size)
+	var(--large-size)
+*/
+
 html {
 	font-family: Tahoma;
+	font-size: var(--normal-size);
 	color: #111;
 }
 
@@ -7,6 +31,7 @@ body {
 	margin: 0px;
 	background-color: #fff;
 }
+
 
 .top {
 	padding: 4px 10px 7px 10px;
@@ -16,8 +41,8 @@ body {
 }
 
 .content {
-	background-color: #fff;
 	padding: 5px 10px 5px 10px;
+	background-color: #fff;
 }
 
 .bottom {
@@ -25,24 +50,42 @@ body {
 	
 }
 
-.separator { padding: 0px 5px 0px 5px }
-.customLink { color: #000; font-weight: bold;}
 
-.incInfo { color: #000; font-weight: bold;}
-.incPath { color: #ff8040; font-weight: bold;}
+/********************************/
 
-.pawnDefaultColor { color: #000080; font-family: Verdana; }
-.pawnFunction { color: #e00; }
-.pawnString { color: #f00; }
-.pawnKeyword { color: #007700; }
-.pawnConstant { color: #007700; }
-.pawnNumber { color: #000080; }
-.pawnTag { color: #007700; font-style: italic; }
-.pawnTag a { color: #007700; text-decoration: none; }
+/* Popup top */
+.top a { color: #000; font-weight: bold;}
+.top .separator { 
+	padding: 0px 5px 0px 5px;
+}
 
-.inspectorTitle { color: #000; font-weight: bold;}
-.inspectorBlock { color: #000; }
 
+/* Tooltip function */
+.tooltip-function .inspectorTitle { color: #000; font-weight: bold; margin-top: 8px; }
+.tooltip-function .inspectorBlock { color: #444; }
+
+
+/* Tooltip include */
+.tooltip-include .info {
+	margin: 0px;
+	font-weight: bold;
+}
+.tooltip-include .path {
+	color: #D20A0A;
+}
+
+
+/* Tooltip tags */
+.tooltip-tag div.itemrow {
+	margin: 2px;
+}
+
+.tooltip-tag a.funcname {
+	padding-left: 4px;
+}
+
+
+/* Document comments Block */
 .code {
 	font-family: monospace;
 	background-color: #f5f5f5;
@@ -52,14 +95,45 @@ body {
 }
 
 .code b {
-	color: #000;
-}
-
-.doct2 { 
-	color: #333;
-}
-
-.doct1 { 
 	color: #666;
+}
+
+.doc2 { 
+	color: #111;
+}
+
+.doc1 { 
+	color: #444;
 	font-style: italic;
 }
+
+
+/* Buttons */
+.btn {
+	font-size: var(--small-size);
+	text-decoration: none;
+	border-radius: 4px;
+	padding-right: 3px;
+	padding-left: 3px;
+}
+
+.btn.go {
+	background-color: #4fd154;
+	color: #fff;
+}
+
+.btn.copy {
+	background-color: #4fd154;
+	color: #fff;
+}
+
+
+/* Syntax style ( setting 'tooltip_style_mode' = 0  */
+.pawnDefaultColor { color: #000080; font-family: Verdana; }
+.pawnFunction { color: #e00; }
+.pawnString { color: #f00; }
+.pawnOperator { color: #007700; }
+.pawnType { color: #007700; }
+.pawnNumber { color: #000080; }
+.pawnTag { color: #007700; font-style: italic; }
+.pawnTag a { color: #007700; text-decoration: none; }

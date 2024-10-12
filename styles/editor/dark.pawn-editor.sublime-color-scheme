@@ -8,12 +8,7 @@
 	"amxxeditor":
 	{
 		"default_popup": "BasicBlack",
-		"default_console": "DarkColorize",
-		"syntax_settings":
-		{
-			// Custom settings...
-			//"font_face": ""
-		}
+		"default_console": "DarkColorize"
 	},
 	"variables":
     {
@@ -90,20 +85,13 @@
 			"foreground": "#3880D1"
 		},
 		{
-			"name": "Pawn Function parens",
-			"scope": "function.parens.pawn",
-			"foreground": "#575A7D",
-			"font_style": "bold"
-		},
-		
-		{
 			"name": "Pawn Define Constant",
-			"scope": "entity.name.constant.preprocessor.pawn",
+			"scope": "entity.name.constant.preprocessor",
 			"foreground": "#CF8506"
 		},
 		{
 			"name": "Pawn Include path",
-			"scope": "meta.preprocessor.include.path.pawn",
+			"scope": "meta.preprocessor.include.path",
 			"foreground": "#B4DE0D"
 		},
 		{
@@ -131,19 +119,19 @@
 		
 		{
 			"name": "Pawn Brackets",
-			"scope": "meta.brackets.pawn",
+			"scope": "meta.brackets",
 			"foreground": "#575A7D",
 			"font_style": "bold"
 		},
 		{
 			"name": "Pawn Parens Group",
-			"scope": "parens.pawn",
+			"scope": "punctuation.section.group",
 			"foreground": "#575A7D",
 			"font_style": "bold"
 		},
 		{
 			"name": "Pawn Brace",
-			"scope": "keyword.brace.pawn",
+			"scope": "punctuation.section.block",
 			"foreground": "#575A7D"
 		},
 		{
@@ -153,13 +141,13 @@
 		},
 		{
 			"name": "Pawn Function Types",
-			"scope": "storage.modifier.function.pawn",
+			"scope": "storage.modifier.function",
 			"foreground": "#5BC718",
 			"font_style": "bold"
 		},
 		{
 			"name": "Pawn Vars Types",
-			"scope": "storage.type.vars.pawn",
+			"scope": "storage.type.vars",
 			"foreground": "#5BC718"
 		},
 		{
@@ -182,7 +170,7 @@
 		
 		{
 			"name": "Pawn Constant Vars",
-			"scope": "constant.vars.pawn",
+			"scope": "constant.vars",
 			"foreground": "#7F98BA",
 			"font_style": "italic",
 			

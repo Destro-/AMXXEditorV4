@@ -1,53 +1,60 @@
 {
-	// Example: AMXXEditor 4.2 by Destro
+	// Example: AMXX-Editor v4.4 by Destro
 
+	"active_profile": "default (AMXX 1.9)",
 	"build_profiles":
 	{
-		/*"AMXX-1.8.2":
+		/* Example:
+		"AMXX-1.8.2":
 		{
 			"amxxpc_debug": 2,
-			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\amxxpc.exe",
-			"include_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.8.2\\include",
-			"output_dir": "D:\\archivos\\plugins"
+			"amxxpc_path": "D:\\amxmodx\\compiler\\1.8.2\\amxxpc.exe",
+			"include_dir": "D:\\amxmodx\\compiler\\1.8.2\\include",
+			"output_dir": "D:\\amxmodx\\plugins"
 		},
 		"AMXX-1.9":
 		{
 			"amxxpc_debug": 2,
-			"amxxpc_path": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.9\\amxxpc.exe",
-			"include_dir": "D:\\archivos\\amxx_mm_hlsdk\\compiler\\1.9\\include",
-			"output_dir": "D:\\archivos\\plugins"
-		}*/
+			"amxxpc_path": "D:\\amxmodx\\compiler\\1.9\\amxxpc.exe",
+			"include_dir": "D:\\amxmodx\\compiler\\1.9\\include",
+			"output_dir": "D:\\amxmodx\\plugins"
+		}
+
+		Valid variables in path:
+		- ${package}
+		- ${file_path}
+
+		*/
 	},
 	
-
-	/* EDITOR */
+	/* Editor features */
 	"enable_tooltip": 				true,	// ( true / false )
 	"enable_buildversion": 			true,	// ( true / false )
 	"enable_check_invalid": 		true,	// ( true / false )
 	"enable_dynamic_highlight": 	true,	// ( true / false )
 	
+	/* Autocomplete */
 	"ac_enable": 			true,		// ( true / false )
-	"ac_keywords": 			2,			// ( 0 disable, 1 normal, 2 insert parents )
+	"ac_keywords": 			2,			// ( 0: Disable, 1: Normal, 2: Insert parents )
 	"ac_snippets": 			true,		// ( true / false )
 	"ac_preprocessor": 		true,		// ( true / false )
 	"ac_emit_info": 		true,		// ( true / false )
 	"ac_local_var": 		true,		// ( true / false )
 	"ac_extra_sorted":		true,		// ( true / false )
 	
-	"live_refresh_delay": 	1.5, 		// ( 0.5 ~ 5.0 ) 		Delay before regenerating Auto-Completion
+	"live_refresh_delay": 	1.5, 		// ( 0.5 ~ 5.0 ) Delay before reparsing code.
 
-	"tooltip_style_mode":	0,			// 0: Using CSS style file, 1: Using Editor color-scheme file.
-	"tooltip_font_size":	1,			// editor font_size + tooltip_font_size
+	"tooltip_style_mode":	1,			// 0: Using CSS style file, 1: Generate from color-scheme.
+	"tooltip_font_size":	1,			// Tooltip font size offset (font_size + tooltip_font_size)
 
-	"style_editor": 		"AMXXStudio", 	// ( stylename / "default" )
-	"style_console": 		"AMXXStudio",	// ( stylename / "default" )
-	"style_popup": 			"AMXXStudio", 	// ( stylename  )
-	
+	"style_editor": 		"default", 	// ( stylename )
+	"style_console": 		"default",	// ( stylename )
+	"style_popup": 			"default", 	// ( stylename )
 	
 		
 
 	/***********************************************
-	* Debug message/log flags:
+	* Debug flags:
 	* ""   - Set default: "a".
 	* "a"  - Errors messages.
 	* "b"  - Warnings messages.
@@ -57,8 +64,8 @@
 	* "f"  - Info Analyzer.
 	* "s"  - Sublime EventListener (dev).
 	* "z"  - Enable ViewDebugMode (colorize code sections).
-	* "*"  - All debugging flags at the same time.
+	* "*"  - All debugging flags.
 	***********************************************/
-	"debug_flags": "abcd",
-	"debug_flags_log": "abcd",
+	"debug_flags": "abe",				// Console message
+	"debug_flags_log": "abcde",			// Log file
 }

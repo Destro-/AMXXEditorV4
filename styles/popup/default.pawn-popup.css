@@ -1,0 +1,131 @@
+/* Sublime Text MiniHTML docs -> http://www.sublimetext.com/docs/minihtml.html */
+
+/*
+	Sublime Text Vars:
+    var(--background)
+    var(--foreground)
+    var(--accent)
+    var(--redish)
+    var(--orangish)
+    var(--yellowish)
+    var(--greenish)
+    var(--cyanish)
+    var(--bluish)
+    var(--purplish)
+    var(--pinkish)
+	
+	AMXX-Editor:
+	var(--micro-size)
+	var(--small-size)
+	var(--normal-size)
+	var(--large-size)
+*/
+
+html {
+	--fg-title: color(var(--foreground) s(- 100%));
+	
+	font-family: Tahoma;
+	font-size: var(--normal-size);
+	color: var(--fg-title);
+}
+
+body {
+	margin: 0px;
+}
+
+
+.top {
+	padding: 4px 10px 7px 10px;
+	border-radius: 5;
+	font-family: Verdana;
+}
+
+.content {
+	padding: 5px 10px 5px 10px;
+}
+
+.bottom {
+	
+	
+}
+
+
+/********************************/
+
+/* Popup top */
+.top a { color: var(--fg-title); font-weight: bold;}
+.top .separator { 
+	padding: 0px 5px 0px 5px;
+}
+
+
+/* Tooltip function */
+.tooltip-function .inspectorTitle { color: var(--fg-title); font-weight: bold; margin-top: 8px; }
+.tooltip-function .inspectorBlock { color: var(--fg-title); }
+
+
+/* Tooltip include */
+.tooltip-include .info {
+	margin: 0px;
+	font-weight: bold;
+}
+.tooltip-include .path {
+	color: var(--redish);
+}
+
+
+/* Tooltip tags */
+.tooltip-tag div.itemrow {
+	margin: 2px;
+}
+
+.tooltip-tag a.funcname {
+	padding-left: 4px;
+}
+
+
+/* Document comments Block */
+.code {
+	font-family: monospace;
+	background-color: var(--background);
+	padding: 4px;
+	border-radius: 2px;
+	margin: 5px;
+}
+
+.code b {
+
+}
+
+.doc2 { 
+	color: var(--yellowish);
+}
+
+.doc1 { 
+	color: var(--orangish);
+	font-style: italic;
+}
+
+
+/* Buttons */
+.btn {
+	font-size: var(--small-size);
+	text-decoration: none;
+	border-radius: 4px;
+	padding-right: 3px;
+	padding-left: 3px;
+}
+
+.btn.go {
+	background-color: #4fd154;
+	color: #fff;
+}
+
+.btn.copy {
+	background-color: #4fd154;
+	color: #fff;
+}
+
+
+/* Syntax style ( setting 'tooltip_style_mode' = 0  */
+.pawnDefaultColor { color: var(--foreground); font-family: Verdana; }

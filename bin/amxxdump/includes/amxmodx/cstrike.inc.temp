@@ -1,0 +1,150 @@
+#if defined _cstrike_included
+#endinput
+#endif
+#define _cstrike_included
+#pragma reqlib cstrike
+#if !defined AMXMODX_NOAUTOLOAD
+#pragma loadlib cstrike
+#endif
+#include <cstrike_const>
+native cs_get_user_deaths(index);
+native cs_set_user_deaths(index, newdeaths, bool:scoreboard = true);
+native cs_get_hostage_foll(index);
+native cs_set_hostage_foll(index, followedindex = 0);
+native cs_get_hostage_id(index);
+native cs_get_user_bpammo(index, weapon);
+native cs_set_user_bpammo(index, weapon, amount);
+native cs_get_user_defuse(index);
+native cs_set_user_defuse(index, defusekit = 1, r = 0, g = 160, b = 0, icon[] = "defuser", flash = 0);
+native cs_get_user_buyzone(index);
+native cs_get_user_hasprim(index);
+native cs_get_user_model(index, model[], len);
+native cs_set_user_model(index, const model[], bool:update_index = false);
+native cs_reset_user_model(index);
+native cs_get_user_money(index);
+native cs_set_user_money(index, money, flash = 1);
+native cs_get_user_nvg(index);
+native cs_set_user_nvg(index, nvgoggles = 1);
+native cs_get_user_plant(index);
+native cs_set_user_plant(index, plant = 1, showbombicon = 1);
+native cs_set_user_team(index, any:team, any:model = CS_DONTCHANGE, bool:send_teaminfo = true);
+native CsTeams:cs_get_user_team(index, &any:model = CS_DONTCHANGE);
+native cs_get_user_vip(index);
+native cs_set_user_vip(index, vip = 1, model = 1, scoreboard = 1);
+native cs_get_user_tked(index);
+native cs_set_user_tked(index, tk = 1, subtract = 1);
+native cs_get_user_driving(index);
+native cs_get_user_shield(index);
+native cs_get_user_stationary(index);
+native cs_get_user_armor(index, &CsArmorType:armortype = CS_ARMOR_NONE);
+native cs_set_user_armor(index, armorvalue, CsArmorType:armortype);
+native cs_get_weapon_burst(index);
+native cs_set_weapon_burst(index, burstmode = 1);
+native cs_get_weapon_silen(index);
+native cs_set_weapon_silen(index, silence = 1, draw_animation = 1);
+native cs_get_weapon_ammo(index);
+native cs_set_weapon_ammo(index, newammo);
+native cs_get_weapon_id(index);
+native cs_get_no_knives();
+native cs_set_no_knives(noknives = 0);
+native cs_user_spawn(player);
+native cs_get_armoury_type(index, &count = 1);
+native cs_set_armoury_type(index, type, count = -1);
+native cs_get_weaponbox_item(weaponboxIndex);
+native cs_get_user_mapzones(index);
+native cs_set_user_zoom(index, type, mode);
+native cs_get_user_zoom(index);
+native cs_get_user_submodel(index);
+native cs_set_user_submodel(index, value);
+native Float:cs_get_user_lastactivity(index);
+native cs_set_user_lastactivity(index, Float:value);
+native cs_get_user_hostagekills(index);
+native cs_set_user_hostagekills(index, value);
+native Float:cs_get_hostage_lastuse(index);
+native cs_set_hostage_lastuse(index, Float:value);
+native Float:cs_get_hostage_nextuse(index);
+native cs_set_hostage_nextuse(index, Float:value);
+native Float:cs_get_c4_explode_time(index);
+native cs_set_c4_explode_time(index, Float:value);
+native bool:cs_get_c4_defusing(c4index);
+native cs_set_c4_defusing(c4index, bool:defusing);
+native cs_create_entity(const classname[]);
+native cs_find_ent_by_class(start_index, const classname[]);
+native cs_find_ent_by_owner(start_index, const classname[], owner);
+native cs_set_ent_class(index, const classname[]);
+native any:cs_get_item_id(const name[], &CsWeaponClassType:classid = CS_WEAPONCLASS_NONE);
+native bool:cs_get_item_alias(itemid, name[], name_maxlen, altname[] = "", altname_maxlen = 0);
+native bool:cs_get_translated_item_alias(const alias[], itemname[], maxlength);
+native any:cs_get_weapon_info(weapon_id, CsWeaponInfo:type);
+native cs_get_user_weapon_entity(playerIndex);
+native cs_get_user_weapon(playerIndex, &clip = 0, &ammo = 0);
+stock CsWeaponClassType:cs_get_weapon_class(weapon_id)
+{
+new CsWeaponClassType:type = CS_WEAPONCLASS_NONE;
+if (cs_is_valid_itemid(weapon_id, .weapon_only = true) || weapon_id == CSI_SHIELD)
+{
+switch (weapon_id)
+{
+case CSI_SHIELDGUN, CSI_SHIELD: 
+{
+type = CS_WEAPONCLASS_PISTOL;
+}
+case CSI_KNIFE: 
+{
+type = CS_WEAPONCLASS_KNIFE;
+}
+default:
+{
+new const bits = (1 << weapon_id);
+if(bits & CSI_ALL_PISTOLS)
+{
+type = CS_WEAPONCLASS_PISTOL;
+}
+else if(bits & CSI_ALL_GRENADES)
+{
+type = CS_WEAPONCLASS_GRENADE;
+}
+else if(bits & CSI_ALL_SMGS)
+{
+type = CS_WEAPONCLASS_SUBMACHINEGUN;
+}
+else if(bits & CSI_ALL_SHOTGUNS)
+{
+type = CS_WEAPONCLASS_SHOTGUN;
+}
+else if(bits & CSI_ALL_MACHINEGUNS)
+{
+type = CS_WEAPONCLASS_MACHINEGUN;
+}
+else if(bits & CSI_ALL_RIFLES)
+{
+type = CS_WEAPONCLASS_RIFLE;
+}
+else if(bits & CSI_ALL_SNIPERRIFLES)
+{
+type = CS_WEAPONCLASS_SNIPERRIFLE;
+}
+}
+}
+}
+return type;
+}
+stock bool:cs_is_valid_itemid(id, bool:weapon_only = false)
+{
+if (id <= CSI_NONE)
+{
+return false;
+}
+if (id > CSI_LAST_WEAPON && id != CSI_SHIELDGUN && weapon_only)
+{
+return false;
+}
+if (id >= CSI_MAX_COUNT)
+{
+return false;
+}
+return true;
+}
+forward CS_InternalCommand(id, const cmd[]);
+forward CS_OnBuyAttempt(index, item);
+forward CS_OnBuy(index, item);

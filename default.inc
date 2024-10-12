@@ -1,4 +1,4 @@
-/* Sublime AMXX Editor v4.2 */
+/* Sublime AMXX-Editor v4.4 */
 
 #if defined _example_included
 	#endinput
