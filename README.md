@@ -2,7 +2,7 @@
 
 ### A Complete Editor for AMX Mod X on Sublime Text
 
-## Instalation:
+## Installation:
 Download Sublime Text 4, there’s a portable option:
 https://www.sublimetext.com/download_thanks?target=win-x64-portable
 
