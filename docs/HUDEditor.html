@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMXX HUD Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+
+/* ════════════════════════════════════════
+   VARIABLES GLOBALES
+   ════════════════════════════════════════ */
+:root {
+  --bg:           #0a0c10;
+  --panel:        #0f1318;
+  --border:       #1e2d3d;
+  --border-bright:#2a4a6a;
+  --accent:       #00d4ff;
+  --accent2:      #ff6b00;
+  --accent3:      #00ff88;
+  --text:         #c8d8e8;
+  --text-dim:     #709eb5;
+  --input-bg:     #080b0f;
+  --label:        #4797bf;
+  --glow:         0 0 12px rgba(0,212,255,0.4);
+  --glow2:        0 0 12px rgba(255,107,0,0.4);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  /* grilla sutil de fondo */
+  background-image:
+    repeating-linear-gradient(0deg,   transparent, transparent 39px, rgba(0,212,255,0.03) 40px),
+    repeating-linear-gradient(90deg,  transparent, transparent 39px, rgba(0,212,255,0.03) 40px);
+}
+
+
+/* ════════════════════════════════════════
+   HEADER
+   ════════════════════════════════════════ */
+header {
+  background: linear-gradient(135deg, #0d1520, #0f1a28);
+  border-bottom: 1px solid var(--border-bright);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* línea animada en el borde inferior del header */
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scanline 3s linear infinite;
+}
+
+@keyframes scanline {
+  0%, 100% { opacity: .3; }
+  50%       { opacity:  1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .3; }
+}
+
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--accent);
+  text-shadow: var(--glow);
+  letter-spacing: 2px;
+}
+.logo span { color: var(--accent2); text-shadow: var(--glow2); }
+
+.subtitle {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+}
+
+.badge {
+  margin-left: auto;
+  color: var(--accent);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+
+/* ════════════════════════════════════════
+   LAYOUT PRINCIPAL
+   ════════════════════════════════════════ */
+.app {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* columna izquierda — controles */
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-bright);
+  background: var(--panel);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar::-webkit-scrollbar       { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--accent); }
+
+/* columna derecha — preview + código */
+.right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+
+/* ════════════════════════════════════════
+   ENCABEZADOS DE PANEL
+   ════════════════════════════════════════ */
+.ph {
+  background: linear-gradient(90deg, rgba(0,212,255,.08), transparent);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 12px;
+  font-family: 'Orbitron', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ph .dot {
+  width: 5px;
+  height: 5px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: var(--glow);
+  animation: blink 2s ease-in-out infinite;
+}
+
+
+/* ════════════════════════════════════════
+   SECCIONES DE LA SIDEBAR
+   ════════════════════════════════════════ */
+.sec    { border-bottom: 1px solid var(--border); padding: 9px 12px; }
+
+.stitle {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: var(--label);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.stitle::before { content: ''; width: 10px; height: 1px; background: var(--label); }
+
+
+/* ════════════════════════════════════════
+   CAMPOS DE FORMULARIO
+   ════════════════════════════════════════ */
+.field { margin-bottom: 7px; }
+
+.field label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.field input[type=text],
+.field input[type=number],
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color .2s;
+  appearance: none;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(0,212,255,.15);
+}
+
+.field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300d4ff'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+  cursor: pointer;
+}
+
+.field textarea { resize: vertical; min-height: 50px; }
+
+
+/* ════════════════════════════════════════
+   FILA RGB + SWATCH DE COLOR
+   ════════════════════════════════════════ */
+.rgb-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 30px;
+  gap: 5px;
+  align-items: end;
+  margin-bottom: 7px;
+}
+.rgb-row input[type=number] { text-align: center; }
+
+.color-swatch {
+  height: 27px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform .1s;
+  position: relative;
+}
+.color-swatch:hover { transform: scale(1.08); }
+.color-swatch input[type=color] {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+/* grids de dos columnas */
+.xy-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.eff-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+
+
+/* ════════════════════════════════════════
+   BOTONES DE TIPO (HUD / DHUD)
+   ════════════════════════════════════════ */
+.msg-type-btns { display: flex; gap: 0; }
+
+.msg-type-btn {
+  flex: 1;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 7px 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.04);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  transition: all .15s;
+}
+.msg-type-btn:first-child { border-right: 1px solid var(--border); }
+.msg-type-btn.active {
+  background: rgba(0,212,255,.12);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-right-color: var(--accent);
+}
+.msg-type-btn:not(.active):hover {
+  background: rgba(255,255,255,.08);
+  color: var(--text);
+}
+
+
+/* ════════════════════════════════════════
+   BOTONES "CENTRAR X / Y"
+   ════════════════════════════════════════ */
+.center-btn {
+  width: 100%;
+  margin-top: 3px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  transition: all .15s;
+}
+.center-btn:hover  { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,.08); }
+.center-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,.15); }
+
+
+/* ════════════════════════════════════════
+   BOTONES DE CANAL (Auto / 0-3)
+   ════════════════════════════════════════ */
+.ch-btns { display: flex; gap: 0; }
+
+.ch-btn {
+  flex: 1;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 6px 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-right: none;
+  background: rgba(255,255,255,.04);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  transition: all .15s;
+}
+.ch-btn:last-child { border-right: 1px solid var(--border); }
+.ch-btn.active {
+  background: rgba(0,212,255,.12);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-right-color: var(--accent);
+}
+.ch-btn.active + .ch-btn { border-left-color: var(--accent); }
+.ch-btn:not(.active):hover { background: rgba(255,255,255,.08); color: var(--text); }
+
+
+/* ════════════════════════════════════════
+   BOTONES DE EFECTO (Sin efecto / Flicker / Typewriter)
+   ════════════════════════════════════════ */
+.eff-btns { display: flex; gap: 0; margin-bottom: 7px; }
+
+.eff-btn {
+  flex: 1;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 6px 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-right: none;
+  background: rgba(255,255,255,.04);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  transition: all .15s;
+  text-align: center;
+}
+.eff-btn:last-child { border-right: 1px solid var(--border); }
+.eff-btn.active {
+  background: rgba(0,212,255,.12);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-right-color: var(--accent);
+}
+.eff-btn.active + .eff-btn { border-left-color: var(--accent); }
+.eff-btn:not(.active):hover { background: rgba(255,255,255,.08); color: var(--text); }
+
+
+/* ════════════════════════════════════════
+   ÁREA DE PREVIEW
+   ════════════════════════════════════════ */
+.preview-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* toolbar de play/stop, FUERA del canvas */
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.tb-label   { font-family: 'Orbitron', monospace; font-size: 9px; color: var(--accent); letter-spacing: 2px; }
+
+/* indicador "▶ PLAYING" */
+.play-ind      { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--accent3); letter-spacing: 2px; display: none; }
+.play-ind.show { display: block; animation: blink .6s ease-in-out infinite; }
+
+.btn-play {
+  background: rgba(0,255,136,.1);
+  border: 1px solid var(--accent3);
+  color: var(--accent3);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 4px 13px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all .2s;
+  margin-left: auto;
+}
+.btn-play:hover { background: rgba(0,255,136,.25); box-shadow: 0 0 10px rgba(0,255,136,.3); }
+
+.btn-stop {
+  background: rgba(255,68,68,.08);
+  border: 1px solid #884;
+  color: #cc8;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all .2s;
+}
+.btn-stop:hover { background: rgba(200,150,0,.2); border-color: #cc8; }
+
+/* canvas: solo fondo + elementos HUD arrastrables */
+.canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  min-height: 0;
+}
+
+.canvas-bg {
+  position: absolute;
+  inset: 0;
+  background-color: #1a2a1a;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+}
+
+/* hint de arrastre */
+.drag-hint {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,.5);
+  letter-spacing: 2px;
+  pointer-events: none;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+
+/* ════════════════════════════════════════
+   ELEMENTOS HUD ARRASTRABLES
+   ════════════════════════════════════════ */
+.hud-el {
+  position: absolute;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 17px;
+  line-height: 1.2;
+  white-space: pre;
+  cursor: grab;
+  user-select: none;
+  z-index: 10;
+  /* sin transform: origen = esquina sup-izq, igual que el engine de HL */
+  transition: none;
+}
+.hud-el:active    { cursor: grabbing; }
+.hud-el.inactive  { opacity: .4; pointer-events: none; cursor: default; }
+.hud-el.active-msg{ outline: 1px dashed rgba(255,255,255,.2); outline-offset: 4px; }
+.hud-el.dragging  { z-index: 99; cursor: grabbing; }
+
+
+/* ════════════════════════════════════════
+   BARRA DE MAPA / RESOLUCIÓN
+   ════════════════════════════════════════ */
+.map-bar {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 5px 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.map-bar::-webkit-scrollbar       { height: 3px; }
+.map-bar::-webkit-scrollbar-thumb { background: var(--accent); }
+
+.map-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--accent); letter-spacing: 1px; white-space: nowrap; flex-shrink: 0; }
+.map-sep   { width: 1px; height: 16px; background: var(--border-bright); flex-shrink: 0; margin: 0 2px; }
+
+.map-btn {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  padding: 3px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.map-btn:hover,
+.map-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,.1); }
+
+.res-btn {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  padding: 3px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.res-btn:hover,
+.res-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(255,107,0,.1); }
+
+
+/* ════════════════════════════════════════
+   PANEL DE CÓDIGO GENERADO
+   ════════════════════════════════════════ */
+.code-panel {
+  border-top: 1px solid var(--border-bright);
+  flex-shrink: 0;
+  height: 90px;
+  display: flex;
+  flex-direction: column;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(90deg, rgba(255,107,0,.08), transparent);
+  border-bottom: 1px solid var(--border);
+  padding: 5px 12px;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.code-title { font-family: 'Orbitron', monospace; font-size: 9px; color: var(--accent2); letter-spacing: 2px; flex: 1; }
+
+.btn-copy {
+  background: rgba(0,255,136,.1);
+  border: 1px solid var(--accent3);
+  color: var(--accent3);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  padding: 3px 10px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all .2s;
+}
+.btn-copy:hover  { background: rgba(0,255,136,.25); }
+.btn-copy.copied { background: rgba(0,255,136,.3); color: #fff; }
+
+.code-out {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 14px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  line-height: 1.65;
+  color: #c8d8e8;
+  white-space: pre;
+}
+.code-out::-webkit-scrollbar       { width: 3px; height: 3px; }
+.code-out::-webkit-scrollbar-thumb { background: var(--accent2); }
+
+/* colores de syntax highlighting */
+.c-kw  { color: #c678dd; }
+.c-fn  { color: #61afef; }
+.c-str { color: #98c379; }
+.c-num { color: #d19a66; }
+.c-cm  { color: #5c6370; font-style: italic; }
+
+
+/*  Input spin  */
+/* Chrome, Edge, Safari */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">AMXX <span>HUD</span> Editor</div>
+    <div class="subtitle">HUD Message Editor Tool</div>
+  </div>
+  <div class="badge">for AMXX Editor v4.4</div>
+</header>
+
+<div class="app">
+
+  <!-- ══════════════════ SIDEBAR ══════════════════ -->
+  <div class="sidebar">
+    <div class="ph"><div class="dot"></div> Configuración</div>
+
+    <!-- Tipo de mensaje -->
+    <div class="sec" style="padding:8px 12px">
+      <div class="msg-type-btns">
+        <button class="msg-type-btn active" id="btnHud"  onclick="setMsgType(false)">HUD Message</button>
+        <button class="msg-type-btn"        id="btnDhud" onclick="setMsgType(true)">DHUD Message</button>
+      </div>
+    </div>
+
+    <!-- Texto -->
+    <div class="sec">
+      <div class="stitle">Texto del Mensaje</div>
+      <div class="field" style="margin:0">
+        <textarea id="msgText" rows="3" placeholder="Escribe tu HUD message...">¡Bienvenido al servidor!</textarea>
+      </div>
+    </div>
+
+    <!-- Color primario + secundario -->
+    <div class="sec">
+      <div class="stitle">Color</div>
+
+      <div class="rgb-row">
+        <div class="field" style="margin:0"><label>- Red</label><input type="number" id="cR" step="10" min="0" max="255" value="90"></div>
+        <div class="field" style="margin:0"><label>- Green</label><input type="number" id="cG" step="10" min="0" max="255" value="190"></div>
+        <div class="field" style="margin:0"><label>- Blue</label><input type="number" id="cB" step="10" min="0" max="255" value="255"></div>
+        <div class="color-swatch" id="swatchA" style="background:rgb(90,190,255)">
+          <input type="color" id="colorPicker" value="#5abeff">
+        </div>
+      </div>
+
+      <!-- color2: solo visible en HUD (oculto en DHUD) -->
+      <div id="color2Section">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;">
+          Color Secundario (effectos)
+        </div>
+        <div class="rgb-row">
+          <div class="field" style="margin:0"><input type="number" id="cR2" step="10" min="0" max="255" value="255"></div>
+          <div class="field" style="margin:0"><input type="number" id="cG2" step="10" min="0" max="255" value="255"></div>
+          <div class="field" style="margin:0"><input type="number" id="cB2" step="10" min="0" max="255" value="250"></div>
+          <div class="color-swatch" id="swatchB" style="background:rgb(255,255,250)">
+            <input type="color" id="colorPicker2" value="#fffffa">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Posición -->
+    <div class="sec">
+      <div class="stitle">Posición</div>
+      <div class="xy-row">
+        <div class="field" style="margin:0">
+          <label>X</label>
+          <input type="number" id="posX" step="0.01" min="-1" max="1" value="0.45" style="text-align:center">
+          <button class="center-btn" id="btnCenterX" onclick="doToggleCenterX()">centrar X</button>
+        </div>
+        <div class="field" style="margin:0">
+          <label>Y</label>
+          <input type="number" id="posY" step="0.01" min="-1" max="1" value="0.15" style="text-align:center">
+          <button class="center-btn" id="btnCenterY" onclick="doToggleCenterY()">centrar Y</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Efectos y tiempos -->
+    <div class="sec">
+    <div class="stitle">Tiempos</div>
+      <div class="eff-row">
+        <div class="field" style="margin:0"><label>FX Time</label>    <input type="number" id="fxTime"   step="0.1"  min="0"    max="10" value="0.3"  style="text-align:center"></div>
+        <div class="field" style="margin:0"><label>Hold Time</label><input type="number" id="holdTime" step="0.1"  min="0.1"  max="60" value="3.0"  style="text-align:center"></div>
+      </div>
+      <div class="eff-row" style="margin-top:5px">
+        <div class="field" style="margin:0"><label>Fade In</label> <input type="number" id="fadeIn"   step="0.05" min="0.05" max="5"  value="1.0"  style="text-align:center"></div>
+        <div class="field" style="margin:0"><label>Fade Out</label><input type="number" id="fadeOut"  step="0.05" min="0.05" max="5"  value="0.75" style="text-align:center"></div>
+      </div>
+	  <div class="stitle">Efectos</div>
+      <div class="eff-btns">
+        <button class="eff-btn active" id="eff0" onclick="setEffect(this,0)">[0] Normal</button>
+        <button class="eff-btn"        id="eff1" onclick="setEffect(this,1)">[1] Flicker</button>
+        <button class="eff-btn"        id="eff2" onclick="setEffect(this,2)">[2] Typewriter</button>
+      </div>
+    </div>
+
+    <!-- Canal (solo visible en HUD) -->
+    <div id="channelSection" class="sec">
+      <div class="stitle">Canal</div>
+      <div class="ch-btns">
+        <button class="ch-btn active" id="chAuto" onclick="setChannel(this,-1)">Auto</button>
+        <button class="ch-btn" id="ch0" onclick="setChannel(this,0)">0</button>
+        <button class="ch-btn" id="ch1" onclick="setChannel(this,1)">1</button>
+        <button class="ch-btn" id="ch2" onclick="setChannel(this,2)">2</button>
+        <button class="ch-btn" id="ch3" onclick="setChannel(this,3)">3</button>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+
+  <!-- ══════════════════ COLUMNA DERECHA ══════════════════ -->
+  <div class="right">
+
+    <!-- PREVIEW -->
+    <div class="preview-area">
+
+      <!-- toolbar: play/stop FUERA del canvas -->
+      <div class="preview-toolbar">
+        <span class="tb-label">● VISTA PREVIA</span>
+        <div class="play-ind" id="playInd">▶ PLAYING</div>
+        <button class="btn-play" id="btnPlay" onclick="playAnimation()">▶ PLAY</button>
+        <button class="btn-stop" onclick="stopAnimation()">■ STOP</button>
+      </div>
+
+      <!-- canvas: fondo + elementos HUD arrastrables -->
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas-bg" id="canvasBg"></div>
+        <div class="drag-hint" id="dragHint">ARRASTRÁ EL TEXTO PARA REPOSICIONAR</div>
+      </div>
+
+      <!-- barra de mapa / resolución -->
+      <div class="map-bar">
+        <div class="map-label">MAPA:</div>
+        <button class="map-btn active" id="mapDust"   onclick="setMap(this,'de_dust2')">de_dust2</button>
+        <button class="map-btn"        id="mapInferno" onclick="setMap(this,'de_inferno')">de_inferno</button>
+        <button class="map-btn"        id="mapHud"     onclick="setMap(this,'hud')">Ingame HUD</button>
+        <button class="map-btn"        id="mapDhud"    onclick="setMap(this,'dhud')">Ingame DHUD</button>
+        <div class="map-sep"></div>
+        <div class="map-label">RESOLUCION:</div>
+        <button class="res-btn active" onclick="setRes(this,'800x600')">800×600</button>
+        <button class="res-btn"        onclick="setRes(this,'1024x768')">1024×768</button>
+        <button class="res-btn"        onclick="setRes(this,'1152x864')">1152×864</button>
+        <button class="res-btn"        onclick="setRes(this,'1280x960')">1280×960</button>
+        <button class="res-btn"        onclick="setRes(this,'1440x1080')">1440×1080</button>
+      </div>
+    </div><!-- /preview-area -->
+
+    <!-- CÓDIGO GENERADO -->
+    <div class="code-panel">
+      <div class="code-header">
+        <div class="code-title">Código Generado — AMX Mod X</div>
+        <button class="btn-copy" id="btnCopy" onclick="copyCode()">COPIAR</button>
+      </div>
+      <div class="code-out" id="codeOut"></div>
+    </div>
+
+  </div><!-- /right -->
+</div><!-- /app -->
+
+
+<script>
+
+// ════════════════════════════════════════════════════════
+// CONSTANTES
+// ════════════════════════════════════════════════════════
+
+// Tamaño base del HUD en píxeles de referencia (800×600)
+const BASE_FONT_SIZE = 17;
+
+// Resoluciones de referencia del juego (para escalar el preview)
+const REF_DIMS = {
+  '800x600':   { w: 800,  h: 600  },
+  '1024x768':  { w: 1024, h: 768  },
+  '1152x864':  { w: 1152, h: 864  },
+  '1280x960':  { w: 1280, h: 960  },
+  '1440x1080': { w: 1440, h: 1080 },
+};
+
+
+const inputs = document.querySelectorAll('input[type="number"]');
+inputs.forEach(input => {
+  input.addEventListener('mouseenter', () => {
+    input.focus();
+  });
+  input.addEventListener('wheel', (e) => {
+    if (document.activeElement !== input) {
+      e.preventDefault();
+    }
+  });
+});
+
+
+
+// ════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════════════════════
+const S = {
+  msgs: [{
+    text:     '¡Bienvenido al servidor!',
+    r:  90, g: 190, b: 255,       // color primario
+    r2: 255, g2: 255, b2: 250,    // color secundario (effect 1 y 2)
+    x: 0.45, y: 0.15,             // posición (0-1 = porcentaje, -1 = centrado)
+    centerX: false, centerY: false,
+    effect:   0,                   // 0=normal, 1=flicker, 2=typewriter
+    fxTime:   0.3,
+    holdTime: 3.0,
+    fadeIn:   1.0,
+    fadeOut:  0.75,
+    channel:  -1,     // -1=auto, 0-3=fijo
+    isDhud:   false,  // false=set_hudmessage, true=set_dhudmessage
+  }],
+  active:    0,      // índice del mensaje activo en la lista
+  rafId:     null,   // ID del requestAnimationFrame en curso
+  isPlaying: false,  // true mientras corre la animación de preview
+  drag: { active: false, idx: -1, offX: 0, offY: 0 },
+};
+
+// Estado del fondo del canvas
+const BG = { map: 'de_dust2', res: '800x600' };
+
+
+// ════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const rgb2hex = (r, g, b) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+
+// Canvas offscreen para medir anchos de texto sin tocar el DOM
+const _measureCtx = document.createElement('canvas').getContext('2d');
+
+function measureLineWidth(line, fontSize) {
+  _measureCtx.font = `${fontSize || BASE_FONT_SIZE}px 'Share Tech Mono', monospace`;
+  return _measureCtx.measureText(line).width;
+}
+
+// Devuelve el factor de escala del preview según el canvas actual y la res seleccionada
+function getScale() {
+  const wrap = $('canvasWrap');
+  const canvasH = wrap.clientHeight || wrap.offsetHeight || 600;
+  // DHUD escala por porcentaje independiente de resolución — fijamos H en 500 para imitarlo
+  const m = S.msgs[S.active];
+  if (m && m.isDhud) return canvasH / 500;
+  const ref = REF_DIMS[BG.res] || REF_DIMS['800x600'];
+  return canvasH / ref.h;
+}
+
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+function init() {
+  // Conectar todos los inputs al handler genérico
+  [
+    'msgText', 'cR', 'cG', 'cB', 'cR2', 'cG2', 'cB2',
+    'posX', 'posY', 'fxTime', 'holdTime', 'fadeIn', 'fadeOut'
+  ].forEach(id => $(id).addEventListener('input', onInput));
+
+  // Color picker primario → actualiza los campos RGB
+  $('colorPicker').addEventListener('input', e => {
+    const hex = e.target.value;
+    $('cR').value = parseInt(hex.slice(1, 3), 16);
+    $('cG').value = parseInt(hex.slice(3, 5), 16);
+    $('cB').value = parseInt(hex.slice(5, 7), 16);
+    onInput();
+  });
+
+  // Color picker secundario → actualiza los campos RGB2
+  $('colorPicker2').addEventListener('input', e => {
+    const hex = e.target.value;
+    $('cR2').value = parseInt(hex.slice(1, 3), 16);
+    $('cG2').value = parseInt(hex.slice(3, 5), 16);
+    $('cB2').value = parseInt(hex.slice(5, 7), 16);
+    onInput();
+  });
+
+  window.addEventListener('resize', () => renderHudEls());
+
+  updateBg();
+  loadFromHash(); // aplica hash URL antes de pintar el formulario
+  loadMsg(0);
+
+  // Diferir el primer render para que el canvas tenga dimensiones reales
+  requestAnimationFrame(() => renderHudEls());
+}
+
+
+// ════════════════════════════════════════════════════════
+// LECTURA DE INPUTS → ESTADO
+// ════════════════════════════════════════════════════════
+function onInput() {
+  const m = S.msgs[S.active];
+  if (!m) return;
+
+  m.text     = $('msgText').value;
+  m.r        = clamp(+$('cR').value   || 0, 0, 255);
+  m.g        = clamp(+$('cG').value   || 0, 0, 255);
+  m.b        = clamp(+$('cB').value   || 0, 0, 255);
+  m.r2       = clamp(+$('cR2').value  || 0, 0, 255);
+  m.g2       = clamp(+$('cG2').value  || 0, 0, 255);
+  m.b2       = clamp(+$('cB2').value  || 0, 0, 255);
+  m.x        = parseFloat($('posX').value)    || 0;
+  m.y        = parseFloat($('posY').value)    || 0;
+  // m.effect se actualiza desde setEffect()
+  m.fxTime   = parseFloat($('fxTime').value)  || 0.1;
+  m.holdTime = parseFloat($('holdTime').value) || 3;
+  m.fadeIn   = Math.max(parseFloat($('fadeIn').value)  || 0.5, 0.05);
+  m.fadeOut  = Math.max(parseFloat($('fadeOut').value) || 0.5, 0.05);
+  // channel e isDhud se actualizan desde sus propios handlers
+
+  // Sincronizar swatches de color
+  $('swatchA').style.background  = `rgb(${m.r},${m.g},${m.b})`;
+  $('colorPicker').value         = rgb2hex(m.r, m.g, m.b);
+  $('swatchB').style.background  = `rgb(${m.r2},${m.g2},${m.b2})`;
+  $('colorPicker2').value        = rgb2hex(m.r2, m.g2, m.b2);
+
+  // Si hay una animación corriendo, detenerla antes de volver al modo estático
+  if (S.isPlaying) stopAnimation();
+  else renderHudEls();
+  updateCode();
+}
+
+
+// ════════════════════════════════════════════════════════
+// CARGA DE MENSAJE → FORMULARIO
+// ════════════════════════════════════════════════════════
+function loadMsg(i) {
+  const m = S.msgs[i];
+  if (!m) return;
+  S.active = i;
+
+  $('msgText').value  = m.text;
+  $('cR').value       = m.r;
+  $('cG').value       = m.g;
+  $('cB').value       = m.b;
+  $('cR2').value      = m.r2 ?? 255;
+  $('cG2').value      = m.g2 ?? 255;
+  $('cB2').value      = m.b2 ?? 250;
+  $('posX').value     = m.x;
+  $('posY').value     = m.y;
+  $('fxTime').value   = m.fxTime;
+  $('holdTime').value = m.holdTime;
+  $('fadeIn').value   = m.fadeIn;
+  $('fadeOut').value  = m.fadeOut;
+
+  // Efecto activo
+  document.querySelectorAll('.eff-btn').forEach(b => b.classList.remove('active'));
+  const effBtn = $('eff' + m.effect);
+  if (effBtn) effBtn.classList.add('active');
+
+  // Tipo HUD / DHUD
+  $('btnHud').classList.toggle('active',  !m.isDhud);
+  $('btnDhud').classList.toggle('active',  m.isDhud);
+  updateDhudVisibility(m.isDhud);
+
+  // Canal activo
+  document.querySelectorAll('.ch-btn').forEach(b => b.classList.remove('active'));
+  const chBtn = m.channel === -1 ? $('chAuto') : $('ch' + m.channel);
+  if (chBtn) chBtn.classList.add('active');
+
+  // Botones "centrar"
+  $('btnCenterX').classList.toggle('active', m.centerX);
+  $('btnCenterY').classList.toggle('active', m.centerY);
+
+  renderHudEls();
+  updateCode();
+}
+
+
+// ════════════════════════════════════════════════════════
+// RENDER DE ELEMENTOS HUD EN EL CANVAS (modo estático)
+// ════════════════════════════════════════════════════════
+function renderHudEls() {
+  const wrap = $('canvasWrap');
+  wrap.querySelectorAll('.hud-el').forEach(el => el.remove());
+
+  S.msgs.forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'hud-el' + (i === S.active ? ' active-msg' : ' inactive');
+    el.id        = 'hud' + i;
+    el.textContent = m.text || ' ';
+    el.style.color = `rgb(${m.r},${m.g},${m.b})`;
+
+    // Cuanto más oscuro, más transparente (negro = invisible en HL)
+    const brightness = clamp((m.r + m.g + m.b) / 255, 0, 1);
+    el.style.opacity    = Math.max(brightness, 0.15).toFixed(2);
+    el.style.textShadow = brightness > 0.12
+      ? `0 0 8px rgba(${m.r},${m.g},${m.b},.8)`
+      : 'none';
+
+    if (i === S.active) {
+      el.style.outline = brightness > 0.12
+        ? '1px dashed rgba(255,255,255,.15)'
+        : '1px dashed rgba(255,255,255,.4)';
+      el.style.outlineOffset = '3px';
+    }
+
+    positionEl(el, m, wrap);
+
+    // Solo el mensaje activo es arrastrable (y no durante animación)
+    if (i === S.active && !S.isPlaying) {
+      el.addEventListener('mousedown', e => beginDrag(e, i));
+      el.addEventListener('touchstart', e => beginDragTouch(e, i), { passive: false });
+    }
+
+    wrap.appendChild(el);
+  });
+}
+
+// Posiciona un elemento HUD respetando la lógica exacta del engine de HL
+function positionEl(el, m, wrap) {
+  const W = wrap.clientWidth  || wrap.offsetWidth  || 800;
+  const H = wrap.clientHeight || wrap.offsetHeight || 600;
+
+  const scale      = getScale();
+  const fontSize   = BASE_FONT_SIZE * scale;
+  const lineHeight = fontSize * 1.2;
+
+  el.style.fontSize = fontSize + 'px';
+
+  const lines      = m.text.split('\n');
+  const lineWidths = lines.map(l => measureLineWidth(l, fontSize));
+  const totalWidth = Math.max(...lineWidths);
+  const totalHeight= lines.length * lineHeight;
+
+  // Cálculo de X — igual que CHudMessage::XPosition()
+  let px;
+  if (m.centerX || m.x === -1) {
+    px = (W - totalWidth) / 2;        // centrado exacto
+  } else if (m.x < 0) {
+    px = (1 + m.x) * W - totalWidth;  // alineado a la derecha
+  } else {
+    px = m.x * W;                      // porcentaje desde la izquierda
+  }
+
+  // Cálculo de Y — igual que CHudMessage::YPosition()
+  let py;
+  if (m.centerY || m.y === -1) {
+    py = (H - totalHeight) / 2;
+  } else if (m.y < 0) {
+    py = (1 + m.y) * H - totalHeight;
+  } else {
+    py = m.y * H;
+  }
+
+  el.style.left = px + 'px';
+  el.style.top  = py + 'px';
+}
+
+
+// ════════════════════════════════════════════════════════
+// DRAG & DROP — Mouse
+// ════════════════════════════════════════════════════════
+function beginDrag(e, idx) {
+  if (S.isPlaying) return;
+  e.preventDefault();
+
+  const el   = $('hud' + idx);
+  const wrap = $('canvasWrap');
+  const elRect = el.getBoundingClientRect();
+
+  S.drag = { active: true, idx, offX: e.clientX - elRect.left, offY: e.clientY - elRect.top };
+  el.classList.add('dragging');
+
+  const wrapRect = wrap.getBoundingClientRect();
+  const onMove   = ev => applyDrag(ev.clientX, ev.clientY, wrapRect);
+  const onUp     = () => {
+    endDrag();
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+  };
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+}
+
+// Drag & Drop — Touch
+function beginDragTouch(e, idx) {
+  if (S.isPlaying) return;
+  e.preventDefault();
+
+  const el     = $('hud' + idx);
+  const wrap   = $('canvasWrap');
+  const elRect = el.getBoundingClientRect();
+  const touch  = e.touches[0];
+
+  S.drag = { active: true, idx, offX: touch.clientX - elRect.left, offY: touch.clientY - elRect.top };
+  el.classList.add('dragging');
+
+  const wrapRect = wrap.getBoundingClientRect();
+  const onMove   = ev => { ev.preventDefault(); applyDrag(ev.touches[0].clientX, ev.touches[0].clientY, wrapRect); };
+  const onEnd    = () => {
+    endDrag();
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend',  onEnd);
+  };
+
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend',  onEnd);
+}
+
+// Aplica la posición durante el drag y actualiza el estado
+function applyDrag(clientX, clientY, wrapRect) {
+  if (!S.drag.active) return;
+
+  const { idx, offX, offY } = S.drag;
+  const m  = S.msgs[idx];
+  const el = $('hud' + idx);
+  if (!el || !m) return;
+
+  const scale  = getScale();
+  const limitY = BASE_FONT_SIZE * scale;
+
+  const px = clamp(clientX - wrapRect.left - offX, 0, wrapRect.width);
+  const py = clamp(clientY - wrapRect.top  - offY, 0, wrapRect.height - limitY);
+
+  el.style.left = px + 'px';
+  el.style.top  = py + 'px';
+
+  // Convertir píxeles a coordenadas normalizadas (0-1)
+  m.x = parseFloat((px / wrapRect.width).toFixed(3));
+  m.y = parseFloat((py / (wrapRect.height)).toFixed(3));
+
+  // Arrastrar desactiva el centrado
+  m.centerX = false;
+  m.centerY = false;
+  $('posX').value = m.x.toFixed(2);
+  $('posY').value = m.y.toFixed(2);
+  $('btnCenterX').classList.remove('active');
+  $('btnCenterY').classList.remove('active');
+
+  updateCode();
+}
+
+function endDrag() {
+  if (S.drag.active) {
+    const el = $('hud' + S.drag.idx);
+    if (el) el.classList.remove('dragging');
+  }
+  S.drag.active = false;
+}
+
+// ════════════════════════════════════════════════════════
+// ANIMACIÓN DE PREVIEW — port fiel al engine de Half-Life
+// Basado en CHudMessage::MessageScanStart / MessageScanNextChar
+// ════════════════════════════════════════════════════════
+
+/**
+ * Calcula el color y alpha de un carácter en un instante dado.
+ *
+ * - Effect 0/1: fade global (el alpha sube y baja para todos los chars a la vez).
+ * - Effect 2:   typewriter — cada char aparece con un delay (charIdx * fadeIn),
+ *               y durante fxTime hace un blend color2→color1.
+ *
+ * @returns {{ alpha: number, r: number, g: number, b: number }}
+ */
+function calcCharColor(m, localTime, charIdx, totalChars) {
+  const fadeIn  = Math.max(m.fadeIn,   0.001);
+  const fadeOut = Math.max(m.fadeOut,  0.001);
+  const hold    = Math.max(m.holdTime, 0.0);
+
+  // colores fuente y destino
+  const sr = m.r,         sg = m.g,         sb = m.b;
+  const dr = m.r2 ?? 255, dg = m.g2 ?? 255, db = m.b2 ?? 250;
+
+  if (m.effect === 0 || m.effect === 1) {
+    // ─ Fade in / hold / fade out global ─
+    const fadeTime = fadeIn + hold;
+    let alpha;
+    if      (localTime < fadeIn)    alpha = localTime / fadeIn;
+    else if (localTime > fadeTime)  alpha = fadeOut > 0 ? 1 - (localTime - fadeTime) / fadeOut : 0;
+    else                            alpha = 1;
+
+    return { alpha: clamp(alpha, 0, 1), r: sr, g: sg, b: sb };
+
+  } else {
+    // ─ Effect 2: typewriter ─
+    // cada char aparece con un retraso de (charIdx * fadeIn) segundos
+    const charTime = charIdx * fadeIn;
+    const fadeTime = fadeIn * totalChars + hold;
+
+    if (charTime > localTime) {
+      // el char todavía no "llegó"
+      return { alpha: 0, r: sr, g: sg, b: sb };
+    }
+
+    const deltaTime = localTime - charTime;
+
+    if (localTime > fadeTime) {
+      // fase de fade-out global
+      const alpha = fadeOut > 0 ? clamp(1 - (localTime - fadeTime) / fadeOut, 0, 1) : 0;
+      return { alpha, r: sr, g: sg, b: sb };
+
+    } else if (deltaTime > m.fxTime) {
+      // ya terminó el efecto de glow: color final
+      return { alpha: 1, r: sr, g: sg, b: sb };
+
+    } else {
+      // blend color2 → color1 durante fxTime (el "scan glow")
+      const t = deltaTime / Math.max(m.fxTime, 0.001);
+      return {
+        alpha: 1,
+        r: Math.round(dr + (sr - dr) * t),
+        g: Math.round(dg + (sg - dg) * t),
+        b: Math.round(db + (sb - db) * t),
+      };
+    }
+  }
+}
+
+function playAnimation() {
+  stopAnimation();
+
+  const m = S.msgs[S.active];
+  if (!m) return;
+
+  S.isPlaying = true;
+  $('playInd').classList.add('show');
+  $('dragHint').style.opacity = '0';
+
+  // Reemplazar los elementos div por un canvas de render char-por-char
+  const wrap = $('canvasWrap');
+  wrap.querySelectorAll('.hud-el').forEach(el => el.remove());
+
+  const cvs = document.createElement('canvas');
+  cvs.id = 'animCanvas';
+  cvs.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:20;';
+  wrap.appendChild(cvs);
+
+  const chars       = [...m.text];
+  const totalChars  = chars.length || 1;
+  const fadeIn      = Math.max(m.fadeIn,   0.001);
+  const fadeOut     = Math.max(m.fadeOut,  0.001);
+  const hold        = Math.max(m.holdTime, 0.0);
+
+  // Duración total de la animación (con pequeño margen)
+  const totalDuration = (m.effect === 2)
+    ? fadeIn * totalChars + hold + fadeOut + 0.1
+    : fadeIn + hold + fadeOut + 0.1;
+
+  // Effect 1: el engine decide UNA VEZ por frame si todo el mensaje flickea (~10%)
+  let flickerOn = false;
+
+  // Canvas offscreen para medir anchos de chars con el font escalado
+  const offCtx = document.createElement('canvas').getContext('2d');
+
+  const startTime = performance.now();
+
+  function frame(now) {
+    if (!S.isPlaying) return;
+
+    const localTime = (now - startTime) / 1000;
+
+    // Effect 1: decisión de flicker por frame (10% de probabilidad, igual que el engine)
+    if (m.effect === 1) flickerOn = Math.random() < 0.10;
+
+    // Ajustar el canvas al tamaño real del wrapper
+    const wrapRect = wrap.getBoundingClientRect();
+    cvs.width  = wrapRect.width;
+    cvs.height = wrapRect.height;
+
+    const ctx = cvs.getContext('2d');
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+    // Escala dinámica (el panel puede haberse redimensionado)
+    const ref    = m.isDhud ? { h: 500 } : (REF_DIMS[BG.res] || REF_DIMS['800x600']);
+    const scale  = cvs.height / ref.h;
+    const FS     = BASE_FONT_SIZE * scale;  // font size en px
+    const LH     = FS * 1.2;               // line height
+    const font   = `${FS}px 'Share Tech Mono', monospace`;
+
+    ctx.font    = font;
+    offCtx.font = font;
+
+    const W = cvs.width;
+    const H = cvs.height;
+
+    // Dividir texto en líneas y medir cada una
+    const lines      = m.text.split('\n');
+    const lineWidths = lines.map(line => {
+      let w = 0;
+      [...line].forEach(ch => { w += offCtx.measureText(ch).width; });
+      return w;
+    });
+    const totalWidth  = Math.max(...lineWidths);
+    const totalHeight = lines.length * LH;
+
+    // Posición Y base (replicando CHudMessage::YPosition)
+    let baseY;
+    if (m.centerY || m.y === -1) {
+      baseY = (H - totalHeight) / 2;
+    } else if (m.y < 0) {
+      baseY = (1 + m.y) * (H) - totalHeight;
+    } else {
+      baseY = m.y * (H);
+    }
+    baseY = clamp(baseY, 0, H - totalHeight); // clamp igual que el engine
+
+    let globalCharIdx = 0;
+
+    lines.forEach((line, lineIndex) => {
+      const lineChars = [...line];
+      const lineWidth = lineWidths[lineIndex];
+
+      // Posición X por línea (replicando CHudMessage::XPosition)
+      let baseX;
+      if (m.centerX || m.x === -1) {
+        baseX = (W - lineWidth) / 2;
+      } else if (m.x < 0) {
+        baseX = (1 + m.x) * W - totalWidth;
+      } else {
+        baseX = m.x * W;
+      }
+      baseX = clamp(baseX, 0, W - lineWidth); // clamp igual que el engine
+
+      let cursorX = baseX;
+      const cursorY = baseY + lineIndex * LH + FS - 1.2; // baseline. ( -1.2 ???)
+
+      lineChars.forEach(ch => {
+        const charWidth = offCtx.measureText(ch).width;
+        const col       = calcCharColor(m, localTime, globalCharIdx, totalChars);
+        globalCharIdx++;
+
+        if (col.alpha <= 0) { cursorX += charWidth; return; }
+
+        // Negro = fondo en HL, cuanto más oscuro más transparente
+        const brightness = clamp((col.r + col.g + col.b) / 255, 0, 1);
+        const finalAlpha = col.alpha * brightness;
+        if (finalAlpha <= 0) { cursorX += charWidth; return; }
+
+        // Dibujar el carácter con color y glow
+        ctx.globalAlpha = finalAlpha;
+        ctx.fillStyle   = `rgb(${col.r},${col.g},${col.b})`;
+        ctx.shadowColor = `rgb(${col.r},${col.g},${col.b})`;
+        ctx.shadowBlur  = 6;
+        ctx.fillText(ch, cursorX, cursorY);
+        ctx.shadowBlur  = 0;
+
+        // Effect 1: superposición con color2 cuando hay flicker
+        if (m.effect === 1 && flickerOn) {
+          const fr = m.r2 ?? 255, fg = m.g2 ?? 255, fb = m.b2 ?? 250;
+          const flickerBrightness = clamp((fr + fg + fb) / 255, 0, 1);
+          ctx.globalAlpha = col.alpha * flickerBrightness;
+          ctx.fillStyle   = `rgb(${fr},${fg},${fb})`;
+          ctx.shadowColor = `rgb(${fr},${fg},${fb})`;
+          ctx.shadowBlur  = 8;
+          ctx.fillText(ch, cursorX, cursorY);
+          ctx.shadowBlur  = 0;
+        }
+
+        cursorX += charWidth;
+      });
+    });
+
+    ctx.globalAlpha = 1;
+
+    if (localTime < totalDuration) {
+      S.rafId = requestAnimationFrame(frame);
+    } else {
+      // Fin de la animación — volver al modo estático
+      S.isPlaying = false;
+      $('playInd').classList.remove('show');
+      $('dragHint').style.opacity = '';
+      cvs.remove();
+      renderHudEls();
+    }
+  }
+
+  S.rafId = requestAnimationFrame(frame);
+}
+
+function stopAnimation() {
+  if (S.rafId) { cancelAnimationFrame(S.rafId); S.rafId = null; }
+  S.isPlaying = false;
+  $('playInd').classList.remove('show');
+  $('dragHint').style.opacity = '';
+  const cvs = document.getElementById('animCanvas');
+  if (cvs) cvs.remove();
+  renderHudEls();
+}
+
+
+// ════════════════════════════════════════════════════════
+// GENERACIÓN DE CÓDIGO PAWN (AMX Mod X)
+// ════════════════════════════════════════════════════════
+
+// Formatea un float para Pawn: siempre con punto decimal ("3.0", no "3")
+function formatFloat(v) {
+  const s = parseFloat(v.toFixed(2));
+  return Number.isInteger(s) ? `${s}.0` : `${s}`;
+}
+
+// Escapa el texto para strings Pawn: ^" para comillas, ^n para saltos de línea
+function escapePawn(str) {
+  return str
+    .replace(/\^/g, '^^')
+    .replace(/"/g,  '^"')
+    .replace(/\n/g, '^n');
+}
+
+function genSMA(m) {
+  // Si centerX/Y está activo, la coordenada que va al código es -1.0
+  const x = parseFloat((m.centerX ? -1.0 : m.x).toFixed(2));
+  const y = parseFloat((m.centerY ? -1.0 : m.y).toFixed(2));
+
+  const fn  = m.isDhud ? 'set_dhudmessage'  : 'set_hudmessage';
+  const fn2 = m.isDhud ? 'show_dhudmessage' : 'show_hudmessage';
+
+  const r2 = m.r2 ?? 255;
+  const g2 = m.g2 ?? 255;
+  const b2 = m.b2 ?? 250;
+
+  // color2 solo se incluye si el usuario lo cambió respecto al default {255,255,250,0}
+  const isDefaultColor2 = r2 >= 250 && r2 <= 255 && g2 >= 250 && g2 <= 255 && b2 >= 250 && b2 <= 255;
+
+  const args = [
+    String(m.r),
+    String(m.g),
+    String(m.b),
+    formatFloat(x),
+    formatFloat(y),
+    String(m.effect),
+    formatFloat(m.fxTime),
+    formatFloat(m.holdTime),
+    formatFloat(m.fadeIn),
+    formatFloat(m.fadeOut),
+    String(m.channel),
+    '0',  // alpha1 — no tiene input, siempre 0
+    ...(!isDefaultColor2 ? [`{${r2}, ${g2}, ${b2}, 0}`] : []),
+  ];
+
+  return [
+    `${fn}(${args.join(', ')})`,
+    `${fn2}(0, "${escapePawn(m.text)}")`,
+  ].join('\n');
+}
+
+function updateCode() {
+  const m = S.msgs[S.active];
+  if (!m) {
+    $('codeOut').innerHTML = '<span class="c-cm">// Sin mensaje</span>';
+    return;
+  }
+  $('codeOut').innerHTML = syntaxHighlight(genSMA(m));
+  saveToHash();
+}
+
+// Colorea el código generado con spans CSS
+function syntaxHighlight(code) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Regex que tokeniza: strings, floats, ints, funciones AMXX, keywords Pawn, resto
+  const TOKEN = /"[^"]*"|-?[0-9]+\.[0-9]+|-?[0-9]+|\b(?:set_hudmessage|set_dhudmessage|show_hudmessage|show_dhudmessage|new|public|stock|static|if|else|return|for|while)\b|[^]/g;
+
+  return code.split('\n').map(line => {
+    // Separar código de comentario (//)
+    const cmIdx    = line.indexOf('//');
+    const codePart = cmIdx === -1 ? line          : line.slice(0, cmIdx);
+    const cmPart   = cmIdx === -1 ? ''            : line.slice(cmIdx);
+
+    let out = '';
+    let match;
+    TOKEN.lastIndex = 0;
+
+    while ((match = TOKEN.exec(codePart)) !== null) {
+      const t = match[0];
+      if (t[0] === '"') {
+        out += `<span class="c-str">${esc(t)}</span>`;
+      } else if (/^-?[0-9]+\.[0-9]+$/.test(t)) {
+        out += `<span class="c-num">${t}</span>`;
+      } else if (/^-?[0-9]+$/.test(t)) {
+        out += `<span class="c-num">${t}</span>`;
+      } else if (/^(?:set_hudmessage|set_dhudmessage|show_hudmessage|show_dhudmessage)$/.test(t)) {
+        out += `<span class="c-fn">${t}</span>`;
+      } else if (/^(?:new|public|stock|static|if|else|return|for|while)$/.test(t)) {
+        out += `<span class="c-kw">${t}</span>`;
+      } else {
+        out += esc(t);
+      }
+    }
+
+    if (cmPart) out += `<span class="c-cm">${esc(cmPart)}</span>`;
+    return out;
+  }).join('\n');
+}
+
+
+// ════════════════════════════════════════════════════════
+// HANDLERS DE CONTROLES ESPECÍFICOS
+// ════════════════════════════════════════════════════════
+
+function setMsgType(isDhud) {
+  const m = S.msgs[S.active];
+  if (!m) return;
+  m.isDhud = isDhud;
+  $('btnHud').classList.toggle('active',  !isDhud);
+  $('btnDhud').classList.toggle('active',  isDhud);
+  updateDhudVisibility(isDhud);
+  if (S.isPlaying) stopAnimation();
+  else renderHudEls();
+  updateCode();
+}
+
+// Oculta/muestra secciones que no aplican al DHUD
+function updateDhudVisibility(isDhud) {
+  $('channelSection').style.display = isDhud ? 'none' : '';
+  $('color2Section').style.display  = isDhud ? 'none' : '';
+}
+
+function setEffect(btn, effect) {
+  const m = S.msgs[S.active];
+  if (!m)
+    return;
+	
+  m.effect = effect;
+  
+  // Efecto typewriter: fade in es tiempo por carácter, 0.1 es un valor sensato
+  if (effect === 2) {
+	if (m.fadeIn > 0.3) {
+      m.fadeIn = 0.1;
+      $('fadeIn').value = 0.1;
+    }
+  }
+  
+  document.querySelectorAll('.eff-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  if (S.isPlaying)
+    stopAnimation(); // stopAnimation() call renderHudEls()
+  else
+    renderHudEls();
+	
+  updateCode();
+}
+
+function setChannel(btn, ch) {
+  const m = S.msgs[S.active];
+  if (!m) return;
+  m.channel = ch;
+  document.querySelectorAll('.ch-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateCode();
+}
+
+function doToggleCenterX() {
+  const m = S.msgs[S.active];
+  if (!m) return;
+  m.centerX = !m.centerX;
+  $('btnCenterX').classList.toggle('active', m.centerX);
+  $('posX').value = m.centerX ? -1 : m.x;
+  renderHudEls();
+  updateCode();
+}
+
+function doToggleCenterY() {
+  const m = S.msgs[S.active];
+  if (!m) return;
+  m.centerY = !m.centerY;
+  $('btnCenterY').classList.toggle('active', m.centerY);
+  $('posY').value = m.centerY ? -1 : m.y;
+  renderHudEls();
+  updateCode();
+}
+
+
+
+// ════════════════════════════════════════════════════════
+// FONDO DEL CANVAS (mapa + resolución)
+// ════════════════════════════════════════════════════════
+
+function updateBg() {
+  const bg  = $('canvasBg');
+  const url = `img/${BG.map}_${BG.res}.png`;
+  bg.style.backgroundImage    = `url('${url}')`;
+  bg.style.backgroundSize     = '100% 100%';
+  bg.style.backgroundPosition = 'center';
+  bg.style.backgroundColor    = '#000';
+}
+
+function setMap(btn, key) {
+  document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  BG.map = key;
+  updateBg();
+}
+
+function setRes(btn, res) {
+  document.querySelectorAll('.res-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  BG.res = res;
+  updateBg();
+  renderHudEls();
+}
+
+
+// ════════════════════════════════════════════════════════
+// COPIAR CÓDIGO AL PORTAPAPELES
+// ════════════════════════════════════════════════════════
+function copyCode() {
+  navigator.clipboard.writeText($('codeOut').innerText).then(() => {
+    $('btnCopy').textContent = '✓ COPIADO';
+    $('btnCopy').classList.add('copied');
+    setTimeout(() => {
+      $('btnCopy').textContent = 'COPIAR';
+      $('btnCopy').classList.remove('copied');
+    }, 2000);
+  });
+}
+
+
+// ════════════════════════════════════════════════════════
+// HASH URL — persistencia y formato legacy
+// ════════════════════════════════════════════════════════
+
+// Serializa el mensaje activo como JSON abreviado + base64url
+function saveToHash() {
+  const m = S.msgs[S.active];
+  const x = m.centerX ? -1 : m.x;
+  const y = m.centerY ? -1 : m.y;
+
+  const obj = {
+    t:    m.text,
+    r:    m.r,    g:  m.g,   b:  m.b,
+    r2:   m.r2,   g2: m.g2,  b2: m.b2,
+    x:    parseFloat(x.toFixed(2)),
+    y:    parseFloat(y.toFixed(2)),
+    eff:  m.effect,
+    fx:   m.fxTime,
+    h:    m.holdTime,
+    fi:   m.fadeIn,
+    fo:   m.fadeOut,
+    ch:   m.channel,
+    dhud: m.isDhud ? 1 : 0,
+  };
+
+  const json    = JSON.stringify(obj);
+  const b64     = btoa(unescape(encodeURIComponent(json)))  // UTF-8 safe
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''); // base64url
+
+  history.replaceState(null, '', '#' + b64)
+
+}
+
+// Lee el hash al inicio y establece el estado
+// Soporta dos formatos:
+//   - JSON+base64url (formato nativo, generado por saveToHash)
+//   - Legacy: "1+255+255+50+-1.0+0.5+0+0.0+4.0+0.0+0.0+3"
+//             donde el primer número es 1=HUD, 2=DHUD
+//             y el resto son los argumentos de set_hudmessage en orden
+function loadFromHash() {
+  const hash = location.hash.slice(1);
+  if (!hash) return false;
+
+  // ── Formato legacy: contiene "+" como separador ──
+  if (hash.includes('+')) {
+    const parts = hash.split('+');
+    if (parts.length < 12) return false;
+
+    const isDhud = parts[0] === '2';
+    const m      = S.msgs[S.active];
+
+    m.isDhud   = isDhud;
+    m.r        = clamp(+parts[1],  0, 255);
+    m.g        = clamp(+parts[2],  0, 255);
+    m.b        = clamp(+parts[3],  0, 255);
+    m.x        = parseFloat(parts[4])  || 0;
+    m.y        = parseFloat(parts[5])  || 0;
+    m.effect   = +parts[6];
+    m.fxTime   = parseFloat(parts[7])  || 0.1;
+    m.holdTime = parseFloat(parts[8])  || 3.0;
+    m.fadeIn   = parseFloat(parts[9])  || 0.5;
+    m.fadeOut  = parseFloat(parts[10]) || 0.5;
+    m.channel  = +parts[11];
+
+    // centerX/Y: si el valor recibido es exactamente -1.0
+    m.centerX  = m.x === -1;
+    m.centerY  = m.y === -1;
+
+    return true;
+  }
+
+
+  // ── Formato nativo: base64url + JSON ──
+  try {
+    const json = decodeURIComponent(escape(atob(
+      hash.replace(/-/g, '+').replace(/_/g, '/')
+    )));
+    const obj = JSON.parse(json);
+    const m   = S.msgs[S.active];
+
+    m.text     = obj.t   ?? m.text;
+    m.r        = obj.r   ?? m.r;
+    m.g        = obj.g   ?? m.g;
+    m.b        = obj.b   ?? m.b;
+    m.r2       = obj.r2  ?? m.r2;
+    m.g2       = obj.g2  ?? m.g2;
+    m.b2       = obj.b2  ?? m.b2;
+    m.x        = obj.x   ?? m.x;
+    m.y        = obj.y   ?? m.y;
+    m.effect   = obj.eff ?? m.effect;
+    m.fxTime   = obj.fx  ?? m.fxTime;
+    m.holdTime = obj.h   ?? m.holdTime;
+    m.fadeIn   = obj.fi  ?? m.fadeIn;
+    m.fadeOut  = obj.fo  ?? m.fadeOut;
+    m.channel  = obj.ch  ?? m.channel;
+    m.isDhud   = obj.dhud === 1;
+
+    // centerX/Y: si la coordenada guardada es exactamente -1
+    m.centerX  = m.x === -1;
+    m.centerY  = m.y === -1;
+
+    return true;
+  } catch {
+    return false;
+  }
+
+}
+
+
+// ════════════════════════════════════════════════════════
+// ARRANQUE
+// ════════════════════════════════════════════════════════
+window.addEventListener('load', init);
+
+</script>
+</body>
+</html>
