@@ -168,8 +168,14 @@ class pawnParse:
 		self.comment_doc1		= ""
 		self.comment_doc2		= ""
 
-
-		self.start_parse()
+		############################################################################
+		try:
+			self.start_parse()
+		except Exception:
+				if globalvar.rollbar and cfg.rollbar_report :
+					globalvar.rollbar.set_parse_code(self.raw_parse_code)
+				sys.excepthook(*sys.exc_info())
+		############################################################################
 
 		debug.performance.pause("pawnparse")
 
@@ -193,35 +199,29 @@ class pawnParse:
 			# Fix XS include (Temp!)
 			buffer = buffer.replace("XS_LIBFUNC_ATTRIB", "stock")
 			
-			try:
-				if buffer.startswith("#pragma deprecated") :
-					buffer = self.read_clean_line()
-					if buffer and self.startswith(buffer, "stock") :
-						self.parse_function(buffer, -1)
-				elif buffer.startswith("#define ") :
-					buffer = self.parse_define(buffer)
-				elif buffer.startswith("enum") :
-					self.parse_enum(buffer)
-				elif self.startswith(buffer, "const") :
-					buffer = self.parse_const(buffer)
-				elif self.startswith(buffer, "new") or self.startswith(buffer, "stock const") :
-					self.parse_variable(buffer, False)
-				elif self.startswith(buffer, "public") :
-					self.parse_function(buffer, globalvar.FUNC_TYPES.public)
-				elif self.startswith(buffer, "stock") :
-					self.parse_function(buffer, globalvar.FUNC_TYPES.stock)
-				elif self.startswith(buffer, "forward") :
-					self.parse_function(buffer, globalvar.FUNC_TYPES.forward)
-				elif self.startswith(buffer, "native") :
-					self.parse_function(buffer, globalvar.FUNC_TYPES.native)
-				elif buffer[0] == '_' or buffer[0].isalpha() :
-					self.parse_function(buffer, globalvar.FUNC_TYPES.function)
-			except Exception:
-			
-				if globalvar.rollbar and cfg.rollbar_report :
-					globalvar.rollbar.set_parse_code(self.raw_parse_code.strip())
 
-				sys.excepthook(*sys.exc_info())	
+			if buffer.startswith("#pragma deprecated") :
+				buffer = self.read_clean_line()
+				if buffer and self.startswith(buffer, "stock") :
+					self.parse_function(buffer, -1)
+			elif buffer.startswith("#define ") :
+				buffer = self.parse_define(buffer)
+			elif buffer.startswith("enum") :
+				self.parse_enum(buffer)
+			elif self.startswith(buffer, "const") :
+				buffer = self.parse_const(buffer)
+			elif self.startswith(buffer, "new") or self.startswith(buffer, "stock const") :
+				self.parse_variable(buffer, False)
+			elif self.startswith(buffer, "public") :
+				self.parse_function(buffer, globalvar.FUNC_TYPES.public)
+			elif self.startswith(buffer, "stock") :
+				self.parse_function(buffer, globalvar.FUNC_TYPES.stock)
+			elif self.startswith(buffer, "forward") :
+				self.parse_function(buffer, globalvar.FUNC_TYPES.forward)
+			elif self.startswith(buffer, "native") :
+				self.parse_function(buffer, globalvar.FUNC_TYPES.native)
+			elif buffer[0] == '_' or buffer[0].isalpha() :
+				self.parse_function(buffer, globalvar.FUNC_TYPES.function)
 		#}
 	#}
 	
@@ -277,12 +277,16 @@ class pawnParse:
 		return None
 	#}
 			
-	def read_clean_line(self, recursive=False):
+	def read_clean_line(self, recursive=0):
 	#{
 		buffer = self.read_line()
 
 		if buffer is None:
 			return None
+			
+		# Fix big recursive by bad closed
+		if recursive > 400 :
+			return " "
 
 		if not recursive :
 			self.backup_string = ""
@@ -361,7 +365,7 @@ class pawnParse:
 			cleanbuff = ' '.join(cleanbuff.split())
 		
 		if not cleanbuff:
-			cleanbuff = self.read_clean_line(True)
+			cleanbuff = self.read_clean_line(recursive + 1)
 
 		return cleanbuff
 	#}
@@ -382,7 +386,7 @@ class pawnParse:
 		#{
 			if buffer.split(' ', 1)[0] in invalidKeywords :
 				self.restore_buffer = buffer
-				return self.function_block_finish(localvars)
+				return self.function_block_error(localvars)
 			
 			if cfg.ac_local_var :
 				while buffer.startswith("new ") or buffer.startswith("static ") or buffer.startswith("for") :
@@ -398,15 +402,20 @@ class pawnParse:
 		
 					buffer = self.read_clean_line()
 					if not buffer :
-						return self.function_block_finish(localvars)
+						return self.function_block_error(localvars)
 				#}
 			
-			# SKIP #else ... #end
+			# SKIP #else ... #end on function block
 			# very simple, it does not make sense to make it so complex when it is hardly ever used
 			if buffer.startswith("#else") :
-				while not buffer.startswith("#end") :
+				line = self.line_position
+				while buffer and not buffer.startswith("#end") :
 					buffer = self.read_clean_line()
 				buffer = self.read_clean_line()
+				if not buffer:
+					self.mark_error(line, line - self.offset_line - 1)
+					self.error("parse_function", "complex `#else`, no `#end` found in the same function block")
+					return localvars
 			###############################################
 			
 			pos = buffer.find('{')
@@ -436,10 +445,10 @@ class pawnParse:
 			buffer = self.read_clean_line()
 		#}
 		
-		return self.function_block_finish(localvars)
+		return self.function_block_error(localvars)
 	#}
 	
-	def function_block_finish(self, localvars):
+	def function_block_error(self, localvars):
 		self.mark_error(self.start_position)
 		
 		self.error("parse_function", "bad function closed detected, misses '}'")
@@ -593,9 +602,9 @@ class pawnParse:
 			self.info("parse_define", "add -> [%s]" % name)
 		#}
 		
-		# Skip multiline
-		while buffer[-1] == '\\' :
-			buffer = self.read_clean_line()
+		if buffer : # Skip multiline
+			while buffer[-1] == '\\' :
+				buffer = self.read_clean_line()
 	#}
 	
 	def parse_const(self, buffer):
@@ -957,7 +966,7 @@ class pawnParse:
 			if pos == -1 :
 				content = "%s\n%s" % (content, buffer)
 				buffer = self.read_clean_line()
-				if len(buffer) > 1 :
+				if buffer and len(buffer) > 1 :
 					doc2 += [ self.comment_doc2 if self.comment_doc2 else self.comment_doc1  ]
 			else :
 				content = "%s\n%s" % (content, buffer[0:pos])
@@ -1068,20 +1077,26 @@ class pawnParse:
 			return
 			
 		remaining = split[1]
+		
+		funcname = ''
 		return_tag = ''
 		return_array = ''
+		
 		funcname_and_return = split[0].strip()
+		
 		split_funcname_and_return = funcname_and_return.split(':')
 		if len(split_funcname_and_return) > 1 :
 			funcname = split_funcname_and_return[1].strip()
 			return_tag = split_funcname_and_return[0].strip()
 		else :
 			funcname = split_funcname_and_return[0].strip()
-		
-		if funcname[0] == '[' :
+			
+			
+		if funcname and funcname[0] == '[' :
 			bracket_end = funcname.find(']') + 1
 			return_array = funcname[0:bracket_end]
 			funcname = funcname[bracket_end:].strip()
+		
 		
 		# Fix float.inc
 		if funcname.startswith("operator") :

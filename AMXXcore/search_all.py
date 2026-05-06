@@ -202,7 +202,7 @@ class SearchAllTool:
 
 		visited += [ node.file_path ]
 
-		if includedir or cfg.profile_include_dir != os.path.dirname(node.file_path) :
+		if includedir or not cfg.active_include_dir in node.file_path :
 			includes += [ node.file_path ]
 
 		for child in node.children :

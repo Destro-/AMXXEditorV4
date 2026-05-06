@@ -18,8 +18,6 @@ class cfg:
 	filename = "AMXX-Editor.sublime-settings"
 	settings = None
 	on_change_callback = None
-	silent = False
-	
 	
 	# Support reloading module
 	def init(on_change_callback=None):
@@ -35,10 +33,6 @@ class cfg:
 		cfg.on_change()
 		
 	def on_change():
-		if cfg.silent :
-			cfg.silent = False
-			return
-		
 		if cfg.on_change_callback :
 			cfg.on_change_callback()
 		
@@ -52,8 +46,7 @@ class cfg:
 	def get(key, default=None):
 		return cfg.settings.get(key, default)
 	
-	def save(silent=True):
-		cfg.silent = silent
+	def save():
 		sublime.save_settings(cfg.filename)
 		
 	def get_path(key) :
@@ -83,6 +76,26 @@ class util:
 			
 	def clamp(value, minv, maxv):
 		return max(min(value, maxv), minv)
+		
+	def is_number(s):
+		try:
+			float(s)
+			return True
+		except ValueError:
+			return False
+			
+	def is_int(s):
+		try:
+			int(s)
+			return True
+		except ValueError:
+			return False
+			
+	def is_float(s):
+		try:
+			return "." in s and float(s)
+		except ValueError:
+			return False
 		
 	def unix_normpath(path):
 		return os.path.normpath(path).replace('\\', '/')
@@ -297,7 +310,7 @@ class Style:
 		return len(self.list)
 		
 	def get_path(self):
-		return self.paths.get(self.active)
+		return self.paths.get(self.active, "")
 
 	def get_active(self):
 		return self.active

@@ -39,8 +39,8 @@ import AMXXcore.debug 		as debug
 # Global VARs & Initialize
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 globalvar.EDITOR_VERSION 		= "4.4"
-globalvar.EDITOR_BUILD 			= "4410"
-globalvar.EDITOR_DATE 			= "11 Oct 2024"
+globalvar.EDITOR_BUILD 			= "4420"
+globalvar.EDITOR_DATE 			= "6 May 2026"
 globalvar.PACKAGE_NAME			= "AMXXEditorV4"
 
 globalvar.ROLLBAR_API_TOKEN		= "abe32dcc89f647398b096cd63aa964a9"
@@ -58,6 +58,7 @@ globalvar.KIND_FUCTION = [
 
 globalvar.nodes 			= dict()
 globalvar.profiles_list 	= list()
+globalvar.includes_list		= list()
 globalvar.rollbar			= None
 
 globalvar.search_fix_view	= False
@@ -66,8 +67,21 @@ globalvar.checking_update	= False
 globalvar.style_popup 		= Style("style_popup", ".pawn-popup.css")
 globalvar.style_editor 		= Style("style_editor", ".pawn-editor.sublime-color-scheme")
 globalvar.style_console 	= Style("style_console", ".pawn-console.sublime-color-scheme")
-	
-	
+
+globalvar.cacheSyntaxCSS = ""
+globalvar.pevDocumentation = dict()
+globalvar.pevType = {
+	"S": "String",
+	"P": "String pointer (EngFunc_AllocString)",
+	"B": "Byte (0-255)",
+	"E": "Entity Index",
+	"I": "Number",
+	"F": "Float",
+	"A": "Array[]",
+	"V": "Float:[3]"
+}
+
+
 # Default configuration values
 cfg.rollbar_report = True
 cfg.lang = "en"
@@ -88,7 +102,6 @@ cfg.ac_emit_info =  None
 cfg.ac_local_var =  None
 cfg.ac_extra_sorted =  None
 cfg.ac_add_parameters =  None
-cfg.profile_include_dir =  None
 cfg.view_debug_mode = None
 
 
@@ -177,6 +190,9 @@ def plugin_loaded() :
 	globalvar.analyzer 				= CodeAnalyzer()
 	globalvar.parse 				= pawnParse()
 	
+	# Load fakemeta pev documentation
+	globalvar.pevDocumentation = util.safe_json_load(f"Packages/{globalvar.PACKAGE_NAME}/pev.json")
+
 	# Config
 	cfg.init(on_config_change)
 	
@@ -235,12 +251,14 @@ def extract_package_directory(package_name, target_directory):
 
 def on_config_change() :
 
+	print(" on_config_change 1")
+
 	# Debug
 	cfg.debug_flags 		= debug.check_flags(cfg.get("debug_flags", "a"))
 	cfg.debug_log_flags 	= debug.check_flags(cfg.get("debug_log_flags", "abcd"))
 	
 	# Default Profile
-	default_profile = "default (AMXX 1.9)"
+	default_profile = "default (AMXX 1.10)"
 	default_compiler = os.path.join(sublime.packages_path(), globalvar.PACKAGE_NAME, "bin", "compiler")
 	cfg.profiles = {
 		default_profile: {
@@ -255,7 +273,10 @@ def on_config_change() :
 		path = _dict.get(key, "")
 		if not path or path == "${file_path}" :
 			return path
+			
 		path = path.replace("${packages}", sublime.packages_path())
+		path = path.replace("${default}", default_compiler)
+		
 		return os.path.normpath(path)
 		
 	# List Profiles and Validate
@@ -277,15 +298,19 @@ def on_config_change() :
 				profile['amxxpc_debug'] = 2
 				
 			if validate_profile(profile_name, profile) :
+				# if key not exit, insert then
 				cfg.profiles.setdefault(profile_name, profile)
 		
 	globalvar.profiles_list = list(cfg.profiles.keys())
 	
+	# Active profile
 	cfg.active_profile = cfg.get("active_profile", default_profile)
 	if not cfg.active_profile in globalvar.profiles_list :
 		cfg.active_profile = default_profile
 		
-		
+	cfg.active_include_dir = cfg.profiles[cfg.active_profile]['include_dir']
+	
+	
 
 	# Cache settings
 	cfg.enable_tooltip 				= cfg.get('enable_tooltip', True)
@@ -293,7 +318,7 @@ def on_config_change() :
 	cfg.enable_marking_error 		= cfg.get('enable_marking_error', True)
 	cfg.enable_dynamic_highlight 	= cfg.get('enable_dynamic_highlight', True)
 	
-	cfg.tooltip_style_mode			= cfg.get('tooltip_style_mode', 0)
+	cfg.tooltip_style_mode			= cfg.get('tooltip_style_mode', 1)
 	cfg.tooltip_font_size			= cfg.get('tooltip_font_size', 1)
 	
 	cfg.ac_enable 					= cfg.get('ac_enable', True)
@@ -304,8 +329,6 @@ def on_config_change() :
 	cfg.ac_local_var				= cfg.get('ac_local_var', True)
 	cfg.ac_extra_sorted				= cfg.get('ac_extra_sorted', True)
 	cfg.ac_add_parameters			= cfg.get('ac_add_parameters', 1)
-	
-	cfg.profile_include_dir 		= cfg.profiles[cfg.active_profile]['include_dir']
 	
 	# Update Live reflesh delay.
 	globalvar.analyzerQueue.delay	= util.clamp(float(cfg.get('live_refresh_delay', 1.5)), 0.5, 5.0)
@@ -320,12 +343,15 @@ def on_config_change() :
 	update_console_style()
 	update_popup_style()
 	
+	# List and watch includes
 	globalvar.watchDog.unschedule_all()
-
-	for profile_name in globalvar.profiles_list :
-		if list_includes(cfg.profiles[profile_name]):
-			globalvar.watchDog.schedule(globalvar.incFileEventHandler, cfg.profiles[profile_name]['include_dir'], True)
-
+	if list_includes() :
+		globalvar.watchDog.schedule(globalvar.incFileEventHandler, cfg.active_include_dir, True)
+		
+	# Clear nodes
+	for node in list(globalvar.nodes.values()) :
+		node.remove_all()
+	
 	# Popup style autoload on changed
 	path = os.path.join(sublime.packages_path(), globalvar.PACKAGE_NAME, "styles", "popup")
 	if os.path.isdir(path) :
@@ -335,22 +361,22 @@ def on_config_change() :
 	ac.init()
 	
 
-def list_includes(profile):
+def list_includes():
 	
 	bad_files = 0
-	profile['includes_list'] = list()
+	includes_list = []
 	
-	for inc in list_files(profile['include_dir']) :
+	for inc in list_files(cfg.active_include_dir) :
 		if inc.endswith(".inc") :
-			inc = inc.replace(profile['include_dir'], "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
-			profile['includes_list'].append(inc)
+			inc = inc.replace(cfg.active_include_dir, "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
+			includes_list.append(inc)
 		else : # big recursive loop in root folder  (example: 'C:\\')
 			bad_files += 1
 			if bad_files >= 50 :
-				debug.warning(f"Big recursive loop, include_dir: {profile['include_dir']}")
+				debug.warning(f"Big recursive loop and bad files, include_dir: {cfg.active_include_dir}")
 				return False
-				
-	profile['includes_list'] = ac.sorted_nicely(profile['includes_list'])
+
+	globalvar.includes_list = ac.sorted_nicely(includes_list)
 	return True
 
 def update_editor_style():
@@ -363,7 +389,7 @@ def update_editor_style():
 	s.set("color_scheme", color_scheme)
 	s.set("show_errors_inline", False)
 	s.set("word_separators", "./\\()\"'-:,.;<>~!$%^&*|+=[]{}`~?")
-	s.set("extensions", [ "sma", "inc" ])
+	s.set("extensions", [ "sma", "inc", "inl" ])
 	s.save()
 	
 	# AMXX Uncompress
@@ -391,7 +417,11 @@ def update_console_style():
 def update_popup_style():
 	globalvar.cacheSyntaxCSS = ""
 	
-	globalvar.cachePopupCSS = sublime.load_resource(globalvar.style_popup.get_path())
+	CSS = globalvar.style_popup.get_path()
+	if not CSS :
+		return
+		
+	globalvar.cachePopupCSS = sublime.load_resource(CSS)
 	globalvar.cachePopupCSS = globalvar.cachePopupCSS.replace('\r', '') # Fix
 	
 	# Remove comments
@@ -480,7 +510,7 @@ class AmxxEditorStyleCommand(sublime_plugin.ApplicationCommand):
 		cfg.set("style_editor", globalvar.style_editor.get_active())
 		
 		if not index :
-			cfg.save(False)
+			cfg.save()
 			return
 			
 		path = globalvar.style_editor.get_path()
@@ -489,7 +519,7 @@ class AmxxEditorStyleCommand(sublime_plugin.ApplicationCommand):
 			cfg.set("style_popup", data.get('default_popup', 'default'))
 			cfg.set("style_console", data.get('default_console', 'default'))
 			
-		cfg.save(False)
+		cfg.save()
 
 	def is_visible(self, index) :
 		return index < globalvar.style_editor.count()
@@ -617,7 +647,7 @@ def check_update(bycommand=False) :
 			ok = sublime.ok_cancel_dialog(msg, "Download Update", title)
 			
 			if ok :
-				webbrowser.open_new_tab("https://github.com/Destro-/AMXXEditorV4/")
+				webbrowser.open_new_tab("https://github.com/Destro-/AMXXEditorV4/releases")
 	#}
 	
 	globalvar.checking_update = False
@@ -858,7 +888,7 @@ class AmxxFuncListCommand(sublime_plugin.WindowCommand):
 			
 			self.list = []
 			for func in funclist :
-				if not cfg.profile_include_dir in func.file_path and func.type < globalvar.FUNC_TYPES.forward :
+				if not cfg.active_include_dir in func.file_path and func.type < globalvar.FUNC_TYPES.forward :
 					self.list += [ [ func.name, func.file_path, func.start_line, func.type ] ]
 
 			self.list = ac.sorted_nicely(self.list)
@@ -939,8 +969,7 @@ class AboutInputHandler(sublime_plugin.TextInputHandler):
 		body = f'<span class="title">Sublime AMXX-Editor v{globalvar.EDITOR_VERSION}</span>'
 		body += '<span class="author"> By <a href="https://forums.alliedmods.net/member.php?u=81617">Destro</a></span>'
 		body += '<div class="info">'
-		body += f'Build: {globalvar.EDITOR_BUILD}<br>'
-		body += f'Release Date: {globalvar.EDITOR_DATE}'
+		body += f'Build: <span>{globalvar.EDITOR_BUILD}</span> - <span>{globalvar.EDITOR_DATE}</span>'
 		body += '<br><br><a href="https://github.com/Destro-/AMXXEditorV4/">AMXXEditorV4 on GitHub</a>'
 		body += '</div>'
 		
@@ -964,7 +993,7 @@ body {
 }
 
 .title {
-	font-size: 20px;
+	font-size: 24px;
 	font-weight: bold;
 }
 
@@ -974,6 +1003,13 @@ body {
 
 .info {
 	padding-left: 8px;
+	padding-top: 20px;
+	font-size: 16px;
+	font-weight: bold;
+}
+
+.info span {
+	color: var(--orangish);
 }
 
 .info a {
@@ -997,20 +1033,7 @@ body {
 </html>
 """ % body
 
-		"""
-		<h1>Sublime AMXX-Editor v Destro</h1>
-<b>CREDITs:</b><br>
-ppalex7 <i>(SourcePawn Completions)</i><br>
-<br>
-<b>- Contributors:</b><br>
-sasske <i>(white color scheme)</i><br>
-addons_zz <i>(npp color scheme)</i><br>
-KliPPy <i>(build version)</i><br>
-Mistrick <i>(mistrick color scheme)</i><br>
-
 		
-		"""
-
 		return sublime.Html(content)
 
 
@@ -1415,8 +1438,8 @@ class SublimeEvents(sublime_plugin.EventListener):
 			top += f'<a href="webapi:{webapi_data}">WebAPI</a><span class="separator">|</span>'
 		top += f'<a href="goto:{location_data}">{include}</a>'
 	
-		content =  '<span class="info">Location:</span><br>'
-		content += f'<span class="path">{file_path}</span>'
+		content =  '<span class="info">Location:</span> <br>'
+		content += f'<a class="path" href="explorer:{file_path}">{file_path}</a>'
 
 		self.tooltip_show_popup(view, point + 1, "tooltip-include", top, content)
 
@@ -1488,15 +1511,36 @@ class SublimeEvents(sublime_plugin.EventListener):
 		
 		content = '<b>%s</b>:' % (search)
 		
+	
+		content = f'<b>{search}</b>:'
+		
+		org_search = search
+		if search.startswith(("EV_BYTE_", "EV_INT_", "EV_FL_", "EV_VEC_")):
+			parts = search.split("_", 2)
+			if len(parts) >= 3:
+				search = "pev_" + parts[2]
+
 		if search.startswith("SVC_") :
-			content = f'<b>{search}</b> <a class="btn go" href="https://wiki.alliedmods.net/Half-Life_1_Engine_Messages#{search}">☛ WIKI</a>'
-		else :
-			content = f'<b>{search}</b>:'
+			top += f' | <a class="btn go" href="https://wiki.alliedmods.net/Half-Life_1_Engine_Messages#{search}">Go to WIKI</a>'
+		elif search.startswith("EngFunc_") :
+			top += f' | <a class="btn go" href="https://github.com/Destro-/AMXXEditorV4/wiki/FakeMeta-Functions#{search}">Go to WIKI</a>'
+		elif search.startswith("pev_") :
+			top += f' | <a class="btn go" href="https://github.com/Destro-/AMXXEditorV4/wiki/FakeMeta-PEV-(Entity-Vars)#:~:text={search}">Go to WIKI</a>'
+		elif search.startswith("var_") :
+			top += f' | <a class="btn go" href="https://github.com/Destro-/AMXXEditorV4/wiki/FakeMeta-PEV-(Entity-Vars)#:~:text={search.replace("var", "pev")}">Go to WIKI</a>'
+
 
 		if const.doc2 :
 			content += tooltip.format_doct(const.doc2, "doc2")
 		if const.doc1 :
 			content += tooltip.format_doct(const.doc1, "doc1")
+			
+		if search.startswith("pev_") :
+			doc = globalvar.pevDocumentation.get(search)
+			if doc :
+				content += tooltip.format_doct(doc['description'], "doc2")
+				content += tooltip.format_doct(f"Type: {globalvar.pevType[doc['type']]}", "doc1")
+			
 
 		self.tooltip_show_popup(view, point + 1, "tooltip-constant", top, content)
 
@@ -1526,7 +1570,7 @@ class SublimeEvents(sublime_plugin.EventListener):
 		location_data = found.file_path + '#' + found.name + '#' + str(found.start_line)
 		webapi_data = ""
 			
-		if found.type != globalvar.FUNC_TYPES.function and cfg.profile_include_dir == os.path.dirname(found.file_path) :
+		if found.type != globalvar.FUNC_TYPES.function and cfg.active_include_dir == os.path.dirname(found.file_path) :
 			webapi_data = filename.rsplit('.', 1)[0] + '#' + found.name
 
 		top = f'<a href="find_all:{search_func}">Search All</a>'
@@ -1548,6 +1592,8 @@ class SublimeEvents(sublime_plugin.EventListener):
 			longest_param = len(max(found.param_list, key=len)) + 1
 			
 			is_get_user_msgid = found.name == "get_user_msgid" # Add wiki button
+			is_hud = 1 if found.name == "set_hudmessage" else 2 if found.name == "set_dhudmessage" else 0
+			hud_data = f'{is_hud}'
 			
 			if len(arguments) >= 1 :
 				content += '<div class="inspectorTitle">Params-Inspector:</div>'
@@ -1556,30 +1602,59 @@ class SublimeEvents(sublime_plugin.EventListener):
 				i = 0
 				for value in arguments :
 				
+					invalid_param = False
+					
 					if value.startswith('.') :
 						eq = value.find('=')
-						param = value[1:eq]
-						param = next((p for p in found.param_list if param in p), param)
 						
-						value = value[eq+1:]
+						if eq != -1:
+							param = value[1:eq].strip()
+							prefix = param + '['
+							
+							matched_param = next(
+								(p for p in found.param_list if p == param or p.startswith(prefix)),
+								None
+							)
+							
+							invalid_param = matched_param is None
+							param = matched_param or param
+							
+							value = value[eq+1:]
+						else :
+							param = value[1:]
+							value = "invalid param"
+							invalid_param = True
+							
 					elif i < len(found.param_list) :
 						param = found.param_list[i]
 					else :
 						param = "..."
+						
+					if is_hud and not invalid_param :
+						if util.is_number(value) :
+							hud_data += f'+{value}'
+						else :
+							hud_data += f'+*'
 				
 					param = param.ljust(longest_param).replace(" ", "&nbsp;")
+					
+					if invalid_param :
+						param = f'<u style="color: #f00;">{param}</u>'
 		
 					content += '- '+ param +':&nbsp;'+ tooltip.pawn_highlight( value )
 					
 					if is_get_user_msgid :
 						value = value.strip('"')
-						content += f' <a class="btn go" href="https://wiki.alliedmods.net/Half-Life_1_Game_Events#{value}">☛ WIKI</a>'
-					
+						content += f' <a class="btn go" href="https://wiki.alliedmods.net/Half-Life_1_Game_Events#{value}">Go to WIKI</a>'
+						
 					content += '<br>'
 					
 					i += 1
 					
 				content += '</code>'
+				
+				if is_hud :
+					top += f' | <a class="btn go" href="https://destro-.github.io/AMXXEditorV4/HUDEditor.html#{hud_data}">HUD Editor</a>'
 
 		self.tooltip_show_popup(view, point + 1, "tooltip-function", top, content)
 			
@@ -1595,12 +1670,15 @@ class SublimeEvents(sublime_plugin.EventListener):
 			
 		elif cmd == "webapi" :
 			(include, function) = data.split('#')
-			webbrowser.open_new_tab(f"http://www.amxmodx.org/api/{include}/{function}") 
+			webbrowser.open_new_tab(f"https://amxx-bg.info/api/{include}/{function}") 
 		
 		elif cmd == "goto" :
 			(file, search, line_row) = data.split('#')
 			util.goto_definition(file, search, int(line_row)-1, False)
 		
+		elif cmd == "explorer" :
+			subprocess.Popen(f'explorer /select,"{data}"')
+			
 		elif cmd == "copy" :
 			sublime.set_clipboard(data)
 		
@@ -1797,7 +1875,7 @@ html.dark {
 		if fullLine[0] == '#' :
 
 			if fullLine.startswith("#include") or fullLine.startswith("#tryinclude"):
-				return ( ac.generate_includes_list(cfg.profiles[cfg.active_profile]['includes_list'], fullLine), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+				return ( ac.generate_includes_list(globalvar.includes_list, fullLine), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
 			if fullLine.startswith("#emit"):
 				return ( ac.cache_emit, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
@@ -1893,10 +1971,9 @@ class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler):
 			globalvar.analyzerQueue.add_to_queue(event.src_path)
 			
 		# Add to Autocomplete
-		profile = cfg.profiles[cfg.active_profile]
-		if profile['include_dir'] in event.src_path and event.src_path.endswith(".inc") :
-			inc = event.src_path.replace(profile['include_dir'], "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
-			profile['includes_list'].append(inc)
+		if cfg.active_include_dir in event.src_path and event.src_path.endswith(".inc") :
+			inc = event.src_path.replace(cfg.active_include_dir, "").lstrip("\\/").replace("\\", "/").replace(".inc", "")
+			globalvar.includes_list.append(inc)
 			debug.info("Add include:", inc, " -> ", event.src_path)
 		
 
@@ -1910,10 +1987,8 @@ class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler):
 			return
 
 		node = globalvar.nodes.get(event.src_path)
-		if not node :
-			return
-
-		node.remove_all_children_and_clear()
+		if node :
+			node.remove_all()
 
 #:: Monitor on Scrolled Thread ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -2046,6 +2121,9 @@ class  CodeAnalyzer:
 		error_regions = [ ]
 
 		for match in self.Regex_FIND_INCLUDE.finditer(buffer):
+			if view and "comment" in view.scope_name( match.start() + round((match.end() - match.start()) / 2)  ) :
+				continue
+			
 			exists = self.load_include_file(file_path, match.group(2).strip(), current_node, current_node, includes_used)
 			if view and not exists :
 				error_regions.append(sublime.Region(match.start(1), match.end(1)))
@@ -2308,9 +2386,9 @@ class  CodeAnalyzer:
 		
 		if not exists :
 			if '.' in include :
-				file_path = os.path.join(cfg.profile_include_dir, include)
+				file_path = os.path.join(cfg.active_include_dir, include)
 			else :
-				file_path = os.path.join(cfg.profile_include_dir, include + ".inc")
+				file_path = os.path.join(cfg.active_include_dir, include + ".inc")
 			exists = os.path.exists(file_path)
 
 		return (file_path, exists)
@@ -2354,12 +2432,11 @@ class SectionData:
 	
 class NodeBase:
 
-	def __init__(self, file_path, readonly=False):
+	def __init__(self, file_path):
 	
 		self.file_path 		= file_path
 		self.file_name		= os.path.basename(file_path)
-		self.readonly		= readonly
-		
+
 		self.children 		= set()
 		self.parents 		= set()
 		
@@ -2376,6 +2453,8 @@ class NodeBase:
 		
 		self.cache_all_tags		= dict()
 		self.cache_autocomplete = list()
+		
+		self.removed = False
 
 	def add_child(self, node) :
 		self.children.add(node)
@@ -2383,19 +2462,29 @@ class NodeBase:
 
 	def remove_child(self, node):
 	
-		self.children.remove(node)
-		node.parents.remove(self)
+		# discard() is a safe remove()
+		self.children.discard(node)
+		node.parents.discard(self)
 
-		if len(node.parents) <= 0 :
-			node.clear()
-			globalvar.nodes.pop(node.file_path)
-
-	def remove_all_children_and_clear(self):
+		if not self.removed and len(node.parents) == 0:
+			node.remove_all()
+			
+	def remove_all(self):
 	
-		for child in self.children :
-			self.remove_child(node)
+		if self.removed :
+			return
+			
+		self.removed = True
 		
-	# unnecessary code ??? apparently python does it automatically
+		for child in list(self.children) :
+			self.remove_child(child)
+			
+		for parent in list(self.parents) :
+			parent.remove_child(self)
+			
+		globalvar.nodes.pop(self.file_path)
+		self.clear()
+		
 	def clear(self):
 	
 		self.autocomplete.clear()
@@ -2494,6 +2583,7 @@ class NodeBase:
 			return (node, True)
 
 		return (node, False)
+		
 
 def get_view_node(view):
 	return globalvar.nodes.get(util.get_filename_by_view(view))

@@ -902,6 +902,7 @@ function init() {
   updateBg();
   loadFromHash(); // aplica hash URL antes de pintar el formulario
   loadMsg(0);
+  onInput()
 
   // Diferir el primer render para que el canvas tenga dimensiones reales
   requestAnimationFrame(() => renderHudEls());
@@ -1058,6 +1059,11 @@ function positionEl(el, m, wrap) {
 
   // Cálculo de Y — igual que CHudMessage::YPosition()
   let py;
+  
+  if (m.y > 0.98 ) { // fix hidden element
+    m.y = 0.98
+  }
+  
   if (m.centerY || m.y === -1) {
     py = (H - totalHeight) / 2;
   } else if (m.y < 0) {
@@ -1736,7 +1742,6 @@ function loadFromHash() {
   } catch {
     return false;
   }
-
 }
 
 

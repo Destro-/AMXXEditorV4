@@ -119,11 +119,22 @@ def show_changelog(resource_path):
 		# Mostrar el changelog
 		sublime.active_window().run_command('show_changelog')
 		
+	except PermissionError:
+		import tempfile
+		import webbrowser
+
+		# Crear archivo temporal para mostrar el contenido en el navegador
+		with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as temp_file:
+			temp_file.write(html_content)
+		webbrowser.open(temp_file.name)
+		
 	finally:
 		# Restaurar el changelog original
-		if os.path.exists(backup_changelog):
-			shutil.move(backup_changelog, original_changelog)
-
+		try:
+			if os.path.exists(backup_changelog):
+				shutil.move(backup_changelog, original_changelog)
+		except:
+			pass
 
 class ShowAmxxChangelogCommand(sublime_plugin.WindowCommand):
 	def run(self, file):

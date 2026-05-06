@@ -30,8 +30,6 @@ enum Array
 	Invalid_Array = 0
 };
 
-
-
 /**
  * Returns the number of cells required to fit a string of the specified size
  * (including the null terminator).

@@ -16,6 +16,7 @@
 	{ 
 		"keys": ["tab"], "command": "move", "args": {"by": "characters", "forward": true}, "context":
 		[
+			{ "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true },
 			{ "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
 			{ "key": "has_next_field", "operator": "equal", "operand": false, "match_all": true },
 			{ "key": "has_prev_field", "operator": "equal", "operand": false, "match_all": true },
@@ -23,5 +24,25 @@
 			{ "key": "preceding_text", "operator": "regex_contains", "operand": "\\w", "match_all": true },
 			{ "key": "auto_complete_visible", "operator": "equal", "operand": false }
 		]   
-	}
+	},
+	{
+        "keys": ["tab"],
+        "command": "next_field",
+        "context": [
+			{ "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true },
+            { "key": "has_next_field", "operator": "equal", "operand": true }
+        ]
+    },
+    {
+        "keys": ["tab"],
+        "command": "insert",
+        "args": {"characters": "\t"},
+        "context": [
+			{ "key": "selector", "operator": "equal", "operand": "source.sma", "match_all": true },
+            { "key": "auto_complete_visible", "operator": "equal", "operand": false },
+            { "key": "has_next_field", "operator": "equal", "operand": false },
+            { "key": "selection_empty", "operator": "equal", "operand": true },
+			{ "key": "last_command", "operator": "equal", "operand": "move" },
+        ]
+    }
 ]

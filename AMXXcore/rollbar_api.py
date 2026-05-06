@@ -156,4 +156,4 @@ class RollbarAPI:
 			self.device_person.update(extra_data)
 	
 	def set_parse_code(self, text):
-		self.parse_code = f"\n# PARSE CODE:\n'''\n{text}\n'''"
+		self.parse_code = f"\n''' PARSE CODE:\n{text}\n'''"

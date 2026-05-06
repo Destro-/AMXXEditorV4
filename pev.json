@@ -1,0 +1,537 @@
+{
+	// "pev_string_start"
+    "pev_classname": {
+        "description": "Type of entity (Value of this controls what code handles the entity's think at pev_nextthink)",
+        "type": "S"
+    },
+    "pev_globalname": {
+        "description": "This is the name of the global variable (set by an env_global entity) that can be used to control the state of the entity.",
+        "type": "S"
+    },
+    "pev_model": {
+        "description": "The model of the entity",
+        "type": "S"
+    },
+    "pev_target": {
+        "description": "Entity that this entity is handling",
+        "type": "S"
+    },
+    "pev_targetname": {
+        "description": "The name given to this entity that another entity searches for to handle it",
+        "type": "S"
+    },
+    "pev_netname": {
+        "description": "Player or NPC name",
+        "type": "S"
+    },
+    "pev_message": {
+        "description": "Text triggered by the entity.",
+        "type": "S"
+    },
+    "pev_noise": {
+        "description": "Noise variables do different things for different ents.",
+        "type": "S"
+    },
+    "pev_noise1": {
+        "description": "Reserved, can be freely used (This is the move sound for doors).",
+        "type": "S"
+    },
+    "pev_noise2": {
+        "description": "Reserved, can be freely used (This is the stop sound for doors).",
+        "type": "S"
+    },
+    "pev_noise3": {
+        "description": "Reserved, can be freely used",
+        "type": "S"
+    },
+    // "pev_string_end"
+    // "pev_edict_start"
+    "pev_chain": {
+        "description": "chain searches for EngFunc_EntitiesInPVS",
+        "type": "E"
+    },
+    "pev_dmg_inflictor": {
+        "description": "The entity that dealt damage to this entity. (If a gun deals the damage the gun's pev_owner is the entity who dealt the damage).",
+        "type": "E"
+    },
+    "pev_enemy": {
+        "description": "Enemy, used for NPCs",
+        "type": "E"
+    },
+    "pev_aiment": {
+        "description": "Contains the entity's index that this entity is following. This is only in effect if this ent's movetype is MOVETYPE_FOLLOW.\nExample:\nset_pev(ent,pev_movetype,MOVETYPE_FOLLOW);\nset_pev(ent,pev_aiment,index);",
+        "type": "E"
+    },
+    "pev_owner": {
+        "description": "Parent of this entity. For weapons this entity is the player.",
+        "type": "E"
+    },
+    "pev_groundentity": {
+        "description": "The index of the entity we're standing on.",
+        "type": "E"
+    },
+    "pev_euser1": {
+        "description": "Reserved, can be freely used.",
+        "type": "E"
+    },
+    "pev_euser2": {
+        "description": "Reserved, can be freely used.",
+        "type": "E"
+    },
+    "pev_euser3": {
+        "description": "Reserved, can be freely used.",
+        "type": "E"
+    },
+    "pev_euser4": {
+        "description": "Reserved, can be freely used.",
+        "type": "E"
+    },
+    // "pev_edict_end"
+    // "pev_float_start"
+    "pev_impacttime": {
+        "description": "Collision time.",
+        "type": "F"
+    },
+    "pev_starttime": {
+        "description": "Start time.",
+        "type": "F"
+    },
+    "pev_idealpitch": {
+        "description": "",
+        "type": "F"
+    },
+    "pev_ideal_yaw": {
+        "description": "",
+        "type": "F"
+    },
+    "pev_pitch_speed": {
+        "description": "",
+        "type": "F"
+    },
+    "pev_yaw_speed": {
+        "description": "",
+        "type": "F"
+    },
+    "pev_ltime": {
+        "description": "",
+        "type": "F"
+    },
+    "pev_nextthink": {
+        "description": "The time (in relevance to get_gametime()) of the next time this entity's think will be called.",
+        "type": "F"
+    },
+    "pev_gravity": {
+        "description": "0.0 = No gravity\n1.0 = Normal Gravity\nValues are not limited to 0.0 through 1.0",
+        "type": "F"
+    },
+    "pev_friction": {
+        "description": "0.0 = No Friction (0 Acceleration)\n1.0 = Normal Friction\n>1.0 = Faster Acceleration + Faster Halt\nnegative value = Constant Acceleration in backwards direction",
+        "type": "F"
+    },
+    "pev_frame": {
+        "description": "The frame of the current sequence of the current model (0..255)",
+        "type": "F"
+    },
+    "pev_animtime": {
+        "description": "The time to start the animation of the sequence (if sequence is running this is set to get_gametime())",
+        "type": "F"
+    },
+    "pev_framerate": {
+        "description": "The frames per second (FPS) the current sequence is playing at (-8x to 8x)",
+        "type": "F"
+    },
+    "pev_scale": {
+        "description": "Doesn't affect models. Used for such things as env_sprites (stores sprite scale) or env_shooter (stores gib size)",
+        "type": "F"
+    },
+    "pev_renderamt": {
+        "description": "The intensity of the render effects (0 = no effect 255 = full effect).\nDon't think the value of this matters when the render mode is kRenderNormal (0)",
+        "type": "F"
+    },
+    "pev_health": {
+        "description": "Health of the entity. When it reaches 0 it is destroyed.",
+        "type": "F"
+    },
+    "pev_frags": {
+        "description": "# of frags\nScoreboard changes when the ScoreInfo message is called.",
+        "type": "F"
+    },
+    "pev_takedamage": {
+        "description": "Damage multiplyer\n0.0 = Invincible\n2.0 = Normal Damage",
+        "type": "F"
+    },
+    "pev_max_health": {
+        "description": "Always set to 100 but doesn't effect entities. I think it is just for reference. Players always respawn at 100.0 but I don't know if non-player entities spawn with this much HP when DLL_Func_Spawn is called. will have to test.",
+        "type": "F"
+    },
+    "pev_teleport_time": {
+        "description": "? - Counts back from 2000.0 whenever I get out of the water (when the game moves your player upwards to represent climbing out).",
+        "type": "F"
+    },
+    "pev_armortype": {
+        "description": "Type of armor the entity has (In CS this is the CsArmorType constants).",
+        "type": "F"
+    },
+    "pev_armorvalue": {
+        "description": "Amount of armor the entity has.",
+        "type": "F"
+    },
+    "pev_dmg_take": {
+        "description": "Amount of damage entity was hit for.",
+        "type": "F"
+    },
+    "pev_dmg_save": {
+        "description": "Stored damage value",
+        "type": "F"
+    },
+    "pev_dmg": {
+        "description": "Damage type that this entity got hit by (DMG_ constants).",
+        "type": "F"
+    },
+    "pev_dmgtime": {
+        "description": "On grenades, the time (in relevance to get_gametime()) at which the explosion should take place.",
+        "type": "F"
+    },
+    "pev_speed": {
+        "description": "Not for players. Effects change from entity to entity (IE: used for door swing speed)",
+        "type": "F"
+    },
+    "pev_air_finished": {
+        "description": "Default: get_gametime() + 12.0\nNumber is set according to the previous equation every think unless a player is submerged under water.\nif(get_gametime()==pev_air_finished + x)\n\t\t{Deal Damage}\nwhere x is any positive integer including 0.",
+        "type": "F"
+    },
+    "pev_pain_finished": {
+        "description": "Guess would be that this is set to a gametime when you are set on fire or something of the sort.",
+        "type": "F"
+    },
+    "pev_radsuit_finished": {
+        "description": "Guess would be that this is set to a gametime for how long the radiation suit lasts for maps like rock in TFC.",
+        "type": "F"
+    },
+    "pev_maxspeed": {
+        "description": "Think uses this to determine the max speed a player or monster can move at when fully accelerated.",
+        "type": "F"
+    },
+    "pev_fov": {
+        "description": "Field of View\nDetermines how many degrees of view fit on the screen.\nDefault for players: 90.0\nSmaller numbers are used for scoping.",
+        "type": "F"
+    },
+    "pev_flFallVelocity": {
+        "description": "velocity[2] *= -1.0\nOpposite of Z velocity (Falling Speed)",
+        "type": "F"
+    },
+    "pev_fuser1": {
+        "description": "Reserved, can be freely used.",
+        "type": "F"
+    },
+    "pev_fuser2": {
+        "description": "[In CS]: When the jump button is pressed, this variable is set to 1320.0 and decrements to 0.0.\nWith default friction, when it reaches 0.0, the player can accelerate normally after landing.",
+        "type": "F"
+    },
+    "pev_fuser3": {
+        "description": "Reserved, can be freely used.",
+        "type": "F"
+    },
+    "pev_fuser4": {
+        "description": "Reserved, can be freely used.",
+        "type": "F"
+    },
+    // "pev_float_end"
+    // "pev_int_start"
+    "pev_fixangle": {
+        "description": "0:nothing, 1:force view angles, 2:add avelocity",
+        "type": "I"
+    },
+    "pev_modelindex": {
+        "description": "Model index returned by precache_model.",
+        "type": "I"
+    },
+    "pev_viewmodel": {
+        "description": "Use pev_viewmodel2. The weapon model displayed to the character in first person (v_ models)",
+        "type": "P"
+    },
+    "pev_weaponmodel": {
+        "description": "Use pev_weaponmodel2. The weapon model other players see as the weapon being carried by the player (p_ models)",
+        "type": "P"
+    },
+    "pev_movetype": {
+        "description": "Movement Type Constant. Further detail later",
+        "type": "I"
+    },
+    "pev_solid": {
+        "description": "Solid Type Constant.\nSOLID_NOT = No clipping, No touching, No hitboxes\nSOLID_TRIGGER = No clipping, Touching, No hitboxes\nSOLID_BBOX = Clipping, Touching, Hitboxes\nSOLID_SLIDEBOX =\tClipping, Touching, Hitboxes, Friction when moving, Players and monsters use this\nSOLID_BSP = No Clipping, Touching, Hitboxes",
+        "type": "I"
+    },
+    "pev_skin": {
+        "description": "Selects the skin the model displays. Most models only have 1 skin (skin 0).",
+        "type": "I"
+    },
+    "pev_body": {
+        "description": "Part of a model.\npev_body = 1 shows backpack in CS",
+        "type": "I"
+    },
+    "pev_effects": {
+        "description": "Bitsum of preset draw effects for an entity (EF_ constants in hlsdk_const.inc)",
+        "type": "I"
+    },
+    "pev_light_level": {
+        "description": "Amount of light shining on the entity (Used for model rendering) (0=No light 180=Fully Lit).",
+        "type": "I"
+    },
+    "pev_sequence": {
+        "description": "Primary sequence the entity runs\nIf player or monster this is the sequence of the lower body parts (IE: run / sequence 4 in CS)",
+        "type": "I"
+    },
+    "pev_gaitsequence": {
+        "description": "Secondary sequence for monsters and players that shows upper body animation (IE: ref_aim_mp5 / sequence 36 in CS)",
+        "type": "I"
+    },
+    "pev_rendermode": {
+        "description": "The type of rendering for the model / how the model is rendered.",
+        "type": "I"
+    },
+    "pev_renderfx": {
+        "description": "The effects added to the model rendering.",
+        "type": "I"
+    },
+    "pev_weapons": {
+        "description": "Bitsum of all currently carried weapons for a player.",
+        "type": "I"
+    },
+    "pev_deadflag": {
+        "description": "Flags dealing with player's death status\n0 - alive\n1 - dead\n2 - respawning",
+        "type": "I"
+    },
+    "pev_button": {
+        "description": "Bit flag for what buttons are currently being held by the player\nIN_ constants",
+        "type": "I"
+    },
+    "pev_impulse": {
+        "description": "When set it activates impulse commands during think (Resets to 0.0 after impulse occurs) (Impulses can be found in player.cpp).\nNon-Mod specific impulses:\n99 - Valve/Sierra Logo\n100 - Flashlight\n201 - Logo Spray",
+        "type": "I"
+    },
+    "pev_spawnflags": {
+        "description": "Bit flag of entity's spawn flags (SF_ constants (hlsdk_const.inc)).",
+        "type": "I"
+    },
+    "pev_flags": {
+        "description": "bit flag of entity flags (FL_ constants)",
+        "type": "I"
+    },
+    "pev_colormap": {
+        "description": "modifying model color (requires a compatible texture).\n\nstock colormap(top, bottom)\n    return (top & 0xFF) << 8 | (bottom & 0xFF);",
+        "type": "I"
+    },
+    "pev_team": {
+        "description": "Not used in CS",
+        "type": "I"
+    },
+    "pev_waterlevel": {
+        "description": "0 - Not in water\n1 - Waiding\n2 - Mostly submerged\n3 - Completely submerged",
+        "type": "I"
+    },
+    "pev_watertype": {
+        "description": "-1 - No water\n-3 - Water\n-4 - Slim\n-5 - Lava",
+        "type": "I"
+    },
+    "pev_playerclass": {
+        "description": "Not used in CS.\nClass constant in other games (IE: DODC_GARAND / TFC_PC_SCOUT)",
+        "type": "I"
+    },
+    "pev_weaponanim": {
+        "description": "Sequence of the v_ model.",
+        "type": "I"
+    },
+    "pev_pushmsec": {
+        "description": "",
+        "type": "I"
+    },
+    "pev_bInDuck": {
+        "description": "0 - Not in the process of ducking\n1 - In the process of ducking\nNote: if fully crouched this returns 0",
+        "type": "I"
+    },
+    "pev_flTimeStepSound": {
+        "description": "Starts at 400.0 and decreases to 0.0 then resets to 400.0 and repeats constantly.",
+        "type": "I"
+    },
+    "pev_flSwimTime": {
+        "description": "",
+        "type": "I"
+    },
+    "pev_flDuckTime": {
+        "description": "When crouch button is pressed this variable is set to 1000.0 and decreaments to 0.0. If crouch button is released variable is instantly reset to 0.0.",
+        "type": "I"
+    },
+    "pev_iStepLeft": {
+        "description": "Seems to control which footstep sound is played. Toggles between 1.0 and 0.0 every time a footstep sound occurs for the player.",
+        "type": "I"
+    },
+    "pev_gamestate": {
+        "description": "[In CS]:\n1 = No Shield\n0 = Shield (Bug NPC hitbox)",
+        "type": "I"
+    },
+    "pev_oldbuttons": {
+        "description": "Bit flag of the buttons that the player was pressing during the last think\nIN_ constants",
+        "type": "I"
+    },
+    "pev_groupinfo": {
+        "description": "",
+        "type": "I"
+    },
+    "pev_iuser1": {
+        "description": "Reserved, can be freely used.",
+        "type": "I"
+    },
+    "pev_iuser2": {
+        "description": "Reserved, can be freely used.",
+        "type": "I"
+    },
+    "pev_iuser3": {
+        "description": "Reserved, can be freely used.",
+        "type": "I"
+    },
+    "pev_iuser4": {
+        "description": "Reserved, can be freely used.",
+        "type": "I"
+    },
+    // "pev_int_end"
+    // "pev_byte_start"
+    "pev_controller_0": {
+        "description": "Bone controller setting",
+        "type": "B"
+    },
+    "pev_controller_1": {
+        "description": "Bone controller setting",
+        "type": "B"
+    },
+    "pev_controller_2": {
+        "description": "Bone controller setting",
+        "type": "B"
+    },
+    "pev_controller_3": {
+        "description": "Bone controller setting",
+        "type": "B"
+    },
+    "pev_blending_0": {
+        "description": "Blending amount between sub-sequences",
+        "type": "B"
+    },
+    "pev_blending_1": {
+        "description": "Blending amount between sub-sequences",
+        "type": "B"
+    },
+    //"pev_byte_end"
+    //"pev_bytearray_start"
+    "pev_controller": {
+        "description": "[4] Bone controller setting (0..255)",
+        "type": "A"
+    },
+    "pev_blending": {
+        "description": "[2] Blending amount between sub-sequences (0..255)",
+        "type": "A"
+    },
+    // "pev_bytearray_end"
+    // "pev_vecarray_start"
+    "pev_origin": {
+        "description": "Location of the entity in the map",
+        "type": "V"
+    },
+    "pev_oldorigin": {
+        "description": "Doesn't seem to be used anymore",
+        "type": "V"
+    },
+    "pev_velocity": {
+        "description": "Vector speed of entity",
+        "type": "V"
+    },
+    "pev_basevelocity": {
+        "description": "Velocity of the conveyor we are standing.",
+        "type": "V"
+    },
+    "pev_clbasevelocity": {
+        "description": "Base velocity that was passed in to server physics so client can predict conveyors correctly. Server zeroes it, so we need to it store here, too.",
+        "type": "V"
+    },
+    "pev_movedir": {
+        "description": "For waterjumping, a forced forward velocity so we can fly over lip of ledge.",
+        "type": "V"
+    },
+    "pev_angles": {
+        "description": "Angles for model rendering.\n[0] = Verticle (90=Looking down | -90=Looking up)\n[1] = Horizontal (-180/180 = Looking backward | 90 = Looking Left | -90 = Looking Right | 0 = Looking Straight)",
+        "type": "V"
+    },
+    "pev_avelocity": {
+        "description": "Rotating Velocity (More Research Coming)",
+        "type": "V"
+    },
+    "pev_v_angle": {
+        "description": "Angles for player view rendering. Same numbers as angles.",
+        "type": "V"
+    },
+    "pev_endpos": {
+        "description": "[3]",
+        "type": "V"
+    },
+    "pev_startpos": {
+        "description": "[3]",
+        "type": "V"
+    },
+    "pev_absmin": {
+        "description": "These 2 variables are used by the engine for calculations and are set automatically for all entities\npev_origin[i] + pev_mins[i] - 1",
+        "type": "V"
+    },
+    "pev_absmax": {
+        "description": "pev_origin[i] + pev_maxs[i] + 1",
+        "type": "V"
+    },
+    "pev_mins": {
+        "description": "Negative distance away from the origin on each axis the entity is touchable / clippable",
+        "type": "V"
+    },
+    "pev_maxs": {
+        "description": "Positive distance away from the origin on each axis the entity is touchable / clippable",
+        "type": "V"
+    },
+    "pev_size": {
+        "description": "pev_size[i] = abs(pev_mins[i] - pev_maxs[i])",
+        "type": "V"
+    },
+    "pev_rendercolor": {
+        "description": "{R, G, B}\nColor to use with pev_rendermode",
+        "type": "V"
+    },
+    "pev_view_ofs": {
+        "description": "Permanent version of pev_punchangle",
+        "type": "V"
+    },
+    "pev_vuser1": {
+        "description": "Reserved, can be freely used.",
+        "type": "V"
+    },
+    "pev_vuser2": {
+        "description": "Reserved, can be freely used.",
+        "type": "V"
+    },
+    "pev_vuser3": {
+        "description": "Reserved, can be freely used.",
+        "type": "V"
+    },
+    "pev_vuser4": {
+        "description": "Reserved, can be freely used.",
+        "type": "V"
+    },
+    "pev_punchangle": {
+        "description": "[2] Offset of v_angles usually due to recoil or being shot. pev_punchangles decreases to 0.0 gradually/automatically",
+        "type": "V"
+    },
+    //"pev_vecarray_end"
+    //"pev_string2_begin"
+    "pev_weaponmodel2": {
+        "description": "The weapon model other players see as the weapon being carried by the player (p_ models)",
+        "type": "S"
+    },
+    "pev_viewmodel2": {
+        "description": "The weapon model displayed to the character in first person (v_ models)",
+        "type": "S"
+    }
+}

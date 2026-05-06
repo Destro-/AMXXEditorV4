@@ -12,17 +12,18 @@
 			"include_dir": "D:\\amxmodx\\compiler\\1.8.2\\include",
 			"output_dir": "D:\\amxmodx\\plugins"
 		},
-		"AMXX-1.9":
+		"like the default value:
 		{
 			"amxxpc_debug": 2,
-			"amxxpc_path": "D:\\amxmodx\\compiler\\1.9\\amxxpc.exe",
-			"include_dir": "D:\\amxmodx\\compiler\\1.9\\include",
-			"output_dir": "D:\\amxmodx\\plugins"
+			"amxxpc_path": "${default}\\amxxpc.exe",
+			"include_dir": "${default}\\include",
+			"output_dir": "${file_path}"
 		}
 
 		Valid variables in path:
-		- ${package}
-		- ${file_path}
+		- ${default}			Default compiler path
+		- ${packages}			Packages path
+		- ${file_path}			Current view base path
 
 		*/
 	},
