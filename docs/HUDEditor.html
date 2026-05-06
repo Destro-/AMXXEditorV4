@@ -772,6 +772,7 @@ input[type="number"] {
     <div class="code-panel">
       <div class="code-header">
         <div class="code-title">Código Generado — AMX Mod X</div>
+		<button class="btn-copy" id="btnShare" onclick="shareUrl()">COMPARTIR</button>
         <button class="btn-copy" id="btnCopy" onclick="copyCode()">COPIAR</button>
       </div>
       <div class="code-out" id="codeOut"></div>
@@ -900,12 +901,18 @@ function init() {
   window.addEventListener('resize', () => renderHudEls());
 
   updateBg();
-  loadFromHash(); // aplica hash URL antes de pintar el formulario
+  
+  // Diferir el primer render para que el canvas tenga dimensiones reales
+  requestAnimationFrame(() => renderHudEls());
+  
+  if (loadFromHash()) {
+    requestAnimationFrame(() => playAnimation()); // Auto start anim
+  } 
+  
   loadMsg(0);
   onInput()
 
-  // Diferir el primer render para que el canvas tenga dimensiones reales
-  requestAnimationFrame(() => renderHudEls());
+
 }
 
 
@@ -1471,7 +1478,7 @@ function updateCode() {
     return;
   }
   $('codeOut').innerHTML = syntaxHighlight(genSMA(m));
-  saveToHash();
+
 }
 
 // Colorea el código generado con spans CSS
@@ -1625,9 +1632,21 @@ function setRes(btn, res) {
 // ════════════════════════════════════════════════════════
 // COPIAR CÓDIGO AL PORTAPAPELES
 // ════════════════════════════════════════════════════════
+function shareUrl() {
+  const url = location.origin + location.pathname + location.search + '#' + saveToHash();
+  navigator.clipboard.writeText(url).then(() => {
+    $('btnShare').textContent = '✓ URL COPIADA!';
+    $('btnShare').classList.add('copied');
+    setTimeout(() => {
+      $('btnShare').textContent = 'COMPARTIR';
+      $('btnShare').classList.remove('copied');
+    }, 2000);
+  });
+}
+
 function copyCode() {
   navigator.clipboard.writeText($('codeOut').innerText).then(() => {
-    $('btnCopy').textContent = '✓ COPIADO';
+    $('btnCopy').textContent = '✓ COPIADO!';
     $('btnCopy').classList.add('copied');
     setTimeout(() => {
       $('btnCopy').textContent = 'COPIAR';
@@ -1666,8 +1685,7 @@ function saveToHash() {
   const b64     = btoa(unescape(encodeURIComponent(json)))  // UTF-8 safe
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''); // base64url
 
-  history.replaceState(null, '', '#' + b64)
-
+  return b64;
 }
 
 // Lee el hash al inicio y establece el estado
@@ -1678,33 +1696,53 @@ function saveToHash() {
 //             y el resto son los argumentos de set_hudmessage en orden
 function loadFromHash() {
   const hash = location.hash.slice(1);
-  if (!hash) return false;
+  
+  if (!hash)
+    return false;
+	
+  // Limpiar el hash de la URL para dejarla limpia después de leerlo
+  history.replaceState(null, '', location.pathname + location.search);
 
-  // ── Formato legacy: contiene "+" como separador ──
+  // Legacy: "1+255+255+50+-1.0+0.5+0+0.0+4.0+0.0+0.0+3"
   if (hash.includes('+')) {
     const parts = hash.split('+');
-    if (parts.length < 12) return false;
+    const m = S.msgs[S.active];
 
-    const isDhud = parts[0] === '2';
-    const m      = S.msgs[S.active];
+    // Helper para obtener valor o devolver default si no existe o es "*"
+    const getSafe = (index, def) => {
+        const val = parts[index];
+        // Si el índice no existe, es un asterisco o está vacío, va el default
+        if (val === undefined || val === '*' || val === '') return def;
+        
+        const num = parseFloat(val);
+        return isNaN(num) ? def : num;
+    };
 
-    m.isDhud   = isDhud;
-    m.r        = clamp(+parts[1],  0, 255);
-    m.g        = clamp(+parts[2],  0, 255);
-    m.b        = clamp(+parts[3],  0, 255);
-    m.x        = parseFloat(parts[4])  || 0;
-    m.y        = parseFloat(parts[5])  || 0;
-    m.effect   = +parts[6];
-    m.fxTime   = parseFloat(parts[7])  || 0.1;
-    m.holdTime = parseFloat(parts[8])  || 3.0;
-    m.fadeIn   = parseFloat(parts[9])  || 0.5;
-    m.fadeOut  = parseFloat(parts[10]) || 0.5;
-    m.channel  = +parts[11];
+    // 1. Tipo de mensaje
+    m.isDhud = (parts[0] === '2');
 
-    // centerX/Y: si el valor recibido es exactamente -1.0
-    m.centerX  = m.x === -1;
-    m.centerY  = m.y === -1;
+    // 2. Colores (con clamp para seguridad)
+    m.r = clamp(getSafe(1, 200), 0, 255);
+    m.g = clamp(getSafe(2, 100), 0, 255);
+    m.b = clamp(getSafe(3, 0),   0, 255);
 
+    // 3. Posiciones y Efectos
+    m.x        = getSafe(4, -1.0);
+    m.y        = getSafe(5, 0.35);
+    m.effect   = getSafe(6, 0);
+    m.fxTime   = getSafe(7, 6.0);
+    m.holdTime = getSafe(8, 12.0);
+    m.fadeIn   = getSafe(9, 0.1);
+    m.fadeOut  = getSafe(10, 0.2);
+
+    // 4. Canal (Solo aplica si NO es DHUD)
+    // Si es DHUD, forzamos -1. Si es HUD, buscamos el valor o default -1.
+    m.channel = !m.isDhud ? getSafe(11, -1) : -1;
+
+    // 5. Flags de centrado
+    m.centerX = (m.x === -1);
+    m.centerY = (m.y === -1);
+	
     return true;
   }
 
@@ -1744,10 +1782,18 @@ function loadFromHash() {
   }
 }
 
+window.addEventListener('hashchange', () => {
+  if (loadFromHash()) {
+    loadMsg(0);
+    playAnimation();
+  }
+});
+
 
 // ════════════════════════════════════════════════════════
 // ARRANQUE
 // ════════════════════════════════════════════════════════
+
 window.addEventListener('load', init);
 
 </script>
