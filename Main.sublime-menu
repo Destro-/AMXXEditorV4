@@ -139,6 +139,7 @@
 				"command": "amxx_uncompress",
 				"caption": "AMXX Uncompress"
 			},
+			{ "command": "open_url", "args": {"url": "https://destro-.github.io/AMXXEditorV4/HUDEditor.html"}, "caption": "HUD Editor" },
 			{ "caption": "-" },
 			{
 				"command": "amxx_new_include",
