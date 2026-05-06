@@ -1197,7 +1197,9 @@ function calcCharColor(m, localTime, charIdx, totalChars) {
 
   // colores fuente y destino
   const sr = m.r,         sg = m.g,         sb = m.b;
-  const dr = m.r2 ?? 255, dg = m.g2 ?? 255, db = m.b2 ?? 250;
+  const dr = m.isDhud ? m.r : (m.r2 ?? 255);
+  const dg = m.isDhud ? m.g : (m.g2 ?? 255);
+  const db = m.isDhud ? m.b : (m.b2 ?? 250);
 
   if (m.effect === 0 || m.effect === 1) {
     // ─ Fade in / hold / fade out global ─
