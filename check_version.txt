@@ -1,13 +1,5 @@
-4.4-4420
+4.4-4421
 
 News:
-- New: HUD Editor with simulation 99% faithful to the engine render.
-- New: Open containing folder (context menu in tab).
-- New: WIKI button for `entity vars`, `engine message`, and `game events`.
-- Fix: Updated default compiler to version `1.10-5476` (2026).
-- Fix: Updated ReAPI to version `5.26.0.338` (2025).
-- Fix: Missing permissions to view the changelog.
-- Fix: Selecting a profile did not update instantly.
-- Fix: WebAPI changed from `amxmodx.org` to `amxx-bg.info`.
-- Fix: `.inl` extension correctly added.
-- Fix: Various minor bugs reported on Rollbar.
+- New: Added Lysis Decompiler (https://headlinedev.xyz/lysis/).
+- Fix: Fixed multiple issues reported through Rollbar.

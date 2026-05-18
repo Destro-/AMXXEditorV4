@@ -1094,10 +1094,3 @@ def print_plugin():
 		print(f"magic:           0x{plugin.dbg.magic:x}")
 	
 	print("---------------------------------\n")
-	
-
-if __name__ == "__main__":
-	#process("ask_redirect.amxx")
-	#process("ask_redirect.raw")
-	print("MAIN()!")
-	#process("test.amxx")

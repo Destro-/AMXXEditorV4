@@ -139,6 +139,10 @@
 				"command": "amxx_uncompress",
 				"caption": "AMXX Uncompress"
 			},
+			{
+				"command": "amxx_lysis_decompile",
+				"caption": "Lysis Decompile"
+			},
 			{ "command": "open_url", "args": {"url": "https://destro-.github.io/AMXXEditorV4/HUDEditor.html"}, "caption": "HUD Editor" },
 			{ "caption": "-" },
 			{

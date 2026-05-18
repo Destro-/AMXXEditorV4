@@ -1,3 +1,9 @@
+v4.4 (4421)
+New: Agregado Lysis Decompiler (https://headlinedev.xyz/lysis/)
+Fix: Solucionado multiples errores reportado en rollbar.
+Improved: Mejoras en rollbar y un traking para identificar pais/idioma(para analizar futuro soporte multi lang).
+
+
 v4.4 (4420)
 New: HUD-Editor con simulación 99% fiel al render del engine.
 New: Abrir en carpeta contenedora (menú contextual en pestaña/tab)
@@ -9,6 +15,7 @@ Fix: Al seleccionar un perfil no se actualizaba instantáneamente.
 Fix: WebAPI cambiado de `amxmodx.org` a `amxx-bg.info`.
 Fix: Extensión `.inl` correctamente agregada.
 Fix: Varios pequeños errores reportados en Rollbar.
+
 
 v4.4 (4410)
 New: AMXX-Uncompress; Re-escrito en python y mejorado.

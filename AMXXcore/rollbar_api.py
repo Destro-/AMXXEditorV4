@@ -131,13 +131,6 @@ class RollbarAPI:
 			
 		if extra_data :
 			payload["data"].update(extra_data)
-			
-		"""
-		import pprint
-		print("send:")
-		pprint.pprint(payload)
-		print("")
-		"""
 		
 		self._send_payload(payload)
 

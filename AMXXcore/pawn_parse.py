@@ -603,7 +603,7 @@ class pawnParse:
 		#}
 		
 		if buffer : # Skip multiline
-			while buffer[-1] == '\\' :
+			while buffer and buffer[-1] == '\\' :
 				buffer = self.read_clean_line()
 	#}
 	
