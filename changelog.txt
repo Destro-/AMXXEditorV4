@@ -1,3 +1,9 @@
+v4.4 (4421)
+New: Added Lysis Decompiler (https://headlinedev.xyz/lysis/).
+Fix: Fixed multiple issues reported through Rollbar.
+Improved: Enhanced Rollbar integration and added basic analytics to identify country/language usage for future multi-language support analysis.
+
+
 v4.4 (4420)
 New: HUD Editor with simulation 99% faithful to the engine render.
 New: Open containing folder (context menu in tab).

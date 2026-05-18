@@ -11,6 +11,7 @@ import threading
 import platform
 import subprocess
 import zipfile
+import locale
 
 BASE_PATH = os.path.dirname(__file__)
 
@@ -39,12 +40,11 @@ import AMXXcore.debug 		as debug
 # Global VARs & Initialize
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 globalvar.EDITOR_VERSION 		= "4.4"
-globalvar.EDITOR_BUILD 			= "4420"
-globalvar.EDITOR_DATE 			= "6 May 2026"
+globalvar.EDITOR_BUILD 			= "4421"
+globalvar.EDITOR_DATE 			= "18 May 2026"
 globalvar.PACKAGE_NAME			= "AMXXEditorV4"
 
 globalvar.ROLLBAR_API_TOKEN		= "abe32dcc89f647398b096cd63aa964a9"
-globalvar.ROLLBAR_API_ENV		= "dev"
 
 globalvar.CONST_TYPES 			= Enum( [ "TAG", "DEFINE", "CONST", "ENUM" ] )
 globalvar.FUNC_TYPES 			= Enum( [ "function", "public", "stock", "forward", "native" ] )
@@ -162,14 +162,19 @@ def plugin_loaded() :
 	debug.log_open(os.path.join(packages_path, "debug.log"))
 	
 	# ROLLBAR.com simple REST API ######################################################################
-	globalvar.rollbar = RollbarAPI(globalvar.ROLLBAR_API_TOKEN, globalvar.ROLLBAR_API_ENV)
+	globalvar.rollbar = RollbarAPI(globalvar.ROLLBAR_API_TOKEN, globalvar.EDITOR_BUILD)
 
 	DEVICE_ID = util.hash_sha1( sublime.version() + sublime.executable_path() + platform.node() )
 	
 	globalvar.rollbar.register_device(
 		DEVICE_ID,
 		None, # Device name, default: this pc name.
-		{ "sublime_version": sublime.version(), "AMXXEditor": globalvar.EDITOR_BUILD } # Extra data
+		{ # Extra data
+			"AMXX-Sublime-Version": sublime.version(),
+			"AMXX-Editor-Version": globalvar.EDITOR_BUILD,
+			"AMXX-Language": locale.getdefaultlocale()[0],
+			"code_version": globalvar.EDITOR_BUILD
+		}
 	)
 	####################################################################################################
 	
@@ -200,7 +205,6 @@ def plugin_loaded() :
 	sublime.set_timeout_async(check_update, 2500)
 	
 	try:
-		import locale
 		lang = locale.getdefaultlocale()[0].split("_")[0]
 		if lang == "es" :
 			cfg.lang = "es"
@@ -225,33 +229,43 @@ def is_installed_package():
 
 def extract_package_directory(package_name, target_directory):
 
-	installed_package_path = os.path.join(sublime.installed_packages_path(), f"{package_name}.sublime-package")
-	extracted_path = os.path.join(sublime.packages_path(), package_name)
-	
-	if os.path.exists( os.path.join(extracted_path, target_directory) ):
+	installed_package_path	= os.path.join(sublime.installed_packages_path(), f"{package_name}.sublime-package")
+	extracted_path			= os.path.join(sublime.packages_path(), package_name)
+	version_file_path		= os.path.join(extracted_path, ".install_version")
+	installed_version		= 0
+
+	# Check installed version against current build
+	if os.path.isfile(version_file_path):
+		try:
+			with open(version_file_path, 'r') as f:
+				installed_version = int(f.read().strip())
+			if installed_version >= int(globalvar.EDITOR_BUILD):
+				return False
+		except Exception as e:
+			debug.error(f"Failed to read .install_version: {e}")
+
+	# Check the .sublime-package
+	if not os.path.isfile(installed_package_path):
+		debug.error(f"Package {package_name} not found in 'Installed Packages' folder")
 		return False
 		
-	if not os.path.isfile(installed_package_path):
-		debug.error(f"El paquete {package_name} no existe en installed_packages")
-		return False
-
 	try:
 		os.makedirs(extracted_path, exist_ok=True)
-
 		with zipfile.ZipFile(installed_package_path, 'r') as zip_ref:
 			for file in zip_ref.namelist():
 				if file.startswith(target_directory):
 					zip_ref.extract(file, extracted_path)
 
+		# Save current build version
+		with open(version_file_path, 'w') as f:
+			f.write(globalvar.EDITOR_BUILD)
+
 		return True
 	except Exception as e:
-		debug.error(f"Error al extraer el paquete: {e}")
+		debug.error(f"Failed to extract package: {e}")
 		return False
 
-
 def on_config_change() :
-
-	print(" on_config_change 1")
 
 	# Debug
 	cfg.debug_flags 		= debug.check_flags(cfg.get("debug_flags", "a"))
@@ -649,6 +663,21 @@ def check_update(bycommand=False) :
 			if ok :
 				webbrowser.open_new_tab("https://github.com/Destro-/AMXXEditorV4/releases")
 	#}
+	
+	
+	# Basic tracking (no private information is collected, only visitor analytics)
+	url = "https://middlewr.online/amxxeditor"
+	os_part = "Windows NT 10.0; Win64; x64" if platform.system() == "Windows" else "X11; Linux x86_64"
+	ua = f"Mozilla/5.0 ({os_part}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+
+	try:
+		req = urllib.request.Request(url, headers={
+			"User-Agent": ua,
+			"Referer": f"{globalvar.EDITOR_VERSION} ({globalvar.EDITOR_BUILD})"
+		})
+		urllib.request.urlopen(req)
+	except:
+		pass
 	
 	globalvar.checking_update = False
 #}
@@ -2667,7 +2696,7 @@ def invalid_functions_highlight(view, clear=True):
 	generate_highlight(view, "invalidfunc", r"\b[A-Za-z_][\w_]*\b", "invalid.illegal", sublime.DRAW_NO_OUTLINE|sublime.DRAW_NO_FILL|sublime.DRAW_SQUIGGLY_UNDERLINE, check_scope, clear)	
 
 def is_amxmodx_view(view) :
-	return view.match_selector(0, 'source.sma')
+	return view is not None and view.match_selector(0, 'source.sma')
 
 def marking_error_lines(view, regions):
 	view.add_regions("pawnerror", regions, "invalid.illegal", "dot", sublime.DRAW_NO_OUTLINE|sublime.DRAW_NO_FILL|sublime.DRAW_SQUIGGLY_UNDERLINE)

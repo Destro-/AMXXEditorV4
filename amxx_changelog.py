@@ -139,7 +139,3 @@ def show_changelog(resource_path):
 class ShowAmxxChangelogCommand(sublime_plugin.WindowCommand):
 	def run(self, file):
 		show_changelog(file)
-
-		# sublime.active_window().run_command("show_amxx_changelog", { "file": "Packages/AMXXEditorV4/changelog.txt"})
-		# sublime.active_window().run_command("show_amxx_changelog", { "file": "Packages/AMXXEditorV4/changelog_es.txt"})
-		
